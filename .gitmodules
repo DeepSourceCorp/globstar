@@ -1,0 +1,3 @@
+[submodule "langs/tree-sitter-dockerfile"]
+	path = langs/tree-sitter-dockerfile
+	url = https://github.com/camdencheek/tree-sitter-dockerfile
