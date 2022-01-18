@@ -33,9 +33,9 @@
         });
 
       chanspec = {
-        date = "2021-12-01";
+        date = "2022-01-15";
         channel = "nightly";
-        sha256 = "DhIP1w63/hMbWlgElJGBumEK/ExFWCdLaeBV5F8uWHc="; # set zeros after modifying channel or date
+        sha256 = "kGKh+zzI1lFEbuYxGJ1uqm+sP8A/b66f+/zDICvQtuk="; # set zeros after modifying channel or date
       };
       rustChannel = p: (fenix.overlay p p).fenix.toolchainOf chanspec;
 
@@ -101,6 +101,8 @@
           nativeBuildInputs = [
             pkgs.bacon
             pkgs.cargo-insta
+            # pkgs.gcc11
+            pkgs.darwin.libiconv
             rust-analyzer
             toolchain
           ];
