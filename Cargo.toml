@@ -1,0 +1,9 @@
+[workspace]
+
+members = [
+    "marvin",    # rust types/bindings to marvin
+    "aspen",     # everything you need to write lints
+    "holly",     # annotation based test library
+    "linters/*", # binaries that implement `Linter`s
+]
+
