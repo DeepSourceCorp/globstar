@@ -1,18 +1,19 @@
+mod test_utils;
+pub use tree_sitter;
+
 use std::any::Any;
 
 use derive_builder::Builder;
 use tree_sitter::{Language, Node, Parser, Query, Range};
 
-pub use tree_sitter;
-
-#[derive(Builder)]
-#[builder(pattern = "owned")]
 pub struct Linter {
     lints: Vec<&'static Lint>,
     language: Language,
+    comment_str: &'static str,
 }
 
 impl Linter {
+    /// Run analysis on given source code, producing a list of diagnostics
     pub fn analyze(&self, src: &str) -> Vec<Diagnostic> {
         let mut parser = Parser::new();
         parser.set_language(self.language).unwrap();
@@ -25,6 +26,40 @@ impl Linter {
             .map(|lint| (lint.validate)(lint, root_node, None))
             .flatten()
             .collect()
+    }
+
+    /// Create a new Linter instance of a language
+    pub fn new(language: Language) -> Self {
+        Self {
+            lints: vec![],
+            language,
+            comment_str: "//",
+        }
+    }
+
+    /// Set this Linter's language
+    pub fn language(mut self, language: Language) -> Self {
+        self.language = language;
+        self
+    }
+
+    /// Add a lint to this Linter
+    pub fn lint(mut self, lint: &'static Lint) -> Self {
+        self.lints.push(lint);
+        self
+    }
+
+    /// Set a list of lints accepted by this linter
+    pub fn lints(mut self, lints: Vec<&'static Lint>) -> Self {
+        self.lints = lints;
+        self
+    }
+
+    /// Set the comment str accepted by this language, this is used
+    /// in annotated tests
+    pub fn comment_str(mut self, comment_str: &'static str) -> Self {
+        self.comment_str = comment_str;
+        self
     }
 }
 
