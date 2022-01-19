@@ -105,6 +105,8 @@
             pkgs.darwin.libiconv
             rust-analyzer
             toolchain
+
+            pkgs.parallel
           ];
           RUST_LOG = "info";
           RUST_BACKTRACE = 1;
