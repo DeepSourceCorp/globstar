@@ -1,6 +1,6 @@
 mod lints;
 
-use aspen::{tree_sitter::Language, LinterBuilder};
+use aspen::{tree_sitter::Language, Linter};
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -8,24 +8,12 @@ lazy_static! {
 }
 
 fn main() {
-    let linter = LinterBuilder::default()
-        .language(*RUBY)
-        .lints(lints::lints())
-        .build()
-        .unwrap();
+    let linter = Linter::new(*RUBY).lints(lints::lints()).comment_str("#");
 
     let src = r#"
-        if a = 2
-            puts "hello"
-        else
-            puts "no"
-        end
-
-        if a = a
-            puts "hello"
-        else
-            puts "no"
-        end
+    system <<-BASH.strip!
+        abc --def | ghi > jkl
+    BASH
     "#;
 
     linter

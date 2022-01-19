@@ -40,3 +40,30 @@ fn validator<'a>(meta: &Lint, node: Node<'a>, _ctx: Option<Box<dyn Any>>) -> Vec
         })
         .collect::<Vec<_>>()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::LINT;
+
+    use crate::RUBY;
+
+    use aspen::Linter;
+
+    fn linter() -> Linter {
+        Linter::new(*RUBY).lint(&LINT).comment_str("#")
+    }
+
+    #[test]
+    fn trivial() {
+        linter().test(
+            r#"
+                if a = 2
+                 # ^^^^^ Perhaps this assignment `a = 2` is supposed to be a comparison
+                  puts "no"
+                else
+                  puts "hi"
+                end
+            "#,
+        )
+    }
+}
