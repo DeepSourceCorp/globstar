@@ -9,6 +9,10 @@ edition = "2021"
 tree-sitter = "0.19"
 derive_builder = "0.10.2"
 pretty_assertions = "1.0.0"
+thiserror = "1.0.30"
 
 [dependencies.holly]
 path = "../holly"
+
+[dependencies.marvin]
+path = "../marvin"

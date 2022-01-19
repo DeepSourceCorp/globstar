@@ -1,3 +1,5 @@
+pub mod err;
+mod runner;
 mod test_utils;
 pub use tree_sitter;
 
@@ -14,7 +16,11 @@ pub struct Linter {
 
 impl Linter {
     /// Run analysis on given source code, producing a list of diagnostics
-    pub fn analyze(&self, src: &str) -> Vec<Diagnostic> {
+    pub fn analyze(
+        &self,
+        src: &str,
+        ctx: &Option<Box<dyn Any>>,
+    ) -> Vec<(&'static str, Diagnostic)> {
         let mut parser = Parser::new();
         parser.set_language(self.language).unwrap();
 
@@ -23,7 +29,10 @@ impl Linter {
 
         self.lints
             .iter()
-            .map(|lint| (lint.validate)(lint, root_node, None))
+            .map(|lint| {
+                let diagnostics = (lint.validate)(lint, root_node, ctx);
+                diagnostics.into_iter().map(|d| (lint.code, d))
+            })
             .flatten()
             .collect()
     }
@@ -66,7 +75,7 @@ impl Linter {
 /// Describes the rule itself
 /// The rule can make use of metadata, the query, anything from the tree and
 /// additional context provided by each linter via Box<dyn Any>
-pub type Validator = fn(&Lint, Node, Option<Box<dyn Any>>) -> Vec<Diagnostic>;
+pub type Validator = fn(&Lint, Node, &Option<Box<dyn Any>>) -> Vec<Diagnostic>;
 
 /// Metadata of a lint
 #[derive(Builder)]
