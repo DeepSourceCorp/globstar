@@ -1,3 +1,6 @@
+type Range = (usize, usize);
+type Annotation = (Range, String);
+
 pub fn trim_indent(mut text: &str) -> String {
     if text.starts_with('\n') {
         text = &text[1..];
@@ -19,9 +22,7 @@ pub fn trim_indent(mut text: &str) -> String {
         .collect()
 }
 
-type Range = (usize, usize);
-
-pub fn extract_range_annotation(mut line: &str) -> Option<Range> {
+fn extract_range_annotation(mut line: &str) -> Option<Range> {
     let marker = '^';
 
     line.find(marker).map(|idx| {
@@ -31,8 +32,6 @@ pub fn extract_range_annotation(mut line: &str) -> Option<Range> {
         (idx, idx + len)
     })
 }
-
-type Annotation = (Range, String);
 
 pub fn extract_annotations(src: &str, comment_start: &str) -> Vec<(Annotation, String)> {
     let mut res = Vec::new();
