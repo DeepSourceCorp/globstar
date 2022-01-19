@@ -20,7 +20,7 @@ lazy_static! {
         .unwrap();
 }
 
-fn validator<'a>(meta: &Lint, node: Node<'a>, _ctx: Option<Box<dyn Any>>) -> Vec<Diagnostic> {
+fn validator<'a>(meta: &Lint, node: Node<'a>, _ctx: &Option<Box<dyn Any>>) -> Vec<Diagnostic> {
     let mut query_cursor = QueryCursor::new();
 
     query_cursor
