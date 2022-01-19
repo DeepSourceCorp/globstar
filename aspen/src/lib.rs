@@ -8,19 +8,18 @@ use std::any::Any;
 use derive_builder::Builder;
 use tree_sitter::{Language, Node, Parser, Query, Range};
 
+pub type Context = Option<Box<dyn Any>>;
+
 pub struct Linter {
     lints: Vec<&'static Lint>,
     language: Language,
     comment_str: &'static str,
+    context: Context,
 }
 
 impl Linter {
     /// Run analysis on given source code, producing a list of diagnostics
-    pub fn analyze(
-        &self,
-        src: &str,
-        ctx: &Option<Box<dyn Any>>,
-    ) -> Vec<(&'static str, Diagnostic)> {
+    pub fn analyze(&self, src: &str) -> Vec<(&'static str, Diagnostic)> {
         let mut parser = Parser::new();
         parser.set_language(self.language).unwrap();
 
@@ -30,7 +29,7 @@ impl Linter {
         self.lints
             .iter()
             .map(|lint| {
-                let diagnostics = (lint.validate)(lint, root_node, ctx);
+                let diagnostics = (lint.validate)(lint, root_node, &self.context);
                 diagnostics.into_iter().map(|d| (lint.code, d))
             })
             .flatten()
@@ -43,6 +42,7 @@ impl Linter {
             lints: vec![],
             language,
             comment_str: "//",
+            context: None,
         }
     }
 

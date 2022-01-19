@@ -1,10 +1,8 @@
-use std::any::Any;
-
 use crate::Linter;
 
 impl Linter {
     /// Test the linter on an annotated source file
-    pub fn test(&self, src: &str, ctx: Option<Box<dyn Any>>) {
+    pub fn test(&self, src: &str) {
         use crate::Diagnostic;
 
         use holly::{extract_annotations, trim_indent};
@@ -12,7 +10,7 @@ impl Linter {
 
         let src = trim_indent(src);
         let annotations = extract_annotations(&src, self.comment_str);
-        let diagnostics = self.analyze(&src, ctx);
+        let diagnostics = self.analyze(&src);
 
         // panic if there are more annotations than diagnostics produced
         // or vice-versa
