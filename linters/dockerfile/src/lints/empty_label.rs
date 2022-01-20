@@ -3,13 +3,14 @@ use std::any::Any;
 use crate::DOCKERFILE;
 
 use aspen::{
+    build_query,
     tree_sitter::{Node, Query, QueryCursor},
     Diagnostic, Lint, LintBuilder,
 };
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref QUERY: Query = Query::new(
+    pub static ref QUERY: Query = build_query(
         *DOCKERFILE,
         r#"
         (
@@ -17,8 +18,7 @@ lazy_static! {
             (#is? @value "")
         )
         "#
-    )
-    .unwrap();
+    );
     pub static ref LINT: Lint = LintBuilder::default()
         .name("empty-label")
         .code("DO-W1000")

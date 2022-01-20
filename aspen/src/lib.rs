@@ -6,7 +6,7 @@ pub use tree_sitter;
 use std::any::Any;
 
 use derive_builder::Builder;
-use tree_sitter::{Language, Node, Parser, Query, Range};
+use tree_sitter::{Language, Node, Parser, Query, QueryError, Range};
 
 pub type Context = Option<Box<dyn Any>>;
 
@@ -100,6 +100,28 @@ impl Diagnostic {
         Self {
             at,
             message: message.as_ref().to_owned(),
+        }
+    }
+}
+
+/// Fast failing query-builder
+pub fn build_query(language: Language, query_str: &str) -> Query {
+    let query = Query::new(language, query_str);
+    match query {
+        Ok(q) => return q,
+        Err(QueryError {
+            row,
+            column,
+            message,
+            ..
+        }) => {
+            log::error!(
+                "query builder failed with `{}` on line {}, col {}",
+                message,
+                row,
+                column
+            );
+            panic!();
         }
     }
 }

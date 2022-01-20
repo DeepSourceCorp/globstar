@@ -1,9 +1,18 @@
-mod empty_label;
-mod relative_workdir;
-mod run_cd;
-
-use aspen::Lint;
-
-pub fn lints() -> Vec<&'static Lint> {
-    vec![&empty_label::LINT, &relative_workdir::LINT, &run_cd::LINT]
+macro_rules! lints {
+    ($($s:ident),*,) => {
+        lints!($($s),*);
+    };
+    ($($s:ident),*) => {
+        $(
+            mod $s;
+        )*
+        ::lazy_static::lazy_static! {
+            pub static ref LINTS: Vec<&'static aspen::Lint> = vec![$(&$s::LINT),*];
+        }
+    }
+}
+lints! {
+    empty_label,
+    relative_workdir,
+    run_cd,
 }

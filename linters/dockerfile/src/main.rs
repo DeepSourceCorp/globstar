@@ -1,5 +1,7 @@
 mod lints;
 
+use crate::lints::LINTS;
+
 use aspen::{tree_sitter::Language, Linter};
 use lazy_static::lazy_static;
 
@@ -9,7 +11,7 @@ lazy_static! {
 
 fn main() {
     let linter = Linter::new(*DOCKERFILE)
-        .lints(lints::lints())
+        .lints(LINTS.to_vec())
         .comment_str("#");
     linter.run_analysis();
 }

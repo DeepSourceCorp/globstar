@@ -1,7 +1,17 @@
-use aspen::Lint;
+macro_rules! lints {
+    ($($s:ident),*,) => {
+        lints!($($s),*);
+    };
+    ($($s:ident),*) => {
+        $(
+            mod $s;
+        )*
+        ::lazy_static::lazy_static! {
+            pub static ref LINTS: Vec<&'static aspen::Lint> = vec![$(&$s::LINT),*];
+        }
+    }
+}
 
-mod assignment_in_condition;
-
-pub fn lints() -> Vec<&'static Lint> {
-    vec![&assignment_in_condition::LINT]
+lints! {
+    assignment_in_condition,
 }
