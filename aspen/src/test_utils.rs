@@ -10,7 +10,7 @@ impl Linter {
 
         let src = trim_indent(src);
         let annotations = extract_annotations(&src, self.comment_str);
-        let diagnostics = self.analyze(&src);
+        let diagnostics = self.__analyze(&src);
 
         // panic if there are more annotations than diagnostics produced
         // or vice-versa
@@ -22,7 +22,6 @@ impl Linter {
             let ((range, content), comment) = annotation;
             let (_, Diagnostic { at, message }) = diagnostic;
 
-            let message = message.to_string(&src);
             let actual_content = &src[at.start_byte..at.end_byte];
 
             pretty_assert_eq!(

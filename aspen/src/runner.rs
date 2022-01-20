@@ -44,11 +44,11 @@ impl Linter {
         let src = fs::read_to_string(fq_path).map_err(AnalysisErr::Read)?;
 
         Ok(self
-            .analyze(&src)
+            .__analyze(&src)
             .into_iter()
             .map(|(code, diagnostic)| Issue {
                 code,
-                message: diagnostic.message.to_string(&src),
+                message: diagnostic.message,
                 location: Location {
                     path: stripped_path.to_path_buf(),
                     position: Span {
