@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+
+# tater is a utility to fetch and run marvin-rust on a list of repos.
+
+export workdir="${TATER_WORK_DIR:-.work_dir}"
+
+usage() {
+cat << EOF
+usage
+-----
+
+tater [-f <repo_list> | -r <repo> | -a | -c]
+
+    -f <repo_list>          fetch git repos
+    -r <repo>               run analysis on single repo
+    -a                      run analysis on all repos
+    -c                      clean
+
+tater does all its work inside .work_dir, override this via the TATER_WORK_DIR
+environment variable. analysis results are written into
+TATER_WORK_DIR/<repo>/analysis_results.json
+EOF
+}
+
+stderr() {
+    printf "$@" >&2
+}
+
+sanity() {
+    for cmd in git parallel cargo jq; do
+        if ! command -v "$cmd" &> /dev/null; then
+            stderr "%s not installed" "$cmd"
+            exit 1
+        fi
+    done
+}
+
+# $1 - path to project repo
+analysis_config() {
+    local rust_files file_json tmp_config
+
+    tmp_config=$(mktemp /tmp/tmp_config-XXXXXXX.json)
+    rust_files=($(IFS=$'\n'; find "$1" -name '*.rb' -type f))
+    file_json=$(echo "${rust_files[@]}" | jq -nRc 'inputs | split(" ")')
+
+    cat << EOF > "$tmp_config"
+{
+    "files": $file_json,
+    "exclude_patterns": [],
+    "exclude_files": [],
+    "test_files": [],
+    "test_patterns": [],
+    "analyzer_meta": {
+        "name": "ruby",
+        "enabled": true
+    }
+}
+EOF
+    printf %s "$tmp_config"
+}
+export -f analysis_config
+
+# $1 - username/reponame
+fetch() {
+    local repo
+
+    repo=${1#*/}
+
+    if [ -d "$workdir/$repo" ]; then
+        git -C "$workdir/$repo" \
+            pull -r \
+            --recurse-submodules
+    else
+        git -C "$workdir" \
+            clone -q \
+            --depth 1 \
+            --recurse-submodules \
+            https://github.com/"$1"
+    fi
+}
+export -f fetch
+
+# $1 - path to project repo
+analyze() {
+    local config
+
+    config=$(analysis_config "$1")
+    CODE_PATH="$1" \
+        ANALYSIS_CONFIG_PATH="$config" \
+        ANALYSIS_RESULT_PATH="$1/analysis_results.json" \
+        cargo run -p ruby
+}
+export -f analyze
+
+main() {
+    if [ $# -eq 0 ]; then
+        usage
+        exit 1
+    fi
+
+    sanity
+    mkdir -p "$workdir"
+
+    while getopts "f:r:ach" opts; do
+        case "${opts}" in
+            f)
+                repo_list="${OPTARG}";
+                if [ ! -f "$repo_list" ]; then
+                    stderr "%s does not exist" "$repo_list"
+                    exit 1
+                fi
+
+                parallel --progress -j 8 -a "$repo_list" 'fetch {}'
+                ;;
+            r)
+                analyze "${OPTARG}"
+                ;;
+            a) 
+                parallel --progress -j 8 'analyze {}' ::: "$workdir"/*
+                ;;
+            c)
+                rm -rf "$workdir"
+                ;;
+            *)
+                usage
+                exit 1
+                ;;
+        esac
+    done
+    shift $((OPTIND-1))
+}
+
+main "$@"

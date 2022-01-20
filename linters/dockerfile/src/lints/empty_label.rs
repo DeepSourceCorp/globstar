@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::RUBY;
+use crate::DOCKERFILE;
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
@@ -9,11 +9,19 @@ use aspen::{
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref QUERY: Query =
-        Query::new(*RUBY, "(if (assignment left: (_) right: (_)) @raise)").unwrap();
+    pub static ref QUERY: Query = Query::new(
+        *DOCKERFILE,
+        r#"
+        (
+            (label_instruction (label_pair key: (_) @key value: (_) @value))
+            (#is? @value "")
+        )
+        "#
+    )
+    .unwrap();
     pub static ref LINT: Lint = LintBuilder::default()
-        .name("assign-instead-of-eq")
-        .code("RB-W1000")
+        .name("empty-label")
+        .code("DO-W1000")
         .query(&*QUERY)
         .validate(validator)
         .build()
@@ -28,16 +36,16 @@ fn validator<'a>(
 ) -> Vec<Diagnostic> {
     let mut query_cursor = QueryCursor::new();
 
+    let key_capture = meta.query.capture_index_for_name("key").unwrap();
+
     query_cursor
-        .matches(&meta.query, node, |_n: Node| std::iter::empty())
+        .matches(&meta.query, node, |_: Node| std::iter::empty())
         .flat_map(|m| m.captures)
+        .filter(|capture| capture.index == key_capture)
         .map(|capture| {
             let at = capture.node.range();
             let text = capture.node.utf8_text(src).unwrap();
-            let message = format!(
-                "Perhaps this assignment `{}` is supposed to be a comparison",
-                text,
-            );
+            let message = format!("Found empty label: `{}`", text);
             Diagnostic::new(at, message)
         })
         .collect::<Vec<_>>()
@@ -47,24 +55,23 @@ fn validator<'a>(
 mod tests {
     use super::LINT;
 
-    use crate::RUBY;
+    use crate::DOCKERFILE;
 
     use aspen::Linter;
 
     fn linter() -> Linter {
-        Linter::new(*RUBY).lint(&LINT).comment_str("#")
+        Linter::new(*DOCKERFILE).lint(&LINT).comment_str("#")
     }
 
     #[test]
     fn trivial() {
         linter().test(
             r#"
-                if a = 2
-                 # ^^^^^ Perhaps this assignment `a = 2` is supposed to be a comparison
-                  puts "no"
-                else
-                  puts "hi"
-                end
+            FROM abc
+            LABEL aha=""
+                # ^^^ Found empty label: `aha`
+            LABEL abc=""
+                # ^^^ Found empty label: `abc`
             "#,
         )
     }

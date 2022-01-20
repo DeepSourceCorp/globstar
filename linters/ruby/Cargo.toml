@@ -7,6 +7,5 @@ edition = "2021"
 
 [dependencies]
 aspen = { path = "../../aspen/" }
-marvin = { path = "../../marvin" }
-tree-sitter-ruby = { path = "../../langs/tree-sitter-ruby" }
+tree-sitter-ruby = { path = "../../../tree-sitter-ruby/" }
 lazy_static = "1.0"

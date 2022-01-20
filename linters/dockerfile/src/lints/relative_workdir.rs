@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::RUBY;
+use crate::DOCKERFILE;
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
@@ -9,11 +9,19 @@ use aspen::{
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref QUERY: Query =
-        Query::new(*RUBY, "(if (assignment left: (_) right: (_)) @raise)").unwrap();
+    pub static ref QUERY: Query = Query::new(
+        *DOCKERFILE,
+        r#"
+        (
+            (workdir_instruction (path) @value)
+            (#not-match? @value "^/.*$")
+        )
+        "#
+    )
+    .unwrap();
     pub static ref LINT: Lint = LintBuilder::default()
-        .name("assign-instead-of-eq")
-        .code("RB-W1000")
+        .name("relative-workdir")
+        .code("DO-W1001")
         .query(&*QUERY)
         .validate(validator)
         .build()
@@ -29,15 +37,12 @@ fn validator<'a>(
     let mut query_cursor = QueryCursor::new();
 
     query_cursor
-        .matches(&meta.query, node, |_n: Node| std::iter::empty())
+        .matches(&meta.query, node, src)
         .flat_map(|m| m.captures)
         .map(|capture| {
             let at = capture.node.range();
             let text = capture.node.utf8_text(src).unwrap();
-            let message = format!(
-                "Perhaps this assignment `{}` is supposed to be a comparison",
-                text,
-            );
+            let message = format!("Found relative path to WORKDIR directive: `{}`", text,);
             Diagnostic::new(at, message)
         })
         .collect::<Vec<_>>()
@@ -47,24 +52,22 @@ fn validator<'a>(
 mod tests {
     use super::LINT;
 
-    use crate::RUBY;
+    use crate::DOCKERFILE;
 
     use aspen::Linter;
 
     fn linter() -> Linter {
-        Linter::new(*RUBY).lint(&LINT).comment_str("#")
+        Linter::new(*DOCKERFILE).lint(&LINT).comment_str("#")
     }
 
     #[test]
     fn trivial() {
+        dbg!(&LINT.query);
         linter().test(
             r#"
-                if a = 2
-                 # ^^^^^ Perhaps this assignment `a = 2` is supposed to be a comparison
-                  puts "no"
-                else
-                  puts "hi"
-                end
+            WORKDIR foo/bar
+                  # ^^^^^^^ Found relative path to WORKDIR directive: `foo/bar`
+            WORKDIR /abc/def
             "#,
         )
     }
