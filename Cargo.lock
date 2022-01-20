@@ -123,6 +123,11 @@ checksum = "0e25ea47919b1560c4e3b7fe0aaab9becf5b84a10325ddf7db0f0ba5e1026499"
 [[package]]
 name = "dockerfile"
 version = "0.1.0"
+dependencies = [
+ "aspen",
+ "lazy_static",
+ "tree-sitter-dockerfile",
+]
 
 [[package]]
 name = "fnv"
@@ -230,7 +235,6 @@ version = "0.1.0"
 dependencies = [
  "aspen",
  "lazy_static",
- "marvin",
  "tree-sitter-ruby",
 ]
 
@@ -310,12 +314,20 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter"
-version = "0.19.5"
+version = "0.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad726ec26496bf4c083fff0f43d4eb3a2ad1bba305323af5ff91383c0b6ecac0"
+checksum = "c36be3222512d85a112491ae0cc280a38076022414f00b64582da1b7565ffd82"
 dependencies = [
  "cc",
  "regex",
+]
+
+[[package]]
+name = "tree-sitter-dockerfile"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]
