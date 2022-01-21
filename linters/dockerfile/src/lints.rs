@@ -11,8 +11,11 @@ macro_rules! lints {
         }
     }
 }
+
 lints! {
     empty_label,
     relative_workdir,
     run_cd,
+    unpinned_tag,
+    shell_command_entry_point,
 }

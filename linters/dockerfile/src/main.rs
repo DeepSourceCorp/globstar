@@ -13,5 +13,7 @@ fn main() {
     let linter = Linter::new(*DOCKERFILE)
         .lints(LINTS.to_vec())
         .comment_str("#");
-    linter.run_analysis();
+    if let Err(e) = linter.run_analysis() {
+        eprintln!("error: {}", e);
+    }
 }
