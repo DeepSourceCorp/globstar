@@ -44,10 +44,11 @@
 
       overlay = final: prev: {
 
-        statix = with final;
+        globstar-ruby = with final;
           let
-            pname = "statix";
-            packageMeta = (lib.importTOML ./bin/Cargo.toml).package;
+            analyzer-name = "ruby";
+            pname = "globstar-${analyzer-name}";
+            packageMeta = (lib.importTOML ./linters/ruby/Cargo.toml).package;
             rustPlatform = makeRustPlatform {
               inherit (rustChannel final) cargo rustc;
             };
@@ -55,34 +56,36 @@
           rustPlatform.buildRustPackage {
             inherit pname;
             inherit (packageMeta) version;
-
+            cargoBuildFlags = [ "-p" "${analyzer-name}" ];
             src = gitignoreSource ./.;
             cargoLock.lockFile = ./Cargo.lock;
-
-            buildFeatures = "json";
-
-            meta = with lib; {
-              description = "Lints and suggestions for the Nix programming language";
-              homepage = "https://git.peppe.rs/languages/statix/about";
-              license = licenses.mit;
-            };
           };
 
-        statix-vim =
-          with final; vimUtils.buildVimPlugin {
-            pname = "statix-vim";
-            version = "0.1.0";
-            src = ./vim-plugin;
+        globstar-dockerfile = with final;
+          let
+            analyzer-name = "dockerfile";
+            pname = "globstar-${analyzer-name}";
+            packageMeta = (lib.importTOML ./linters/dockerfile/Cargo.toml).package;
+            rustPlatform = makeRustPlatform {
+              inherit (rustChannel final) cargo rustc;
+            };
+          in
+          rustPlatform.buildRustPackage {
+            inherit pname;
+            inherit (packageMeta) version;
+            cargoBuildFlags = [ "-p" "${analyzer-name}" ];
+            src = gitignoreSource ./.;
+            cargoLock.lockFile = ./Cargo.lock;
           };
 
       };
 
       packages = forAllSystems (system: {
-        inherit (nixpkgsFor."${system}") statix statix-vim;
+        inherit (nixpkgsFor."${system}") globstar-ruby globstar-dockerfile;
       });
 
       defaultPackage =
-        forAllSystems (system: self.packages."${system}".statix);
+        forAllSystems (system: self.packages."${system}".globstar-dockerfile);
 
       devShell = forAllSystems (system:
         let
@@ -100,8 +103,6 @@
         pkgs.mkShell {
           nativeBuildInputs = [
             pkgs.bacon
-            pkgs.cargo-insta
-            # pkgs.gcc11
             pkgs.darwin.libiconv
             rust-analyzer
             toolchain
