@@ -8,22 +8,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    gitignore = {
-      url = "github:hercules-ci/gitignore.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
   };
 
   outputs =
     { self
     , nixpkgs
     , fenix
-    , gitignore
     }:
     let
-      inherit (gitignore.lib) gitignoreSource;
-
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       nixpkgsFor = forAllSystems (system:
@@ -42,47 +34,7 @@
     in
     {
 
-      overlay = final: prev: {
-
-        globstar-ruby = with final;
-          let
-            analyzer-name = "ruby";
-            pname = "globstar-${analyzer-name}";
-            packageMeta = (lib.importTOML ./linters/ruby/Cargo.toml).package;
-            rustPlatform = makeRustPlatform {
-              inherit (rustChannel final) cargo rustc;
-            };
-          in
-          rustPlatform.buildRustPackage {
-            inherit pname;
-            inherit (packageMeta) version;
-            cargoBuildFlags = [ "-p" "${analyzer-name}" ];
-            src = gitignoreSource ./.;
-            cargoLock.lockFile = ./Cargo.lock;
-          };
-
-        globstar-dockerfile = with final;
-          let
-            analyzer-name = "dockerfile";
-            pname = "globstar-${analyzer-name}";
-            packageMeta = (lib.importTOML ./linters/dockerfile/Cargo.toml).package;
-            rustPlatform = makeRustPlatform {
-              inherit (rustChannel final) cargo rustc;
-            };
-          in
-          rustPlatform.buildRustPackage {
-            inherit pname;
-            inherit (packageMeta) version;
-            cargoBuildFlags = [ "-p" "${analyzer-name}" ];
-            src = gitignoreSource ./.;
-            cargoLock.lockFile = ./Cargo.lock;
-          };
-
-      };
-
-      packages = forAllSystems (system: {
-        inherit (nixpkgsFor."${system}") globstar-ruby globstar-dockerfile;
-      });
+      overlay = final: prev: { };
 
       defaultPackage =
         forAllSystems (system: self.packages."${system}".globstar-dockerfile);
