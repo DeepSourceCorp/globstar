@@ -4,6 +4,7 @@ members = [
     "marvin",    # rust types/bindings to marvin
     "aspen",     # everything you need to write lints
     "holly",     # annotation based test library
+    "cedar",     # scope resolution magic
     "linters/*", # binaries that implement `Linter`s
 ]
 
