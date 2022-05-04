@@ -25,11 +25,11 @@ macro_rules! environment {
 
 // paths to default to if marvin-rust can't find these in environment
 mod defaults {
-    pub(crate) static CODE_PATH: &'static str = "/code";
-    pub(crate) static ANALYSIS_CONFIG_PATH: &'static str = "/toolbox/analysis_config.json";
-    pub(crate) static ANALYSIS_RESULT_PATH: &'static str = "/toolbox/analysis_results.json";
-    pub(crate) static AUTOFIX_CONFIG_PATH: &'static str = "/toolbox/autofix_config.json";
-    pub(crate) static AUTOFIX_RESULT_PATH: &'static str = "/toolbox/autofix_results.json";
+    pub(crate) static CODE_PATH: &str = "/code";
+    pub(crate) static ANALYSIS_CONFIG_PATH: &str = "/toolbox/analysis_config.json";
+    pub(crate) static ANALYSIS_RESULT_PATH: &str = "/toolbox/analysis_results.json";
+    pub(crate) static AUTOFIX_CONFIG_PATH: &str = "/toolbox/autofix_config.json";
+    pub(crate) static AUTOFIX_RESULT_PATH: &str = "/toolbox/autofix_results.json";
 }
 
 pub trait Load {
