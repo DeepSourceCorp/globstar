@@ -10,7 +10,8 @@ use tree_sitter::{Language, Node, Parser, Query, QueryError, Range};
 
 pub type Context = Option<Box<dyn Any>>;
 
-pub struct Linter { lints: Vec<&'static Lint>,
+pub struct Linter {
+    lints: Vec<&'static Lint>,
     language: Language,
     comment_str: &'static str,
     context: Context,
