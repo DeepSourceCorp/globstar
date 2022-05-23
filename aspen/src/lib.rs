@@ -6,7 +6,6 @@ pub use tree_sitter;
 use std::{cell::RefCell, rc::Rc};
 
 use cedar::{LocalScope, ResolutionMethod, ScopeStack};
-use derive_builder::Builder;
 use tree_sitter::{Language, Node, Parser, Query, QueryError, Range};
 
 pub struct Context<'a> {
@@ -32,14 +31,14 @@ impl<'a> Context<'a> {
 }
 
 pub struct Linter {
-    lints: Vec<&'static Lint>,
+    validators: Vec<ValidatorFn>,
     language: Language,
     comment_str: &'static str,
     scopes: Option<&'static str>,
 }
 
 impl Linter {
-    fn __analyze(&self, src: &str) -> Vec<(&'static str, Diagnostic)> {
+    fn __analyze(&self, src: &str) -> Vec<Occurrence> {
         let mut parser = Parser::new();
         parser.set_language(self.language).unwrap();
 
@@ -52,12 +51,9 @@ impl Linter {
             .map(|query| ResolutionMethod::Generic.build_scope(query, root_node, src))
             .map(|root_scope| Context { root_scope });
 
-        self.lints
+        self.validators
             .iter()
-            .map(|lint| {
-                let diagnostics = (lint.validate)(lint, root_node, &context, src.as_bytes());
-                diagnostics.into_iter().map(|d| (lint.code, d))
-            })
+            .map(|v| v(root_node, &context, src.as_bytes()))
             .flatten()
             .collect()
     }
@@ -65,7 +61,7 @@ impl Linter {
     /// Create a new Linter instance of a language
     pub fn new(language: Language) -> Self {
         Self {
-            lints: vec![],
+            validators: vec![],
             language,
             comment_str: "//",
             scopes: None,
@@ -79,14 +75,14 @@ impl Linter {
     }
 
     /// Add a lint to this Linter
-    pub fn lint(mut self, lint: &'static Lint) -> Self {
-        self.lints.push(lint);
+    pub fn validator(mut self, validator: ValidatorFn) -> Self {
+        self.validators.push(validator);
         self
     }
 
     /// Set a list of lints accepted by this linter
-    pub fn lints(mut self, lints: Vec<&'static Lint>) -> Self {
-        self.lints = lints;
+    pub fn validators(mut self, validators: Vec<ValidatorFn>) -> Self {
+        self.validators = validators;
         self
     }
 
@@ -105,18 +101,27 @@ impl Linter {
 }
 
 /// Describes the rule itself
-/// The rule can make use of metadata, the query, anything from the tree and
-/// additional context provided by each linter via Box<dyn Any>
-pub type Validator = for<'a> fn(&Lint, Node, &Option<Context<'a>>, &[u8]) -> Vec<Diagnostic>;
+pub type ValidatorFn = for<'a> fn(Node, &Option<Context<'a>>, &[u8]) -> Vec<Occurrence>;
 
-/// Metadata of a lint
-#[derive(Builder)]
-#[builder(pattern = "owned")]
+pub struct Occurrence {
+    pub name: &'static str,
+    pub code: &'static str,
+    pub diagnostic: Diagnostic,
+}
+
 pub struct Lint {
     pub name: &'static str,
     pub code: &'static str,
-    pub query: &'static Query,
-    pub validate: Validator,
+}
+
+impl Lint {
+    pub fn raise<S: AsRef<str>>(&self, at: Range, message: S) -> Occurrence {
+        Occurrence {
+            name: self.name,
+            code: self.code,
+            diagnostic: Diagnostic::new(at, message),
+        }
+    }
 }
 
 /// An occurrence of an offense

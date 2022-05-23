@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use crate::{
     err::{AnalysisErr, AspenErr},
-    Linter,
+    Diagnostic, Linter, Occurrence,
 };
 
 use marvin::{
@@ -46,23 +46,29 @@ impl Linter {
         Ok(self
             .__analyze(&src)
             .into_iter()
-            .map(|(code, diagnostic)| Issue {
-                code,
-                message: diagnostic.message,
-                location: Location {
-                    path: stripped_path.to_path_buf(),
-                    position: Span {
-                        begin: Position {
-                            line: diagnostic.at.start_point.row,
-                            column: diagnostic.at.start_point.column,
-                        },
-                        end: Position {
-                            line: diagnostic.at.end_point.row,
-                            column: diagnostic.at.end_point.column,
+            .map(
+                |Occurrence {
+                     code,
+                     diagnostic: Diagnostic { at, message },
+                     ..
+                 }| Issue {
+                    code,
+                    message,
+                    location: Location {
+                        path: stripped_path.to_path_buf(),
+                        position: Span {
+                            begin: Position {
+                                line: at.start_point.row,
+                                column: at.start_point.column,
+                            },
+                            end: Position {
+                                line: at.end_point.row,
+                                column: at.end_point.column,
+                            },
                         },
                     },
                 },
-            })
+            )
             .collect())
     }
 }
