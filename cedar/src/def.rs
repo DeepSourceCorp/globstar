@@ -1,6 +1,6 @@
 use crate::LocalScope;
 
-use std::{cell::RefCell, fmt, ops, rc::Rc};
+use std::{cell::RefCell, fmt, rc::Rc};
 
 use tree_sitter::Range;
 
@@ -16,11 +16,24 @@ pub struct LocalDef<'a> {
 impl<'a> fmt::Debug for LocalDef<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("LocalDef")
-            .field("def_range", &self.def_range)
+            .field(
+                "def range",
+                &format_args!(
+                    "({}, {})",
+                    &self.def_range.start_byte, &self.def_range.end_byte,
+                ),
+            )
             .field("value_range", &self.value_range)
             .field("is_mutable", &self.is_mutable)
             .field("name", &self.name)
-            .field("owning scope", &self.scope.borrow().range)
+            .field(
+                "owning scope",
+                &format_args!(
+                    "({}, {})",
+                    &self.scope.borrow().range.start_byte,
+                    &self.scope.borrow().range.end_byte,
+                ),
+            )
             .field("reference count", &self.references.len())
             .field(
                 "references",

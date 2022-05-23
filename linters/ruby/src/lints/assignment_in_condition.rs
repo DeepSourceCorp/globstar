@@ -1,10 +1,8 @@
-use std::any::Any;
-
 use crate::RUBY;
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
-    Diagnostic, Lint, LintBuilder,
+    Context, Diagnostic, Lint, LintBuilder,
 };
 use lazy_static::lazy_static;
 
@@ -23,7 +21,7 @@ lazy_static! {
 fn validator<'a>(
     meta: &Lint,
     node: Node<'a>,
-    _ctx: &Option<Box<dyn Any>>,
+    _ctx: &Option<Context>,
     src: &[u8],
 ) -> Vec<Diagnostic> {
     let mut query_cursor = QueryCursor::new();

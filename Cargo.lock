@@ -160,6 +160,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "go"
+version = "0.1.0"
+dependencies = [
+ "aspen",
+ "lazy_static",
+ "tree-sitter-go",
+]
+
+[[package]]
+name = "hare"
+version = "0.1.0"
+dependencies = [
+ "aspen",
+ "lazy_static",
+ "tree-sitter-hare",
+]
+
+[[package]]
 name = "holly"
 version = "0.1.0"
 
@@ -368,6 +386,24 @@ name = "tree-sitter-elm"
 version = "5.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b5fc7afda656cffbc92bb5bcda7842e01d6247612835276e3fa30c48f73cd5d"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-go"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71967701c8214be4aa77e0260e98361e6fd71ceec1d9d03abb37a22c9f60d0ff"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-hare"
+version = "0.0.1"
 dependencies = [
  "cc",
  "tree-sitter",

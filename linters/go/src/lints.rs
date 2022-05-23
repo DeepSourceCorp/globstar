@@ -13,9 +13,5 @@ macro_rules! lints {
 }
 
 lints! {
-    // assignment_in_condition,
-    // useless_cmp,
-    // sussign,
-    // empty_to_json,
-    variable_shadowing,
+    variable_shadowing
 }
