@@ -94,7 +94,7 @@ fn validate_bash<'a>(node: Node, src: &[u8]) -> Option<String> {
     let first_arg = BASH_QUERY.capture_index_for_name("first-arg").unwrap();
 
     QueryCursor::new()
-        .matches(&BASH_QUERY, dbg!(node), src)
+        .matches(&BASH_QUERY, node, src)
         .next()
         .and_then(|m| {
             let command = m.captures.iter().find(|c| c.index == command_idx)?;

@@ -43,7 +43,6 @@ fn validator<'a>(
             let text = capture.node.utf8_text(src).unwrap();
             let scope_stack = ctx.scope_stack_of(capture.node).unwrap();
             let mut shadowed_range: Option<Range> = None;
-            dbg!(ctx.root_scope());
             for scope in scope_stack.skip(1) {
                 for local_def in scope.borrow().local_defs.iter() {
                     if local_def.borrow().name == text {
