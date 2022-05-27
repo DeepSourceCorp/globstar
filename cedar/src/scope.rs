@@ -1,6 +1,6 @@
 use crate::LocalDef;
 
-use std::{cell::RefCell, fmt, ops, rc::Rc};
+use std::{cell::RefCell, fmt, rc::Rc};
 
 use tree_sitter::Range;
 

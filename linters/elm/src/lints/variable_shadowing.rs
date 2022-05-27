@@ -1,13 +1,13 @@
-use crate::ELM;
+use crate::{lints::VARIABLE_SHADOWING, ELM};
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor, Range},
-    Context, Diagnostic, Lint, LintBuilder,
+    Context, Occurrence,
 };
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref QUERY: Query = Query::new(
+    static ref QUERY: Query = Query::new(
         *ELM,
         r#"
             [
@@ -16,27 +16,15 @@ lazy_static! {
             "#
     )
     .unwrap();
-    pub static ref LINT: Lint = LintBuilder::default()
-        .name("variable-shadowing")
-        .code("ELM-W1000")
-        .query(&*QUERY)
-        .validate(validator)
-        .build()
-        .unwrap();
 }
 
-fn validator<'a>(
-    meta: &Lint,
-    node: Node,
-    ctx: &Option<Context<'a>>,
-    src: &[u8],
-) -> Vec<Diagnostic> {
+pub fn validate<'a>(node: Node, ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
     let mut query_cursor = QueryCursor::new();
 
     let ctx = if let Some(c) = ctx { c } else { return vec![] };
 
     query_cursor
-        .matches(&meta.query, node, |_n: Node| std::iter::empty())
+        .matches(&QUERY, node, |_n: Node| std::iter::empty())
         .flat_map(|m| m.captures)
         .flat_map(|capture| {
             let at = capture.node.range();
@@ -61,22 +49,20 @@ fn validator<'a>(
                 "Shadowing `{}`, defined on line {}, col {}",
                 text, s_row, s_col
             );
-            Some(Diagnostic::new(at, message))
+            Some(VARIABLE_SHADOWING.raise(at, message))
         })
         .collect::<Vec<_>>()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::LINT;
-
     use crate::ELM;
 
     use aspen::Linter;
 
     fn linter() -> Linter {
         Linter::new(*ELM)
-            .lint(&LINT)
+            .validator(super::validate)
             .scopes(include_str!("../scopes.scm"))
             .comment_str("--")
     }

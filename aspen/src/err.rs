@@ -2,6 +2,7 @@ use std::io;
 
 use marvin::err::MarvinErr;
 use thiserror::Error;
+use tree_sitter::QueryError as TSQueryError;
 
 #[derive(Error, Debug)]
 pub enum AspenErr {
@@ -9,6 +10,8 @@ pub enum AspenErr {
     Marvin(#[from] MarvinErr),
     #[error("runner error: {0}")]
     Runner(RunnerErr),
+    #[error("query error: {0}")]
+    QueryError(#[from] TSQueryError),
 }
 
 #[derive(Error, Debug)]

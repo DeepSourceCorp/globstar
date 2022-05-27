@@ -6,5 +6,6 @@ members = [
     "holly",     # annotation based test library
     "cedar",     # scope resolution magic
     "linters/*", # binaries that implement `Linter`s
+    "langs/*",   # tree-sitter parsers, mildly vandalized for personal use
 ]
 

@@ -1,17 +1,9 @@
-macro_rules! lints {
-    ($($s:ident),*,) => {
-        lints!($($s),*);
-    };
-    ($($s:ident),*) => {
-        $(
-            mod $s;
-        )*
-        ::lazy_static::lazy_static! {
-            pub static ref LINTS: Vec<&'static aspen::Lint> = vec![$(&$s::LINT),*];
-        }
-    }
-}
+use aspen::{Lint, ValidatorFn};
+mod variable_shadowing;
 
-lints! {
-    variable_shadowing
-}
+const VARIABLE_SHADOWING: Lint = Lint {
+    name: "variable shadowing",
+    code: "ELM-W1000",
+};
+
+pub const LINTS: [ValidatorFn; 1] = [variable_shadowing::validate];

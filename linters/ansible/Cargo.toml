@@ -1,0 +1,12 @@
+[package]
+name = "ansible"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aspen = { path = "../../aspen" }
+tree-sitter-yaml = { path = "../../langs/tree-sitter-yaml" }
+tree-sitter-bash = { path = "../../langs/tree-sitter-bash" }
+lazy_static = "1.0"

@@ -12,7 +12,7 @@ lazy_static! {
 fn main() {
     let scopes = include_str!("scopes.scm");
     let linter = Linter::new(*ELM)
-        .lints(LINTS.to_vec())
+        .validators(LINTS.to_vec())
         .comment_str("#")
         .scopes(scopes);
     linter.run_analysis();
