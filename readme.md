@@ -39,7 +39,9 @@ members = [
     "marvin",    # rust types/bindings to marvin
     "aspen",     # everything you need to write lints
     "holly",     # annotation based test library
+    "cedar",     # scope resolution magic
     "linters/*", # binaries that implement `Linter`s
+    "langs/*",   # tree-sitter parsers, mildly vandalized for personal use
 ]
 ```
 
@@ -63,9 +65,9 @@ end
 ```
 
 `holly` contains utils to produce:
-- the span of the annotation `3..7`
-- the content of the span `a = 2`
-- the comment `offending code`
+- the span of the annotation: `3..7`
+- the content of the span: `a = 2`
+- the comment: `offending code`
 
 #### `aspen`
 
@@ -76,9 +78,9 @@ linters with `aspen` is as simple as:
 
 ```rust
 let LANGUAGE = tree_sitter_x::language();
-let LINTS = vec![ /* a collection of aspen::Lint */ ];
+let VALIDATORS = vec![ /* a collection of aspen::Validator */ ];
 
-let linter = Linter::new(LANGUAGE).lints(LINTS);
+let linter = Linter::new(LANGUAGE).validators(VALIDATORS);
 
 // perform a marvin-compatible analysis run
 // - reads analysis_config.json from ANALYSIS_CONFIG_PATH
@@ -87,6 +89,11 @@ let linter = Linter::new(LANGUAGE).lints(LINTS);
 // - writes analysis_results.json to ANALYSIS_RESULT_PATH
 linter.run_analysis()?;
 ```
+
+#### cedar
+
+scope resolution through tree-sitter queries, currently very
+primitive and non-configurable.
 
 #### `linters`
 

@@ -9,4 +9,4 @@ edition = "2021"
 aspen = { path = "../../aspen" }
 tree-sitter-yaml = { path = "../../langs/tree-sitter-yaml" }
 tree-sitter-bash = { path = "../../langs/tree-sitter-bash" }
-lazy_static = "1.0"
+once_cell = "1.12.0"

@@ -1,30 +1,25 @@
-use crate::YAML;
+use crate::{lints::defs::PARTIAL_BECOME, YAML};
 
 use std::ops::Not;
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
-    Context, Lint, Occurrence,
+    Context, Occurrence,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-const PARTIAL_BECOME: Lint = Lint {
-    name: "partial become",
-    code: "YML-W1001",
-};
-
-lazy_static! {
-    static ref QUERY: Query = Query::new(
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *YAML,
         r#"
         (
             (block_mapping_pair key: (_) @key)
             (#match? @key "become_user")
         )
-        "#
+        "#,
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 pub fn validate<'a>(node: Node, ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
     ctx.as_ref().map_or(Vec::new(), |c| {

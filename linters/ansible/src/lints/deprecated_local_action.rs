@@ -1,28 +1,23 @@
-use crate::YAML;
+use crate::{lints::defs::DEPRECATED_LOCAL_ACTION, YAML};
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
-    Context, Lint, Occurrence,
+    Context, Occurrence,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-const DEPRECATED_LOCAL_ACTION: Lint = Lint {
-    name: "deprecated local action",
-    code: "YML-W1002",
-};
-
-lazy_static! {
-    static ref QUERY: Query = Query::new(
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *YAML,
         r#"
         (
             (block_mapping_pair key: (_) @key)
             (#match? @key "local_action")
         )
-        "#
+        "#,
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 pub fn validate<'a>(node: Node, _ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
     QueryCursor::new()

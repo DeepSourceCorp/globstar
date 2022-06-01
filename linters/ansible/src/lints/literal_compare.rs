@@ -1,18 +1,13 @@
-use crate::YAML;
+use crate::{lints::defs::LITERAL_COMPARE, YAML};
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
-    Context, Lint, Occurrence,
+    Context, Occurrence,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-const LITERAL_COMPARE: Lint = Lint {
-    name: "literal compare",
-    code: "YML-W1005",
-};
-
-lazy_static! {
-    static ref QUERY: Query = Query::new(
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *YAML,
         r#"
         (
@@ -31,10 +26,10 @@ lazy_static! {
             (#is? @conditional-node "when")
             (#match? @bin-expr "[=!]= ?(True|true|False|false)")
         )
-        "#
+        "#,
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 pub fn validate<'a>(node: Node, _ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
     let capture_idx = QUERY.capture_index_for_name("bin-expr").unwrap();

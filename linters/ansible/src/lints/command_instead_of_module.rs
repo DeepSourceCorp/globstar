@@ -1,41 +1,39 @@
 use std::path::Path;
 
-use crate::{lint_utils::AsText, BASH, YAML};
+use crate::{lint_utils::AsText, lints::defs::COMMAND_INSTEAD_OF_MODULE, BASH, YAML};
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
-    Context, Lint, Occurrence,
+    Context, Occurrence,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-const COMMAND_INSTEAD_OF_MODULE: Lint = Lint {
-    name: "command instead of module",
-    code: "YML-W1006",
-};
-
-lazy_static! {
-    static ref QUERY: Query = Query::new(
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *YAML,
         r#"
-        (
-            (block_mapping_pair
-             key: (_) @command-node
-             value: (flow_node (plain_scalar) @value-node))
-            (#match? @command-node "^(ansible\\.builtin\\.)?(command|shell)")
-        )
-        "#
+    (
+        (block_mapping_pair
+         key: (_) @command-node
+         value: (flow_node (plain_scalar) @value-node))
+        (#match? @command-node "^(ansible\\.builtin\\.)?(command|shell)")
     )
-    .unwrap();
-    static ref BASH_QUERY: Query = Query::new(
+    "#,
+    )
+    .unwrap()
+});
+
+static BASH_QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *BASH,
         r#"
         (
             (command name: (_) @command . argument: (_)? @first-arg)
         )
-        "#
+        "#,
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 const MODULES: &[(&str, &str)] = &[
     ("apt-get", "apt-get"),

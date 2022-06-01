@@ -19,13 +19,6 @@ lazy_static! {
         )
         "#
     );
-    pub static ref LINT: Lint = LintBuilder::default()
-        .name("relative-workdir")
-        .code("DO-W1001")
-        .query(&*QUERY)
-        .validate(validator)
-        .build()
-        .unwrap();
 }
 
 fn validator<'a>(

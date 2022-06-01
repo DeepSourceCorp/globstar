@@ -1,26 +1,16 @@
 use crate::{
     lint_utils::{self, AsText},
+    lints::defs::{GIT_LATEST, HG_LATEST},
     YAML,
 };
 
 use aspen::{
     tree_sitter::{Node, Query, QueryCursor},
-    Context, Lint, Occurrence,
+    Context, Occurrence,
 };
-use lazy_static::lazy_static;
-
-const GIT_LATEST: Lint = Lint {
-    name: "git latest",
-    code: "YML-W1003",
-};
-
-const HG_LATEST: Lint = Lint {
-    name: "hg latest",
-    code: "YML-W1004",
-};
-
-lazy_static! {
-    static ref QUERY: Query = Query::new(
+use once_cell::sync::Lazy;
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *YAML,
         r#"
         (
@@ -34,10 +24,10 @@ lazy_static! {
                 value: (_) @version-value) @raise)))
             (#match? @version-node "(version|revision)")
         )
-        "#
+        "#,
     )
-    .unwrap();
-}
+    .unwrap()
+});
 
 pub fn validate<'a>(node: Node, _ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
     let vcs_node_capture = QUERY.capture_index_for_name("vcs-node").unwrap();
