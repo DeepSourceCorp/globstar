@@ -1,11 +1,11 @@
 // exports
 pub mod err;
-pub use context::Context;
-pub use tree_sitter;
+pub use {context::Context, traits::MapCapture, tree_sitter};
 
 mod context;
 mod runner;
 mod test_utils;
+mod traits;
 
 use cedar::ResolutionMethod;
 use context::InjectedTree;
