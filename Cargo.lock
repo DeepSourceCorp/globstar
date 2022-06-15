@@ -321,6 +321,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter"
 version = "0.20.6"
+source = "git+https://github.com/akshay-deepsource/tree-sitter#e5ca0216053461cc855cf4d1b32a1f9df0291598"
 dependencies = [
  "cc",
  "regex",

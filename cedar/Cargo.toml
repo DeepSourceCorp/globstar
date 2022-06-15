@@ -5,5 +5,5 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-tree-sitter = { path = "../../tree-sitter/lib" }
+[dependencies.tree-sitter]
+git = "https://github.com/akshay-deepsource/tree-sitter"
