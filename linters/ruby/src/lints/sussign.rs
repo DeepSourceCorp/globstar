@@ -1,69 +1,45 @@
-use std::any::Any;
-
-use crate::RUBY;
+use crate::{lints::defs::SUSSIGN, RUBY};
 
 use aspen::{
-    build_query,
     tree_sitter::{Node, Query, QueryCursor},
-    Diagnostic, Lint, LintBuilder,
+    Context, MapCapture, Occurrence,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    pub static ref QUERY: Query = build_query(
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *RUBY,
         r#"
         (
             (assignment left: (_) @lhs right: (_) @rhs) @raise
             (eq? @lhs @rhs)
         )
-        "#
-    );
-    pub static ref LINT: Lint = LintBuilder::default()
-        .name("sussign")
-        .code("RB-W1002")
-        .query(&*QUERY)
-        .validate(validator)
-        .build()
-        .unwrap();
-}
+        "#,
+    )
+    .unwrap()
+});
 
-fn validator<'a>(
-    meta: &Lint,
-    node: Node<'a>,
-    _ctx: &Option<Box<dyn Any>>,
-    src: &[u8],
-) -> Vec<Diagnostic> {
-    let mut query_cursor = QueryCursor::new();
-
-    let raise_capture = meta.query.capture_index_for_name("raise").unwrap();
-
-    query_cursor
-        .matches(&meta.query, node, src)
-        .map(|m| {
-            let raise = m
-                .captures
-                .iter()
-                .find(|c| c.index == raise_capture)
-                .unwrap();
+pub fn validate<'a>(node: Node, _ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
+    QueryCursor::new()
+        .matches(&QUERY, node, src)
+        .map_capture("raise", |raise| {
             let at = raise.node.range();
             let text = raise.node.utf8_text(src).unwrap();
             let message = format!("This assignment: `{}`, is suspicious", text);
-            Diagnostic::new(at, message)
+            SUSSIGN.raise(at, message)
         })
-        .collect::<Vec<_>>()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::LINT;
-
     use crate::RUBY;
 
     use aspen::Linter;
 
     fn linter() -> Linter {
-        Linter::new(*RUBY).lint(&LINT).comment_str("#")
+        Linter::new(*RUBY)
+            .validator(super::validate)
+            .comment_str("#")
     }
 
     #[test]

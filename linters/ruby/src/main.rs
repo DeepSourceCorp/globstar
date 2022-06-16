@@ -3,13 +3,17 @@ mod lints;
 use crate::lints::LINTS;
 
 use aspen::{tree_sitter::Language, Linter};
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    pub static ref RUBY: Language = tree_sitter_ruby::language();
-}
+pub static RUBY: Lazy<Language> = Lazy::new(|| tree_sitter_ruby::language());
 
 fn main() {
-    let linter = Linter::new(*RUBY).lints(LINTS.to_vec()).comment_str("#");
-    linter.run_analysis();
+    let linter = Linter::new(*RUBY)
+        .validators(LINTS.to_vec())
+        .scopes(include_str!("scopes.scm"))
+        .comment_str("#");
+
+    if let Err(e) = linter.run_analysis() {
+        eprintln!("{}", e)
+    }
 }

@@ -7,3 +7,7 @@ members = [
     "cedar",     # scope resolution magic
 ]
 
+exclude = [
+    "linters/ruby"
+]
+

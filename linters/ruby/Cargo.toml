@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 aspen = { path = "../../aspen" }
-tree-sitter-ruby = { path = "../../langs/tree-sitter-ruby" }
-lazy_static = "1.0"
+tree-sitter-ruby = { git = "https://github.com/akshay-deepsource/tree-sitter-ruby" }
+once_cell = "1.12.0"

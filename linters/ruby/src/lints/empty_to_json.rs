@@ -1,16 +1,13 @@
-use std::any::Any;
-
-use crate::RUBY;
+use crate::{lints::defs::EMPTY_TO_JSON, RUBY};
 
 use aspen::{
-    build_query,
     tree_sitter::{Node, Query, QueryCursor},
-    Diagnostic, Lint, LintBuilder,
+    Context, MapCapture, Occurrence,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
-lazy_static! {
-    pub static ref QUERY: Query = build_query(
+static QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
         *RUBY,
         r#"
         (
@@ -20,46 +17,32 @@ lazy_static! {
              )
             (#is? @n "to_json")
         )
-        "#
-    );
-    pub static ref LINT: Lint = LintBuilder::default()
-        .name("empty-to-json")
-        .code("RB-W1003")
-        .query(&*QUERY)
-        .validate(validator)
-        .build()
-        .unwrap();
-}
+        "#,
+    )
+    .unwrap()
+});
 
-fn validator<'a>(
-    meta: &Lint,
-    node: Node<'a>,
-    _ctx: &Option<Box<dyn Any>>,
-    src: &[u8],
-) -> Vec<Diagnostic> {
-    let mut query_cursor = QueryCursor::new();
-
-    query_cursor
-        .matches(&meta.query, node, src)
-        .flat_map(|m| m.captures)
-        .map(|capture| {
+pub fn validate<'a>(node: Node, _ctx: &Option<Context<'a>>, src: &[u8]) -> Vec<Occurrence> {
+    QueryCursor::new()
+        .matches(&QUERY, node, src)
+        .map_capture("n", |capture| {
             let at = capture.node.range();
             let message = "This `to_json` method does not accept any parameters";
-            Diagnostic::new(at, message)
+            EMPTY_TO_JSON.raise(at, message)
         })
-        .collect::<Vec<_>>()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::LINT;
 
     use crate::RUBY;
 
     use aspen::Linter;
 
     fn linter() -> Linter {
-        Linter::new(*RUBY).lint(&LINT).comment_str("#")
+        Linter::new(*RUBY)
+            .validator(super::validate)
+            .comment_str("#")
     }
 
     #[test]
