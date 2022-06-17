@@ -20,7 +20,7 @@
 
 (identifier) @local.reference
 
-(assignment left: (identifier) @local.definition)
+(assignment left: (identifier) @local.definition right: (_) @local.definition-value)
 (operator_assignment left: (identifier) @local.definition)
 (left_assignment_list (identifier) @local.definition)
 (rest_assignment (identifier) @local.definition)

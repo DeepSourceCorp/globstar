@@ -45,7 +45,7 @@ pub fn insert_def<'a>(
     target: Rc<RefCell<LocalScope<'a>>>,
     name: &'a str,
     def_range: &Range,
-    value_range: Option<&Range>,
+    value_range: &Option<Range>,
 ) -> bool {
     let target_range = target.borrow().range.clone();
     if contains_range(&target_range, def_range) {
@@ -59,7 +59,7 @@ pub fn insert_def<'a>(
                 Rc::new(RefCell::new(LocalDef::new_with_value(
                     name,
                     def_range,
-                    vr,
+                    &vr,
                     Rc::clone(&target),
                 )))
             })

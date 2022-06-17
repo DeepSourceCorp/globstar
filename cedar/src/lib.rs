@@ -66,7 +66,12 @@ fn scope_res_generic<'a>(
         if local_scope_capture_index == Some(capture.index) {
             utils::insert_scope(Rc::clone(&root_scope), &range);
         } else if local_def_capture_index == Some(capture.index) {
-            utils::insert_def(Rc::clone(&root_scope), name, &range, None);
+            let value_range = match_
+                .captures
+                .iter()
+                .find(|capture| local_def_value_capture_index == Some(capture.index))
+                .map(|capture| capture.node.range());
+            utils::insert_def(Rc::clone(&root_scope), name, &range, &value_range);
         } else if local_ref_capture_index == Some(capture.index) {
             utils::insert_ref(Rc::clone(&root_scope), name, &range);
         }
