@@ -1,8 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt, rc::Rc};
 
 use cedar::{LocalScope, ScopeStack};
 use tree_sitter::{Node, Range, Tree};
 
+#[derive(Debug)]
 pub struct Context<'a> {
     pub(crate) root_scope: Rc<RefCell<LocalScope<'a>>>,
     pub(crate) injected_trees: Vec<InjectedTree>,
@@ -11,6 +12,15 @@ pub struct Context<'a> {
 pub struct InjectedTree {
     pub tree: Tree,
     pub original_range: Range,
+}
+
+impl fmt::Debug for InjectedTree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("InjectedTree")
+            .field("tree", &self.tree.root_node().range())
+            .field("range", &self.original_range)
+            .finish()
+    }
 }
 
 impl<'a> Context<'a> {

@@ -1,4 +1,4 @@
-use tree_sitter::{QueryCapture, QueryMatches, TextProvider};
+use tree_sitter::{Node, Query, QueryCapture, QueryCursor, QueryMatches, TextProvider};
 
 pub trait MapCapture {
     fn map_capture<B>(self, capture_name: &str, f: impl Fn(&QueryCapture) -> B) -> Vec<B>;
@@ -35,5 +35,25 @@ where
         self.flat_map(|m| m.captures.iter().filter(|c| c.index == capture_idx))
             .flat_map(f)
             .collect()
+    }
+}
+
+pub trait IsMatch {
+    fn is_match<'a, 'tree: 'a, T>(
+        &'a mut self,
+        query: &'a Query,
+        node: Node<'tree>,
+        src: T,
+    ) -> bool
+    where
+        T: TextProvider<'a> + 'a;
+}
+
+impl IsMatch for QueryCursor {
+    fn is_match<'a, 'tree: 'a, T>(&'a mut self, query: &'a Query, node: Node<'tree>, src: T) -> bool
+    where
+        T: TextProvider<'a> + 'a,
+    {
+        self.matches(query, node, src).next().is_some()
     }
 }

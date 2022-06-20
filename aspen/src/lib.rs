@@ -1,6 +1,10 @@
 // exports
 pub mod err;
-pub use {context::Context, traits::MapCapture, tree_sitter};
+pub use {
+    context::Context,
+    traits::{IsMatch, MapCapture},
+    tree_sitter,
+};
 
 mod context;
 mod runner;
