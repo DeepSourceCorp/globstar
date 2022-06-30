@@ -8,6 +8,7 @@ pub use {
 
 mod context;
 mod runner;
+#[cfg(feature = "testing")]
 mod test_utils;
 mod traits;
 
