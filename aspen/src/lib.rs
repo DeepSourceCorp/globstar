@@ -11,6 +11,8 @@ mod runner;
 mod test_utils;
 mod traits;
 
+use std::fmt;
+
 use cedar::ResolutionMethod;
 use context::InjectedTree;
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor, QueryError, Range};
@@ -159,6 +161,12 @@ pub struct Occurrence {
     pub diagnostic: Diagnostic,
 }
 
+impl fmt::Display for Occurrence {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}, {}, {}", self.name, self.code, self.diagnostic)
+    }
+}
+
 pub struct Lint {
     pub name: &'static str,
     pub code: &'static str,
@@ -189,6 +197,16 @@ impl Diagnostic {
             at,
             message: message.as_ref().to_owned(),
         }
+    }
+}
+
+impl fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}..{}: {}",
+            self.at.start_point, self.at.end_point, self.message
+        )
     }
 }
 

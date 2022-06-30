@@ -16,7 +16,18 @@ impl Linter {
         // or vice-versa
         let al = annotations.len();
         let ol = occurrences.len();
-        assert_eq!(al, ol, "Annotations ({}), Occurrences ({})", al, ol);
+        assert_eq!(
+            al,
+            ol,
+            "Annotations ({}), Occurrences ({}):\n{}",
+            al,
+            ol,
+            occurrences
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
 
         for (annotation, occurrence) in annotations.iter().zip(occurrences) {
             let ((range, content), comment) = annotation;
