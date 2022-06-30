@@ -12,15 +12,20 @@ use marvin::{
     utils::strip_path,
     Load, Store,
 };
+use regex::RegexSet;
 
 impl Linter {
     pub fn run_analysis(&self) -> Result<(), AspenErr> {
         let config = AnalyzerConfig::load()
             .map_err(MarvinErr::Load)
             .map_err(AspenErr::Marvin)?;
+
+        let ignore_set = RegexSet::new(&self.ignores).map_err(AspenErr::IgnoreError)?;
+
         let (success, _failures): (Vec<_>, Vec<_>) = config
             .files
             .into_iter()
+            .filter(|file| !ignore_set.is_match(&file.to_string_lossy()))
             .map(|fq_path| self.analysis_runer_single(fq_path))
             .partition(Result::is_ok);
         let success = success.into_iter().map(Result::unwrap).flatten().collect();
@@ -58,12 +63,12 @@ impl Linter {
                         path: stripped_path.to_path_buf(),
                         position: Span {
                             begin: Position {
-                                line: at.start_point.row,
-                                column: at.start_point.column,
+                                line: at.start_point.row + 1,
+                                column: at.start_point.column + 1,
                             },
                             end: Position {
-                                line: at.end_point.row,
-                                column: at.end_point.column,
+                                line: at.end_point.row + 1,
+                                column: at.end_point.column + 1,
                             },
                         },
                     },

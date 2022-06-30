@@ -30,6 +30,7 @@ dependencies = [
  "log",
  "marvin",
  "pretty_assertions",
+ "regex",
  "thiserror",
  "tree-sitter",
 ]

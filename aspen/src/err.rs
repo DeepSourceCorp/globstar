@@ -1,6 +1,7 @@
 use std::io;
 
 use marvin::err::MarvinErr;
+use regex::Error as RegexError;
 use thiserror::Error;
 use tree_sitter::QueryError as TSQueryError;
 
@@ -12,6 +13,8 @@ pub enum AspenErr {
     Runner(RunnerErr),
     #[error("query error: {0}")]
     QueryError(#[from] TSQueryError),
+    #[error("regex error: {0}")]
+    IgnoreError(#[from] RegexError),
 }
 
 #[derive(Error, Debug)]

@@ -23,6 +23,7 @@ pub struct Linter {
     comment_str: &'static str,
     scopes: Option<&'static str>,
     injection: Option<Injection>,
+    ignores: Vec<&'static str>,
 }
 
 pub struct Injection {
@@ -110,6 +111,7 @@ impl Linter {
             comment_str: "//",
             scopes: None,
             injection: None,
+            ignores: vec![],
         }
     }
 
@@ -126,8 +128,8 @@ impl Linter {
     }
 
     /// Set a list of lints accepted by this linter
-    pub fn validators(mut self, validators: Vec<ValidatorFn>) -> Self {
-        self.validators = validators;
+    pub fn validators(mut self, validators: &[ValidatorFn]) -> Self {
+        self.validators = validators.to_vec();
         self
     }
 
@@ -147,6 +149,18 @@ impl Linter {
     /// Language injection queries
     pub fn injection(mut self, injection: Injection) -> Self {
         self.injection = Some(injection);
+        self
+    }
+
+    /// Add an ignore pattern
+    pub fn ignore(mut self, regex: &'static str) -> Self {
+        self.ignores.push(regex);
+        self
+    }
+
+    /// Set the list of ignores
+    pub fn ignores(mut self, regex_set: &[&'static str]) -> Self {
+        self.ignores = regex_set.to_vec();
         self
     }
 }
