@@ -26,6 +26,7 @@ impl Linter {
             .files
             .into_iter()
             .filter(|file| !ignore_set.is_match(&file.to_string_lossy()))
+            .filter(|file| matches!(file.extension(), Some(ext) if ext == self.extension))
             .map(|fq_path| self.analysis_runer_single(fq_path))
             .partition(Result::is_ok);
         let success = success.into_iter().map(Result::unwrap).flatten().collect();

@@ -25,6 +25,7 @@ pub struct Linter {
     scopes: Option<&'static str>,
     injection: Option<Injection>,
     ignores: Vec<&'static str>,
+    extension: &'static str,
 }
 
 pub struct Injection {
@@ -113,6 +114,7 @@ impl Linter {
             scopes: None,
             injection: None,
             ignores: vec![],
+            extension: "",
         }
     }
 
@@ -162,6 +164,12 @@ impl Linter {
     /// Set the list of ignores
     pub fn ignores(mut self, regex_set: &[&'static str]) -> Self {
         self.ignores = regex_set.to_vec();
+        self
+    }
+
+    /// Set the file extension
+    pub fn extension(mut self, extension: &'static str) -> Self {
+        self.extension = extension;
         self
     }
 }
