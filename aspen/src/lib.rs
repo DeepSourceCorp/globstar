@@ -14,6 +14,8 @@ mod traits;
 
 use std::fmt;
 
+use crate::err::InjectionErr;
+
 use cedar::ResolutionMethod;
 use context::InjectedTree;
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor, QueryError, Range};
@@ -23,19 +25,28 @@ pub struct Linter {
     language: Language,
     comment_str: &'static str,
     scopes: Option<&'static str>,
-    injection: Option<Injection>,
+    injections: Vec<Injection>,
     ignores: Vec<&'static str>,
     extension: &'static str,
 }
 
 pub struct Injection {
-    query: &'static str,
+    query: Query,
     language: Language,
 }
 
 impl Injection {
-    pub fn new(query: &'static str, language: Language) -> Self {
-        Self { query, language }
+    pub fn new(query: &'static str, language: Language) -> Result<Self, InjectionErr> {
+        let query = Query::new(language, query).map_err(InjectionErr::Query)?;
+        if !query
+            .capture_names()
+            .iter()
+            .any(|name| name != "injection.content")
+        {
+            Err(InjectionErr::MissingCapture)
+        } else {
+            Ok(Self { query, language })
+        }
     }
 }
 
@@ -71,20 +82,23 @@ impl Linter {
             .transpose()?;
 
         let injected_trees = self
-            .injection
-            .as_ref()
-            .map(|Injection { query, language }| {
-                // run the injection query with the injection query and the original language
+            .injections
+            .iter()
+            .filter_map(|Injection { query, language }| {
+                // run the injection query with the syntax tree formed from the original language
                 let mut injection_parser = Parser::new();
                 injection_parser.set_language(*language).unwrap();
-                Query::new(self.language, query).map(|query| {
-                    let capture_idx = query.capture_index_for_name("injection.content").unwrap();
+
+                // infallible, this is checked for in `Injection::new`
+                let content_capture = query.capture_index_for_name("injection.content").unwrap();
+
+                Some(
                     QueryCursor::new()
                         .matches(&query, root_node, src.as_bytes())
                         .flat_map(|m| m.captures)
-                        .filter(|c| c.index == capture_idx)
-                        .map(|c| c.node.range())
-                        .filter_map(|original_range| {
+                        .filter(|c| c.index == content_capture)
+                        .filter_map(|capture| {
+                            let original_range = capture.node.range();
                             let (start, end) = (original_range.start_byte, original_range.end_byte);
                             injection_parser.parse(&src[start..end], None).map(|tree| {
                                 InjectedTree {
@@ -93,11 +107,11 @@ impl Linter {
                                 }
                             })
                         })
-                        .collect::<Vec<_>>()
-                })
+                        .collect::<Vec<_>>(),
+                )
             })
-            .transpose()?
-            .unwrap_or_default();
+            .flatten()
+            .collect::<Vec<_>>();
 
         Ok(root_scope.map(|root_scope| Context {
             root_scope,
@@ -112,7 +126,7 @@ impl Linter {
             language,
             comment_str: "//",
             scopes: None,
-            injection: None,
+            injections: vec![],
             ignores: vec![],
             extension: "",
         }
@@ -151,7 +165,7 @@ impl Linter {
 
     /// Language injection queries
     pub fn injection(mut self, injection: Injection) -> Self {
-        self.injection = Some(injection);
+        self.injections.push(injection);
         self
     }
 

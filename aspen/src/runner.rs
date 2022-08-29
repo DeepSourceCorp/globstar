@@ -20,7 +20,7 @@ impl Linter {
             .map_err(MarvinErr::Load)
             .map_err(AspenErr::Marvin)?;
 
-        let ignore_set = RegexSet::new(&self.ignores).map_err(AspenErr::IgnoreError)?;
+        let ignore_set = RegexSet::new(&self.ignores).map_err(AspenErr::Ignore)?;
 
         let (success, _failures): (Vec<_>, Vec<_>) = config
             .files
