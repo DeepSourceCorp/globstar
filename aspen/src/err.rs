@@ -12,9 +12,19 @@ pub enum AspenErr {
     #[error("runner error: {0}")]
     Runner(RunnerErr),
     #[error("query error: {0}")]
-    QueryError(#[from] TSQueryError),
+    Query(#[from] TSQueryError),
     #[error("regex error: {0}")]
-    IgnoreError(#[from] RegexError),
+    Ignore(#[from] RegexError),
+    #[error("injection errer: {0}")]
+    Injection(#[from] InjectionErr),
+}
+
+#[derive(Error, Debug)]
+pub enum InjectionErr {
+    #[error("query error: {0}")]
+    Query(#[from] TSQueryError),
+    #[error("missing capture `injection.content`")]
+    MissingCapture,
 }
 
 #[derive(Error, Debug)]
