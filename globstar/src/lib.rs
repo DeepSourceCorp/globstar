@@ -1,25 +1,32 @@
-// exports
+#![deny(missing_docs)]
+//! `globstar` is a generic analysis framework.
+
+/// Error types for the globstar crate.
 pub mod err;
-pub use {
-    context::Context,
-    traits::{IsMatch, MapCapture},
-    tree_sitter,
-};
+
+/// Utility traits to write lint rules.
+pub mod traits;
+
+/// re-exported tree-sitter.
+pub use tree_sitter;
 
 mod context;
 mod runner;
 #[cfg(feature = "testing")]
 mod test_utils;
-mod traits;
 
 use std::fmt;
 
-use crate::err::InjectionErr;
-
-use cedar::ResolutionMethod;
-use context::InjectedTree;
+use context::{Context, InjectedTree};
+use err::InjectionErr;
+use scope_resolution::ResolutionMethod;
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor, QueryError, Range};
 
+/// The entrypoint into running an analysis.
+///
+/// A `Linter` contains information about the various rules,
+/// scope queries, language injections etc. It is the entrypoint
+/// to running an analysis.
 pub struct Linter {
     validators: Vec<ValidatorFn>,
     language: Language,
@@ -30,12 +37,56 @@ pub struct Linter {
     extension: &'static str,
 }
 
+/// An "injection" defines the rules to parse a language within a language.
+///
+/// Several languages "nest" one language within another. Globstar allows
+/// you to parse and analyze such nested languages in addition to analyzing
+/// the outer program. For example, an Ansible progam, largely contains YAML
+/// code, but certain keys may contain jinja or bash:
+///
+/// ```yaml
+/// - name: use shell generator
+///   ansible.builtin.shell: ls foo{.txt,.xml}
+///                        ## ^^^^^^^^^^^^^^^^^ bash code
+///   changed_when: false
+/// ```
+///
+/// The key `ansible.builtin.shell` takes a shell script as its value. In order
+/// to treat the value as Bash, and not a YAML string, you may write a query to
+/// capture and parse the value as Bash:
+///
+/// ```
+/// # use globstar::{Linter, Injection};
+/// # fn main() {
+/// let yaml = tree_sitter_yaml::language();
+/// let shell_query = r#"
+///     ((block_mapping_pair
+///       key: (_) @key
+///       value:
+///       (flow_node
+///         (plain_scalar
+///           (string_scalar) @injection.content)))
+///     (#match? @key "^(ansible\\.builtin\\.)?shell")
+///     (#set! injection.language "bash"))
+/// "#;
+/// let bash_injection = Injection::new(shell_query, yaml).unwrap();
+/// let ansible_analyzer = Linter::new(yaml)
+///     .injection(bash_injection);
+/// # }
+/// ```
 pub struct Injection {
     query: Query,
     language: Language,
 }
 
 impl Injection {
+    /// Create a new `Injection` with a given query for a nested language. The `query`
+    /// **must** include a capture called `injection.content`. The result of the capture
+    /// is parsed as `language`.
+    ///
+    /// Note: `query` is a tree-sitter query in the outer language, `language`
+    /// is the nested language, which is then used to parse the result of the
+    /// query.
     pub fn new(query: &'static str, language: Language) -> Result<Self, InjectionErr> {
         let query = Query::new(language, query).map_err(InjectionErr::Query)?;
         if !query
@@ -68,7 +119,7 @@ impl Linter {
             .collect()
     }
 
-    pub fn build_context<'a>(
+    fn build_context<'a>(
         &self,
         root_node: Node<'a>,
         src: &'a str,
@@ -169,102 +220,84 @@ impl Linter {
         self
     }
 
-    /// Add an ignore pattern
+    /// Add an ignore pattern, files conforming to this pattern
+    /// are not processed.
+    ///
+    /// Example:
+    ///
+    /// ```
+    /// # use globstar::Linter;
+    /// let linter = Linter::new(tree_sitter_bash::language())
+    ///     .ignore(r"Cargo\.toml");
+    /// ```
     pub fn ignore(mut self, regex: &'static str) -> Self {
         self.ignores.push(regex);
         self
     }
 
-    /// Set the list of ignores
+    /// Set a list patterns for files to ignore.
+    ///
+    /// Example:
     pub fn ignores(mut self, regex_set: &[&'static str]) -> Self {
         self.ignores = regex_set.to_vec();
         self
     }
 
-    /// Set the file extension
+    /// Set the file extension, e.g.: `"yml"`
     pub fn extension(mut self, extension: &'static str) -> Self {
         self.extension = extension;
         self
     }
 }
 
-/// Describes the rule itself
+/// Analysis rule logic goes in here
+///
+/// Every `ValidatorFn` recives the `root_node` for a syntax tree, along with
+/// (optionally) scope and injection data, and source file (as bytes).
 pub type ValidatorFn = for<'a> fn(Node, &Option<Context<'a>>, &[u8]) -> Vec<Occurrence>;
 
-#[derive(Debug)]
-pub struct Occurrence {
-    pub name: &'static str,
-    pub code: &'static str,
-    pub diagnostic: Diagnostic,
-}
-
-impl fmt::Display for Occurrence {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}, {}, {}", self.name, self.code, self.diagnostic)
-    }
-}
-
+/// Metadata about an antipattern that the `Linter` raises.
+///
+/// TODO: examples
+#[derive(Copy, Clone, Debug)]
+#[non_exhaustive]
 pub struct Lint {
+    /// The name of this lint, for e.g.: `UNUSED_VARIABLES`
     pub name: &'static str,
+    /// A unique code to identify this lint, for e.g.: `RUST-001`
     pub code: &'static str,
 }
 
 impl Lint {
+    /// To produce an [`Occurrence`](Occurrence) from a `Lint`, use `Lint::raise`,
+    /// along with a position and a context aware message.
     pub fn raise<S: AsRef<str>>(&self, at: Range, message: S) -> Occurrence {
         Occurrence {
-            name: self.name,
-            code: self.code,
-            diagnostic: Diagnostic::new(at, message),
-        }
-    }
-}
-
-/// An occurrence of an offense
-#[derive(Debug)]
-pub struct Diagnostic {
-    /// position of offense
-    pub at: Range,
-    /// context aware offense message
-    pub message: String,
-}
-
-impl Diagnostic {
-    pub fn new<S: AsRef<str>>(at: Range, message: S) -> Self {
-        Self {
+            lint: *self,
             at,
             message: message.as_ref().to_owned(),
         }
     }
 }
 
-impl fmt::Display for Diagnostic {
+/// An instance of a `Lint` is an `Occurrence`.
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct Occurrence {
+    /// The lint whose occurrence this refers to.
+    pub lint: Lint,
+    /// The position where this occurrence is present at.
+    pub at: Range,
+    /// A context aware message describing this occurrence.
+    pub message: String,
+}
+
+impl fmt::Display for Occurrence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}..{}: {}",
-            self.at.start_point, self.at.end_point, self.message
+            "{}, {}, {}: {}..{}",
+            self.lint.name, self.lint.code, self.message, self.at.start_point, self.at.end_point
         )
-    }
-}
-
-/// Fast failing query-builder
-pub fn build_query(language: Language, query_str: &str) -> Query {
-    let query = Query::new(language, query_str);
-    match query {
-        Ok(q) => return q,
-        Err(QueryError {
-            row,
-            column,
-            message,
-            ..
-        }) => {
-            log::error!(
-                "query builder failed with `{}` on line {}, col {}",
-                message,
-                row,
-                column
-            );
-            panic!();
-        }
     }
 }

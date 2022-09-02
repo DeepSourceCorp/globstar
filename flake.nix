@@ -60,6 +60,7 @@
             toolchain
 
             pkgs.parallel
+            pkgs.cargo-watch
           ];
           RUST_LOG = "info";
           RUST_BACKTRACE = 1;
