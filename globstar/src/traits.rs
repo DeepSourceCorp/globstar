@@ -1,8 +1,16 @@
 use tree_sitter::{Node, Query, QueryCapture, QueryCursor, QueryMatches, TextProvider};
 
+/// Utility trait to iterate over captures.
+///
+/// This trait never needs to be implemented upon a type, consider using
+/// the provided implementation for `QueryMatches`.
 pub trait MapCapture {
+    /// Apply `f` to every capture by name, `capture_name`.
     fn map_capture<B>(self, capture_name: &str, f: impl Fn(&QueryCapture) -> B) -> Vec<B>;
-    fn flat_map_capture<B>(
+
+    /// Works like `map_capture`, but returns the `value`s for which
+    /// the closure `f` returns `Some(v)`.
+    fn filter_map_capture<B>(
         self,
         capture_name: &str,
         f: impl Fn(&QueryCapture) -> Option<B>,
@@ -23,7 +31,7 @@ where
             .collect()
     }
 
-    fn flat_map_capture<B>(
+    fn filter_map_capture<B>(
         self,
         capture_name: &str,
         f: impl Fn(&QueryCapture) -> Option<B>,
@@ -38,7 +46,14 @@ where
     }
 }
 
+/// Utility trait to verify if a given query had any matches over
+/// some source text.
+///
+/// This trait never needs to be implemented upon a type,
+/// consider using the provided implementation for `QueryCursor`.
 pub trait IsMatch {
+    /// This function is a shorthand for
+    /// `QueryCursor(..).matches(query, node, src).next().is_some`.
     fn is_match<'a, 'tree: 'a, T>(
         &'a mut self,
         query: &'a Query,

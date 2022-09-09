@@ -5,8 +5,8 @@ impl Linter {
     pub fn test(&self, src: &str) {
         use crate::{Diagnostic, Occurrence};
 
-        use holly::{extract_annotations, trim_indent};
         use pretty_assertions::assert_eq as pretty_assert_eq;
+        use test_utils::{extract_annotations, trim_indent};
 
         let src = trim_indent(src);
         let annotations = extract_annotations(&src, self.comment_str);

@@ -1,5 +1,5 @@
 [package]
-name = "aspen"
+name = "globstar"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,15 +17,22 @@ optional = true
 [dependencies.tree-sitter]
 git = "https://github.com/akshay-deepsource/tree-sitter"
 
-[dependencies.cedar]
-path = "../cedar"
+[dependencies.scope-resolution]
+path = "../scope-resolution"
 
-[dependencies.holly]
-path = "../holly"
+[dependencies.test-utils]
+path = "../test-utils"
 
 [dependencies.marvin]
 path = "../marvin"
 
+[dev-dependencies.tree-sitter-yaml]
+git = "https://github.com/akshay-deepsource/tree-sitter-yaml"
+ 
+[dev-dependencies.tree-sitter-bash]
+git = "https://github.com/akshay-deepsource/tree-sitter-bash"
+
 [features]
 default = []
 testing = ["pretty_assertions"]
+

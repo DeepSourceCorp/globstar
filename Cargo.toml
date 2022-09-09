@@ -1,10 +1,10 @@
 [workspace]
 
 members = [
-    "marvin",    # rust types/bindings to marvin
-    "aspen",     # everything you need to write lints
-    "holly",     # annotation based test library
-    "cedar",     # scope resolution magic
+    "marvin",           # rust types/bindings to marvin
+    "globstar",         # everything you need to write lints
+    "test-utils",       # annotation based test library
+    "scope-resolution", # scope resolution magic
 ]
 
 exclude = [

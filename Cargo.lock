@@ -21,31 +21,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "aspen"
-version = "0.1.0"
-dependencies = [
- "cedar",
- "holly",
- "log",
- "marvin",
- "pretty_assertions",
- "regex",
- "thiserror",
- "tree-sitter",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22a9137b95ea06864e018375b72adfb7db6e6f68cfc8df5a04d00288050485ee"
-
-[[package]]
-name = "cedar"
-version = "0.1.0"
-dependencies = [
- "tree-sitter",
-]
 
 [[package]]
 name = "cfg-if"
@@ -70,8 +49,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e25ea47919b1560c4e3b7fe0aaab9becf5b84a10325ddf7db0f0ba5e1026499"
 
 [[package]]
-name = "holly"
+name = "globstar"
 version = "0.1.0"
+dependencies = [
+ "log",
+ "marvin",
+ "pretty_assertions",
+ "regex",
+ "scope-resolution",
+ "test-utils",
+ "thiserror",
+ "tree-sitter",
+ "tree-sitter-bash",
+ "tree-sitter-yaml",
+]
 
 [[package]]
 name = "itoa"
@@ -173,6 +164,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73b4b750c782965c211b42f022f59af1fbceabdd026623714f104152f1ec149f"
 
 [[package]]
+name = "scope-resolution"
+version = "0.1.0"
+dependencies = [
+ "tree-sitter",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -215,6 +213,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-utils"
+version = "0.1.0"
+
+[[package]]
 name = "thiserror"
 version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -241,6 +243,24 @@ source = "git+https://github.com/akshay-deepsource/tree-sitter#e5ca0216053461cc8
 dependencies = [
  "cc",
  "regex",
+]
+
+[[package]]
+name = "tree-sitter-bash"
+version = "0.19.0"
+source = "git+https://github.com/akshay-deepsource/tree-sitter-bash#ef53373b16fff573ce4868a5763660e4ffc528d7"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-yaml"
+version = "0.1.0"
+source = "git+https://github.com/akshay-deepsource/tree-sitter-yaml#7174fbab242915fab614f4a8c16e4ca4d5396979"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]

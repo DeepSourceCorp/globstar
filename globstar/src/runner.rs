@@ -1,8 +1,8 @@
 use std::{fs, path::Path};
 
 use crate::{
-    err::{AnalysisErr, AspenErr},
-    Diagnostic, Linter, Occurrence,
+    err::{AnalysisErr, GlobstarErr},
+    Lint, Linter, Occurrence,
 };
 
 use marvin::{
@@ -15,19 +15,28 @@ use marvin::{
 use regex::RegexSet;
 
 impl Linter {
-    pub fn run_analysis(&self) -> Result<(), AspenErr> {
+    /// The whole point.
+    ///
+    /// `run_analysis` does the following:
+    /// - read environment variables required to interface with `marvin`
+    /// - load `analysis_config.json` from `$ANALYSIS_CONFIG_PATH`
+    /// - build an ignore ruleset to avoid ignored files
+    /// - build scope and injection data
+    /// - walk through the files present in `$CODE_PATH`
+    /// - store `analysis_results.json` to `$ANALYSIS_RESULT_PATH`
+    pub fn run_analysis(&self) -> Result<(), GlobstarErr> {
         let config = AnalyzerConfig::load()
             .map_err(MarvinErr::Load)
-            .map_err(AspenErr::Marvin)?;
+            .map_err(GlobstarErr::Marvin)?;
 
-        let ignore_set = RegexSet::new(&self.ignores).map_err(AspenErr::Ignore)?;
+        let ignore_set = RegexSet::new(&self.ignores).map_err(GlobstarErr::Ignore)?;
 
         let (success, _failures): (Vec<_>, Vec<_>) = config
             .files
             .into_iter()
             .filter(|file| !ignore_set.is_match(&file.to_string_lossy()))
-            .filter(|file| matches!(file.extension(), Some(ext) if ext == self.extension))
-            .map(|fq_path| self.analysis_runer_single(fq_path))
+            .filter(|file| matches!(file.extension(), Some(ext) if ext == self.extension.as_str()))
+            .map(|fq_path| self.analysis_runner_single(fq_path))
             .partition(Result::is_ok);
         let success = success.into_iter().map(Result::unwrap).flatten().collect();
         // let failures = failures.into_iter().map(Result::unwrap_err).collect();
@@ -38,10 +47,13 @@ impl Linter {
         result
             .store()
             .map_err(MarvinErr::Store)
-            .map_err(AspenErr::Marvin)
+            .map_err(GlobstarErr::Marvin)
     }
 
-    fn analysis_runer_single<P: AsRef<Path>>(&self, fq_path: P) -> Result<Vec<Issue>, AnalysisErr> {
+    fn analysis_runner_single<P: AsRef<Path>>(
+        &self,
+        fq_path: P,
+    ) -> Result<Vec<Issue>, AnalysisErr> {
         // fully qualified path, use this to read/write
         let fq_path = fq_path.as_ref();
         // stripped path, use this in issue location
@@ -54,8 +66,9 @@ impl Linter {
             .into_iter()
             .map(
                 |Occurrence {
-                     code,
-                     diagnostic: Diagnostic { at, message },
+                     lint: Lint { code, .. },
+                     at,
+                     message,
                      ..
                  }| Issue {
                     code,
