@@ -30,18 +30,18 @@ use tree_sitter::{Language, Node, Parser, Query, QueryCursor, QueryError, Range}
 pub struct Linter {
     validators: Vec<ValidatorFn>,
     language: Language,
-    comment_str: &'static str,
-    scopes: Option<&'static str>,
+    comment_str: String,
+    scopes: Option<String>,
     injections: Vec<Injection>,
-    ignores: Vec<&'static str>,
-    extension: &'static str,
+    ignores: Vec<String>,
+    extension: String,
 }
 
 /// An "injection" defines the rules to parse a language within a language.
 ///
 /// Several languages "nest" one language within another. Globstar allows
 /// you to parse and analyze such nested languages in addition to analyzing
-/// the outer program. For example, an Ansible progam, largely contains YAML
+/// the outer program. For example, an Ansible progam largely contains YAML
 /// code, but certain keys may contain jinja or bash:
 ///
 /// ```yaml
@@ -87,7 +87,7 @@ impl Injection {
     /// Note: `query` is a tree-sitter query in the outer language, `language`
     /// is the nested language, which is then used to parse the result of the
     /// query.
-    pub fn new(query: &'static str, language: Language) -> Result<Self, InjectionErr> {
+    pub fn new(query: &str, language: Language) -> Result<Self, InjectionErr> {
         let query = Query::new(language, query).map_err(InjectionErr::Query)?;
         if !query
             .capture_names()
@@ -126,8 +126,9 @@ impl Linter {
     ) -> Result<Option<Context<'a>>, QueryError> {
         let root_scope = self
             .scopes
+            .as_ref()
             .map(|scope_query| {
-                Query::new(self.language, scope_query)
+                Query::new(self.language, scope_query.as_str())
                     .map(|query| ResolutionMethod::Generic.build_scope(&query, root_node, src))
             })
             .transpose()?;
@@ -175,11 +176,11 @@ impl Linter {
         Self {
             validators: vec![],
             language,
-            comment_str: "//",
+            comment_str: "//".into(),
             scopes: None,
             injections: vec![],
             ignores: vec![],
-            extension: "",
+            extension: "".into(),
         }
     }
 
@@ -203,14 +204,14 @@ impl Linter {
 
     /// Set the comment str accepted by this language, this is used
     /// in annotated tests
-    pub fn comment_str(mut self, comment_str: &'static str) -> Self {
-        self.comment_str = comment_str;
+    pub fn comment_str<S: AsRef<str>>(mut self, comment_str: S) -> Self {
+        self.comment_str = comment_str.as_ref().to_owned();
         self
     }
 
     /// Scope resolution queries
-    pub fn scopes(mut self, queries: &'static str) -> Self {
-        self.scopes = Some(queries);
+    pub fn scopes<S: AsRef<str>>(mut self, queries: S) -> Self {
+        self.scopes = Some(queries.as_ref().to_owned());
         self
     }
 
@@ -223,29 +224,32 @@ impl Linter {
     /// Add an ignore pattern, files conforming to this pattern
     /// are not processed.
     ///
-    /// Example:
+    /// Example: TODO
     ///
     /// ```
     /// # use globstar::Linter;
     /// let linter = Linter::new(tree_sitter_bash::language())
     ///     .ignore(r"Cargo\.toml");
     /// ```
-    pub fn ignore(mut self, regex: &'static str) -> Self {
-        self.ignores.push(regex);
+    pub fn ignore<S: AsRef<str>>(mut self, regex: S) -> Self {
+        self.ignores.push(regex.as_ref().to_owned());
         self
     }
 
     /// Set a list patterns for files to ignore.
     ///
-    /// Example:
-    pub fn ignores(mut self, regex_set: &[&'static str]) -> Self {
-        self.ignores = regex_set.to_vec();
+    /// Example: TODO
+    pub fn ignores<S: AsRef<str>>(mut self, regex_set: &[S]) -> Self {
+        self.ignores = regex_set
+            .iter()
+            .map(|regex| regex.as_ref().to_owned())
+            .collect();
         self
     }
 
     /// Set the file extension, e.g.: `"yml"`
-    pub fn extension(mut self, extension: &'static str) -> Self {
-        self.extension = extension;
+    pub fn extension<S: AsRef<str>>(mut self, extension: S) -> Self {
+        self.extension = extension.as_ref().to_owned();
         self
     }
 }
@@ -258,7 +262,7 @@ pub type ValidatorFn = for<'a> fn(Node, &Option<Context<'a>>, &[u8]) -> Vec<Occu
 
 /// Metadata about an antipattern that the `Linter` raises.
 ///
-/// TODO: examples
+/// Example: TODO
 #[derive(Copy, Clone, Debug)]
 #[non_exhaustive]
 pub struct Lint {

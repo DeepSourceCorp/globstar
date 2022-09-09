@@ -35,8 +35,8 @@ impl Linter {
             .files
             .into_iter()
             .filter(|file| !ignore_set.is_match(&file.to_string_lossy()))
-            .filter(|file| matches!(file.extension(), Some(ext) if ext == self.extension))
-            .map(|fq_path| self.analysis_runer_single(fq_path))
+            .filter(|file| matches!(file.extension(), Some(ext) if ext == self.extension.as_str()))
+            .map(|fq_path| self.analysis_runner_single(fq_path))
             .partition(Result::is_ok);
         let success = success.into_iter().map(Result::unwrap).flatten().collect();
         // let failures = failures.into_iter().map(Result::unwrap_err).collect();
@@ -50,7 +50,10 @@ impl Linter {
             .map_err(GlobstarErr::Marvin)
     }
 
-    fn analysis_runer_single<P: AsRef<Path>>(&self, fq_path: P) -> Result<Vec<Issue>, AnalysisErr> {
+    fn analysis_runner_single<P: AsRef<Path>>(
+        &self,
+        fq_path: P,
+    ) -> Result<Vec<Issue>, AnalysisErr> {
         // fully qualified path, use this to read/write
         let fq_path = fq_path.as_ref();
         // stripped path, use this in issue location
