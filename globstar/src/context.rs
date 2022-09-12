@@ -10,8 +10,12 @@ pub struct Context<'a> {
     pub(crate) injected_trees: Vec<InjectedTree>,
 }
 
+/// The injected tree
 pub struct InjectedTree {
+    /// The newly parsed tree
     pub tree: Tree,
+
+    /// The range spanned by the tree
     pub original_range: Range,
 }
 
