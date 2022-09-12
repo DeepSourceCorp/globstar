@@ -17,7 +17,7 @@ mod test_utils;
 
 use std::fmt;
 
-use context::{Context, InjectedTree};
+pub use context::{Context, InjectedTree};
 use err::InjectionErr;
 use scope_resolution::ResolutionMethod;
 use tree_sitter::{Language, Node, Parser, Query, QueryCursor, QueryError, Range};
@@ -87,8 +87,12 @@ impl Injection {
     /// Note: `query` is a tree-sitter query in the outer language, `language`
     /// is the nested language, which is then used to parse the result of the
     /// query.
-    pub fn new(query: &str, language: Language) -> Result<Self, InjectionErr> {
-        let query = Query::new(language, query).map_err(InjectionErr::Query)?;
+    pub fn new(
+        query: &str,
+        source_language: Language,
+        target_language: Language,
+    ) -> Result<Self, InjectionErr> {
+        let query = Query::new(source_language, query).map_err(InjectionErr::Query)?;
         if !query
             .capture_names()
             .iter()
@@ -96,7 +100,10 @@ impl Injection {
         {
             Err(InjectionErr::MissingCapture)
         } else {
-            Ok(Self { query, language })
+            Ok(Self {
+                query,
+                language: target_language,
+            })
         }
     }
 }
@@ -264,7 +271,6 @@ pub type ValidatorFn = for<'a> fn(Node, &Option<Context<'a>>, &[u8]) -> Vec<Occu
 ///
 /// Example: TODO
 #[derive(Copy, Clone, Debug)]
-#[non_exhaustive]
 pub struct Lint {
     /// The name of this lint, for e.g.: `UNUSED_VARIABLES`
     pub name: &'static str,
