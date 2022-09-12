@@ -32,6 +32,9 @@ git = "https://github.com/akshay-deepsource/tree-sitter-yaml"
 [dev-dependencies.tree-sitter-bash]
 git = "https://github.com/akshay-deepsource/tree-sitter-bash"
 
+[dev-dependencies.tree-sitter-ruby]
+git = "https://github.com/akshay-deepsource/tree-sitter-ruby"
+
 [features]
 default = []
 testing = ["pretty_assertions"]

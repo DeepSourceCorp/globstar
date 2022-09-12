@@ -10,7 +10,7 @@ pub struct Context<'a> {
     pub(crate) injected_trees: Vec<InjectedTree>,
 }
 
-/// The injected tree
+/// The injected tree.
 pub struct InjectedTree {
     /// The newly parsed tree
     pub tree: Tree,
