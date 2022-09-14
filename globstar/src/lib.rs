@@ -97,7 +97,7 @@ impl Injection {
         if !query
             .capture_names()
             .iter()
-            .any(|name| name != "injection.content")
+            .any(|name| name == "injection.content")
         {
             Err(InjectionErr::MissingCapture)
         } else {
@@ -173,7 +173,7 @@ impl Linter {
             .flatten()
             .collect::<Vec<_>>();
 
-        Ok(root_scope.map(|root_scope| Context {
+        Ok(Some(Context {
             root_scope,
             injected_trees,
         }))

@@ -6,7 +6,7 @@ use tree_sitter::{Node, Range, Tree};
 /// Pass around scope and injection data across lint rules.
 #[derive(Debug)]
 pub struct Context<'a> {
-    pub(crate) root_scope: Rc<RefCell<LocalScope<'a>>>,
+    pub(crate) root_scope: Option<Rc<RefCell<LocalScope<'a>>>>,
     pub(crate) injected_trees: Vec<InjectedTree>,
 }
 
@@ -30,13 +30,13 @@ impl fmt::Debug for InjectedTree {
 
 impl<'a> Context<'a> {
     /// Produce the top-most scope for a given file
-    pub fn root_scope(&self) -> Rc<RefCell<LocalScope<'a>>> {
-        Rc::clone(&self.root_scope)
+    pub fn root_scope(&self) -> Option<Rc<RefCell<LocalScope<'a>>>> {
+        self.root_scope.as_ref().map(Rc::clone)
     }
 
     /// Produce the the nearest scope that can fully contain `range`
     pub fn scope_by_range(&self, range: &Range) -> Option<Rc<RefCell<LocalScope<'a>>>> {
-        scope_resolution::scope_by_range(self.root_scope(), range)
+        scope_resolution::scope_by_range(self.root_scope()?, range)
     }
 
     /// Produce the scope that `node` belongs to
