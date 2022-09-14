@@ -26,11 +26,13 @@ path = "../test-utils"
 [dependencies.marvin]
 path = "../marvin"
 
-[dev-dependencies.tree-sitter-yaml]
-git = "https://github.com/akshay-deepsource/tree-sitter-yaml"
- 
-[dev-dependencies.tree-sitter-bash]
-git = "https://github.com/akshay-deepsource/tree-sitter-bash"
+[dev-dependencies]
+tree-sitter-yaml       = { git = "https://github.com/akshay-deepsource/tree-sitter-yaml" }
+tree-sitter-bash       = { git = "https://github.com/akshay-deepsource/tree-sitter-bash" }
+tree-sitter-rust       = { git = "https://github.com/akshay-deepsource/tree-sitter-rust" }
+tree-sitter-elm        = { git = "https://github.com/akshay-deepsource/tree-sitter-elm" }
+tree-sitter-dockerfile = { git = "https://github.com/akshay-deepsource/tree-sitter-dockerfile" }
+once_cell              = "^1.14"
 
 [dev-dependencies.tree-sitter-ruby]
 git = "https://github.com/akshay-deepsource/tree-sitter-ruby"
@@ -39,3 +41,14 @@ git = "https://github.com/akshay-deepsource/tree-sitter-ruby"
 default = []
 testing = ["pretty_assertions"]
 
+[[example]]
+name = "simple"
+path = "examples/simple/main.rs"
+
+[[example]]
+name = "scopes"
+path = "examples/scopes/main.rs"
+
+[[example]]
+name = "injections"
+path = "examples/injections/main.rs"
