@@ -61,6 +61,7 @@ dependencies = [
  "thiserror",
  "tree-sitter",
  "tree-sitter-bash",
+ "tree-sitter-ruby",
  "tree-sitter-yaml",
 ]
 
@@ -249,6 +250,15 @@ dependencies = [
 name = "tree-sitter-bash"
 version = "0.19.0"
 source = "git+https://github.com/akshay-deepsource/tree-sitter-bash#ef53373b16fff573ce4868a5763660e4ffc528d7"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
+name = "tree-sitter-ruby"
+version = "0.19.0"
+source = "git+https://github.com/akshay-deepsource/tree-sitter-ruby#97fd3060b1bb74dd8761fc3b288efa9b2b81facc"
 dependencies = [
  "cc",
  "tree-sitter",

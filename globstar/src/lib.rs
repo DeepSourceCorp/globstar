@@ -37,7 +37,7 @@ pub struct Linter {
     extension: String,
 }
 
-/// An "injection" defines the rules to parse a language within a language.
+/// An `Injection` defines the rules to parse a language within a language.
 ///
 /// Several languages "nest" one language within another. Globstar allows
 /// you to parse and analyze such nested languages in addition to analyzing
@@ -59,6 +59,7 @@ pub struct Linter {
 /// # use globstar::{Linter, Injection};
 /// # fn main() {
 /// let yaml = tree_sitter_yaml::language();
+/// let bash = tree_sitter_bash::language();
 /// let shell_query = r#"
 ///     ((block_mapping_pair
 ///       key: (_) @key
@@ -69,7 +70,7 @@ pub struct Linter {
 ///     (#match? @key "^(ansible\\.builtin\\.)?shell")
 ///     (#set! injection.language "bash"))
 /// "#;
-/// let bash_injection = Injection::new(shell_query, yaml).unwrap();
+/// let bash_injection = Injection::new(shell_query, yaml, bash).unwrap();
 /// let ansible_analyzer = Linter::new(yaml)
 ///     .injection(bash_injection);
 /// # }
@@ -179,6 +180,16 @@ impl Linter {
     }
 
     /// Create a new Linter instance of a language
+    ///
+    /// Example:
+    ///
+    /// ```rust
+    /// # use globstar::Linter;
+    /// # fn main() {
+    /// let yaml = tree_sitter_yaml::language();
+    /// let yaml_linter = Linter::new(yaml);
+    /// # }
+    /// ```
     pub fn new(language: Language) -> Self {
         Self {
             validators: vec![],
@@ -197,32 +208,119 @@ impl Linter {
         self
     }
 
-    /// Add a lint to this Linter
+    /// Add a validator/lint to this Linter
+    ///
+    /// Example:
+    ///
+    /// ```rust
+    /// # use globstar::{Linter, tree_sitter::Node, Context, Occurrence};
+    /// # fn main() {
+    /// let yaml = tree_sitter_yaml::language();
+    /// let yaml_linter = Linter::new(yaml)
+    ///     .validator(duplicate_key_check);
+    ///
+    /// fn duplicate_key_check<'a>(
+    ///     root: Node,
+    ///     ctx: &Option<Context<'a>>,
+    ///     src: &[u8]
+    /// ) -> Vec<Occurrence> {
+    ///     unimplemented!()
+    /// }
+    /// # }
+    /// ```
     pub fn validator(mut self, validator: ValidatorFn) -> Self {
         self.validators.push(validator);
         self
     }
 
     /// Set a list of lints accepted by this linter
+    ///
+    /// Example:
+    ///
+    /// ```rust
+    /// # use globstar::{Linter, tree_sitter::Node, Context, Occurrence};
+    /// # fn main() {
+    /// let yaml = tree_sitter_yaml::language();
+    /// let yaml_linter = Linter::new(yaml)
+    ///     .validators(&[
+    ///         duplicate_key_check,
+    ///         syntax_error_check
+    ///     ]);
+    ///
+    /// fn duplicate_key_check<'a>(
+    ///     root: Node,
+    ///     ctx: &Option<Context<'a>>,
+    ///     src: &[u8]
+    /// ) -> Vec<Occurrence> {
+    ///     unimplemented!()
+    /// }
+    ///
+    /// fn syntax_error_check<'a>(
+    ///     root: Node,
+    ///     ctx: &Option<Context<'a>>,
+    ///     src: &[u8]
+    /// ) -> Vec<Occurrence> {
+    ///     unimplemented!()
+    /// }
+    /// # }
+    /// ```
     pub fn validators(mut self, validators: &[ValidatorFn]) -> Self {
         self.validators = validators.to_vec();
         self
     }
 
-    /// Set the comment str accepted by this language, this is used
-    /// in annotated tests
+    /// Set the comment prefix for single line comments, accepted
+    /// by this language, this is used in annotated tests
+    ///
+    /// Example:
+    ///
+    /// ```rust
+    /// # use globstar::Linter;
+    /// # fn main() {
+    /// let yaml = tree_sitter_yaml::language();
+    /// let yaml_linter = Linter::new(yaml)
+    ///     .comment_str("#");
+    /// # }
+    /// ```
     pub fn comment_str<S: AsRef<str>>(mut self, comment_str: S) -> Self {
         self.comment_str = comment_str.as_ref().to_owned();
         self
     }
 
     /// Scope resolution queries
+    ///
+    /// Example:
+    ///
+    /// ```rust
+    /// # use globstar::Linter;
+    /// # fn main() {
+    /// let yaml = tree_sitter_yaml::language();
+    /// let yaml_scopes = "...";
+    /// let yaml_linter = Linter::new(yaml)
+    ///     .scopes(yaml_scopes);
+    /// # }
+    /// ```
     pub fn scopes<S: AsRef<str>>(mut self, queries: S) -> Self {
         self.scopes = Some(queries.as_ref().to_owned());
         self
     }
 
     /// Language injection queries
+    ///
+    /// Example:
+    ///
+    /// ```no_run
+    /// # // this test does not actually compile, the query is invalid
+    /// # use globstar::{Linter, Injection, err::GlobstarErr};
+    /// # fn main() -> Result<(), GlobstarErr> {
+    /// let yaml = tree_sitter_yaml::language();
+    /// let bash = tree_sitter_bash::language();
+    /// let injection_query = "...";
+    /// let yaml_linter = Linter::new(yaml)
+    ///     .injection(Injection::new(injection_query, yaml, bash)?);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn injection(mut self, injection: Injection) -> Self {
         self.injections.push(injection);
         self
@@ -231,7 +329,7 @@ impl Linter {
     /// Add an ignore pattern, files conforming to this pattern
     /// are not processed.
     ///
-    /// Example: TODO
+    /// Example:
     ///
     /// ```
     /// # use globstar::Linter;
@@ -245,7 +343,17 @@ impl Linter {
 
     /// Set a list patterns for files to ignore.
     ///
-    /// Example: TODO
+    /// Example:
+    ///
+    /// ```
+    /// # use globstar::Linter;
+    /// let linter = Linter::new(tree_sitter_bash::language())
+    ///     .ignores(&[
+    ///         r"Cargo\.toml",
+    ///         r"roles/*",
+    ///         r"target/*",
+    ///     ]);
+    /// ```
     pub fn ignores<S: AsRef<str>>(mut self, regex_set: &[S]) -> Self {
         self.ignores = regex_set
             .iter()
@@ -255,6 +363,14 @@ impl Linter {
     }
 
     /// Set the file extension, e.g.: `"yml"`
+    ///
+    /// Example:
+    ///
+    /// ```
+    /// # use globstar::Linter;
+    /// let linter = Linter::new(tree_sitter_bash::language())
+    ///     .extension("sh");
+    /// ```
     pub fn extension<S: AsRef<str>>(mut self, extension: S) -> Self {
         self.extension = extension.as_ref().to_owned();
         self
@@ -265,11 +381,62 @@ impl Linter {
 ///
 /// Every `ValidatorFn` recives the `root_node` for a syntax tree, along with
 /// (optionally) scope and injection data, and source file (as bytes).
+///
+/// Example:
+///
+/// ```rust
+/// use globstar::{
+///     tree_sitter::{Node, Query, QueryCursor},
+///     Context, Occurrence, Lint, traits::MapCapture
+/// };
+///
+/// const ASSIGNMENT_IN_CONDITION: Lint = Lint {
+///     name: "ASSIGNMENT_IN_CONDITION",
+///     code: "RB-W001",
+/// };
+///
+/// fn assignment_in_condition<'a>(
+///     root: Node,
+///     ctx: &Option<Context<'a>>,
+///     src: &[u8]
+/// ) -> Vec<Occurrence> {
+///     let ruby = tree_sitter_ruby::language();
+///
+///     let query = Query::new(
+///         ruby,
+///         r#"
+///         (if
+///          (assignment
+///           left: (_)
+///           right: (_)) @raise)
+///         "#,
+///     )
+///     .unwrap();
+///
+///     let occurrences = QueryCursor::new()
+///         .matches(&query, root, src)
+///         .map_capture("raise", |capture| {
+///             let location = capture.node.range();
+///             let message = "Perhaps this assignment is supposed to be a comparison";
+///             ASSIGNMENT_IN_CONDITION.raise(location, message)
+///         });
+///
+///     return occurrences;
+/// }
+/// ```
 pub type ValidatorFn = for<'a> fn(Node, &Option<Context<'a>>, &[u8]) -> Vec<Occurrence>;
 
 /// Metadata about an antipattern that the `Linter` raises.
 ///
-/// Example: TODO
+/// Example:
+///
+/// ```rust
+/// # use globstar::Lint;
+/// const UNUSED_VARIABLE: Lint = Lint {
+///     name: "UNUSED_VARIABLE",
+///     code: "RS-W1011",
+/// };
+/// ```
 #[derive(Copy, Clone, Debug)]
 pub struct Lint {
     /// The name of this lint, for e.g.: `UNUSED_VARIABLES`
@@ -291,6 +458,8 @@ impl Lint {
 }
 
 /// An instance of a `Lint` is an `Occurrence`.
+///
+/// Consider constructing this through [`Lint::raise`](Lint::raise).
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Occurrence {
