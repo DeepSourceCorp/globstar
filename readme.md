@@ -1,3 +1,5 @@
+# `globstar`
+
 ```
       .----------------------------.
       |                            |
@@ -22,15 +24,15 @@
                        ~~~~~~~~~~~~~~~~~~~
 ```
 
-## globstar
+Light-weight linting with tree-sitter queries, compatible with `marvin` out-of-the-box.
 
-light-weight linting with tree-sitter queries. compatible with
-`marvin` out-of-the-box.
+## Dependencies
 
-### architecture
+Globstar currently uses a fork of tree-sitter, which is available [here](https://github.com/akshay-deepsource/tree-sitter). You may also require tree-sitter bindings for a specific language during development, e.g., [tree-sitter-go](https://github.com/tree-sitter/tree-sitter-go) or [tree-sitter-ruby](https://github.com/tree-sitter/tree-sitter-ruby).
 
-the crates in this workspace are given 5-letter tree names
-because nomenclature is hard.
+## Components
+
+The crates in this workspace are given 5-letter tree names because nomenclature is hard.
 
 ```
 [workspace]
@@ -41,19 +43,17 @@ members = [
     "holly",     # annotation based test library
     "cedar",     # scope resolution magic
     "linters/*", # binaries that implement `Linter`s
-    "langs/*",   # tree-sitter parsers, mildly vandalized for personal use
 ]
 ```
+### `marvin`
 
-#### `marvin`
-
-the bottommost layer of the stack, contains types, utils and
+The bottommost layer of the stack, contains types, utils and
 interfaces to interface with `marvin` gracefully.
 
-#### holly
+### holly
 
-annotation based test library. extract comments, trim
-indents, mark ranges in source code etc:
+Annotation based test library. Extract comments, trim
+indents, mark ranges in source code, etc.
 
 ```ruby
 if a = 2
@@ -65,15 +65,15 @@ end
 ```
 
 `holly` contains utils to produce:
-- the span of the annotation: `3..7`
-- the content of the span: `a = 2`
-- the comment: `offending code`
+- The span of the annotation: `3..7`
+- The content of the span: `a = 2`
+- The comment: `offending code`
 
-#### `aspen`
+### `aspen`
 
-provides a "runtime" for lints. `cargo doc --open` for more.
-also implements a thin layer over `holly` for pretty
-assertions and unit tests. creating `marvin` compatible
+Provides a "runtime" for lints. Run `cargo doc --open` for more.
+It also implements a thin layer over `holly` for pretty
+assertions and unit tests. Creating `marvin` compatible
 linters with `aspen` is as simple as:
 
 ```rust
@@ -90,15 +90,18 @@ let linter = Linter::new(LANGUAGE).validators(VALIDATORS);
 linter.run_analysis()?;
 ```
 
-#### cedar
+### cedar
 
-scope resolution through tree-sitter queries, currently very
-primitive and non-configurable.
+Scope resolution through tree-sitter queries (currently very
+primitive and non-configurable)
 
-#### `linters`
+### `linters`
 
-this dir contains a couple of sample `aspen::Linter`
-implementations:
+This dir contains a couple of sample `aspen::Linter` implementations:
 
 - `dockerfile`
 - `ruby`
+
+## Steps to build
+
+You can simply run `cargo build --release`.
