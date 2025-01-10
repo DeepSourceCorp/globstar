@@ -7,7 +7,7 @@ import (
 
 func TestIsLiteral(t *testing.T) {
 	rule := py_rules.IsLiteral()
-	expected := []ExpectedIssue{{Message: "Do not use 'if' to compare literals. Use '==' instead"}}
+	expected := []ExpectedIssue{{Message: "Do not use 'is' to compare literals. Use '==' instead"}}
 
 	testCase := &TestCase{
 		Name: "is-literal",

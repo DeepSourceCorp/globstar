@@ -33,7 +33,7 @@ func checkComparisonOp(r one.Rule, ana *one.Analyzer, node *sitter.Node) {
 
 	if lhsIsLiteral || rhsIsLiteral {
 		ana.Report(&one.Issue{
-			Message: "Do not use 'if' to compare literals. Use '==' instead",
+			Message: "Do not use 'is' to compare literals. Use '==' instead",
 			Range:   node.Range(),
 		})
 	}
