@@ -25,6 +25,9 @@ type ParseResult struct {
 	TsLanguage *sitter.Language
 	// Language is the language of the file
 	Language Language
+	// ScopeTree represents the scope hierarchy of the file.
+	// Can be nil if scope support for this language has not been implemented yet.
+	ScopeTree *ScopeTree
 }
 
 type Language int
@@ -83,20 +86,24 @@ func Parse(filePath string, source []byte, language Language, grammar *sitter.La
 		return nil, fmt.Errorf("failed to parse %s", filePath)
 	}
 
-	return &ParseResult{
+	scopeTree := MakeScopeTree(language, ast, source)
+	parseResult := &ParseResult{
 		Ast:        ast,
 		Source:     source,
 		FilePath:   filePath,
 		TsLanguage: grammar,
 		Language:   language,
-	}, nil
+		ScopeTree:  scopeTree,
+	}
+
+	return parseResult, nil
 }
 
 // ParseFile parses the file at the given path using the appropriate
 // tree-sitter grammar.
 func ParseFile(filePath string) (*ParseResult, error) {
 	lang := LanguageFromFilePath(filePath)
-	grammar := lang.Grammar() 
+	grammar := lang.Grammar()
 	if grammar == nil {
 		return nil, fmt.Errorf("unsupported file type: %s", filePath)
 	}

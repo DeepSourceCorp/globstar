@@ -6,7 +6,6 @@ package one
 
 import (
 	"github.com/smacker/go-tree-sitter"
-	"github.com/srijan-paul/deepgrep/pkg/one"
 )
 
 // Reference represents a variable reference inside a source file
@@ -49,7 +48,7 @@ type Variable struct {
 // Languages that don't implement a `ScopeBuilder` can still have lints, just
 // not any that require scope resolution.
 type ScopeBuilder interface {
-	GetLanguage() one.Language
+	GetLanguage() Language
 	// NodeCreatesScope returns true if the node introduces a new scope
 	// into the scope tree
 	NodeCreatesScope(node *sitter.Node) bool
@@ -102,7 +101,7 @@ func (s *Scope) Lookup(name string) *Variable {
 }
 
 type ScopeTree struct {
-	Language one.Language
+	Language Language
 	// ScopeOfNode maps every scope-having node to its corresponding scope.
 	// E.g: a block statement is mapped to the scope it introduces.
 	ScopeOfNode map[*sitter.Node]*Scope
@@ -176,16 +175,16 @@ func (st *ScopeTree) GetScope(node *sitter.Node) *Scope {
 	return nil
 }
 
-func MakeScopeTree(parsed *one.ParseResult) *ScopeTree {
-	switch parsed.Language {
-	case one.LangPy:
+func MakeScopeTree(lang Language, ast *sitter.Node, source []byte) *ScopeTree {
+	switch lang {
+	case LangPy:
 		return nil
-	case one.LangTs, one.LangJs, one.LangTsx:
+	case LangTs, LangJs, LangTsx:
 		builder := &TsScopeBuilder{
-			ast:    parsed.Ast,
-			source: parsed.Source,
+			ast:    ast,
+			source: source,
 		}
-		return BuildScopeTree(builder, parsed.Ast, parsed.Source)
+		return BuildScopeTree(builder, ast, source)
 	default:
 		return nil
 	}

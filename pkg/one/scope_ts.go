@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/srijan-paul/deepgrep/pkg/one"
 )
 
 type UnresolvedRef struct {
@@ -20,8 +19,8 @@ type TsScopeBuilder struct {
 	unresolvedRefs []UnresolvedRef
 }
 
-func (j *TsScopeBuilder) GetLanguage() one.Language {
-	return one.LangJs
+func (j *TsScopeBuilder) GetLanguage() Language {
+	return LangJs
 }
 
 var ScopeNodes = []string{
@@ -55,7 +54,7 @@ func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls [
 
 	case "object_pattern":
 		// { <properties> } = ...
-		props := one.ChildrenOfType(idOrPattern, "shorthand_property_identifier_pattern")
+		props := ChildrenOfType(idOrPattern, "shorthand_property_identifier_pattern")
 		for _, prop := range props {
 			decls = append(decls, &Variable{
 				Kind:     VarKindVariable,
@@ -64,7 +63,7 @@ func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls [
 			})
 		}
 
-		pairs := one.ChildrenOfType(idOrPattern, "pair_pattern")
+		pairs := ChildrenOfType(idOrPattern, "pair_pattern")
 		for _, pair := range pairs {
 			decls = ts.scanDecl(pair, declarator, decls)
 		}
@@ -77,9 +76,9 @@ func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls [
 
 	case "array_pattern":
 		// [ <elements> ] = foo
-		childrenIds := one.ChildrenOfType(idOrPattern, "identifier")
-		childrenObjPatterns := one.ChildrenOfType(idOrPattern, "object_pattern")
-		childrenArrayPatterns := one.ChildrenOfType(idOrPattern, "array_pattern")
+		childrenIds := ChildrenOfType(idOrPattern, "identifier")
+		childrenObjPatterns := ChildrenOfType(idOrPattern, "object_pattern")
+		childrenArrayPatterns := ChildrenOfType(idOrPattern, "array_pattern")
 		for _, id := range childrenIds {
 			decls = append(decls, &Variable{
 				Kind:     VarKindVariable,
@@ -158,7 +157,7 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 
 	case "import_clause":
 		// import <default>, { <non_default> } from ...
-		defaultImport := one.FirstChildOfType(node, "identifier")
+		defaultImport := FirstChildOfType(node, "identifier")
 		if defaultImport != nil {
 			declaredVars = append(declaredVars, &Variable{
 				Kind:     VarKindImport,

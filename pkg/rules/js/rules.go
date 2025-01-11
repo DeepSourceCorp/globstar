@@ -6,5 +6,6 @@ import "github.com/srijan-paul/deepgrep/pkg/one"
 func CreateJsRules() []one.Rule {
 	return []one.Rule{
 		NoDoubleEq(),
+		UnusedImport(),
 	}
 }

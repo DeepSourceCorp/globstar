@@ -3,13 +3,12 @@ package one
 import (
 	"testing"
 
-	"github.com/srijan-paul/deepgrep/pkg/one"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func parseFile(t *testing.T, source string) *one.ParseResult {
-	parsed, err := one.Parse("file.ts", []byte(source), one.LangJs, one.LangJs.Grammar())
+func parseFile(t *testing.T, source string) *ParseResult {
+	parsed, err := Parse("file.ts", []byte(source), LangJs, LangJs.Grammar())
 	require.NoError(t, err)
 	require.NotNil(t, parsed)
 	return parsed
@@ -24,7 +23,7 @@ func Test_BuildScopeTree(t *testing.T) {
 			}`
 		parsed := parseFile(t, source)
 
-		scopeTree := MakeScopeTree(parsed)
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
 		require.NotNil(t, scopeTree)
 
 		varX, exists := scopeTree.Root.Variables["x"]
@@ -62,7 +61,7 @@ func Test_BuildScopeTree(t *testing.T) {
 		  `
 		parsed := parseFile(t, source)
 
-		scopeTree := MakeScopeTree(parsed)
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
 		require.NotNil(t, scopeTree)
 
 		{
