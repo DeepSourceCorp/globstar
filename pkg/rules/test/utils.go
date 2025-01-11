@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -38,8 +39,8 @@ func serializeIssues(issues []*one.Issue) []string {
 			issue.Message,
 		))
 	}
-	
-	return issues_str 
+
+	return issues_str
 }
 
 func (testCase *TestCase) Run(t *testing.T) {
@@ -53,11 +54,15 @@ func (testCase *TestCase) Run(t *testing.T) {
 
 		analyzer := one.NewAnalyzer(parseResult, []one.Rule{testCase.Rule})
 		require.NotNil(t, analyzer)
-		analyzer.AddRule(testCase.Rule)
 
 		got := analyzer.Analyze()
 		if len(got) != len(shouldRaise.Expected) {
-			t.Errorf("expected %d issues, but got %d. Snippet:\n%s\n", len(shouldRaise.Expected), len(got), shouldRaise.Code)
+			t.Errorf("expected %d issues, but got %d. Snippet:\n%s\nIssues:\n%s",
+				len(shouldRaise.Expected),
+				len(got),
+				shouldRaise.Code,
+				strings.Join(serializeIssues(got), "\n"),
+			)
 		}
 
 		for _, want := range shouldRaise.Expected {

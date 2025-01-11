@@ -91,7 +91,7 @@ func RunLints(rootDir string, globPattern string) error {
 	})
 
 	if result.numFilesChecked > 0 {
-		log.Info().Msgf("Analyzed %d files and found %d issues.", result.numFilesChecked,  len(result.issues))
+		log.Info().Msgf("Analyzed %d files and found %d issues.", result.numFilesChecked, len(result.issues))
 	} else {
 		log.Info().Msg("No files to analyze")
 	}
@@ -121,6 +121,14 @@ func main() {
 
 					ignorePattern := cmd.String("ignore")
 					return RunLints(rootDir, ignorePattern)
+				},
+			},
+			{
+				Name:    "desc",
+				Aliases: []string{"d"},
+				Usage:   "Describe an issue",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return nil
 				},
 			},
 		},

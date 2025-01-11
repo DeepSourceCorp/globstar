@@ -9,8 +9,11 @@ type Issue struct {
 	Message string
 	// The range of the issue in the source code
 	Range sitter.Range
-	// (optional) The AST node that caused the issue 
+	// (optional) The AST node that caused the issue
 	Node *sitter.Node
+	// Id is a unique ID for the issue.
+	// Issue that have 'Id's can be explained using the `one desc` command.
+	Id *string
 }
 
 type Analyzer struct {
