@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/fatih/color"
 	"github.com/gobwas/glob"
@@ -15,9 +16,61 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func LintFile(rulesMap map[one.Language][]one.Rule, path string) ([]*one.Issue, error) {
-	rules := rulesMap[one.LanguageFromFilePath(path)]
-	if rules == nil {
+// ReadCustomRules reads all the custom rules from the `.one/` directory in the project root
+func ReadCustomRules(projectRoot string) (map[one.Language][]one.PatternRule, error) {
+	oneDir := filepath.Join(projectRoot, ".one")
+
+	stat, err := os.Stat(oneDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	if !stat.IsDir() {
+		return nil, nil
+	}
+
+	rulesMap := make(map[one.Language][]one.PatternRule)
+	err = filepath.Walk(oneDir, func(path string, d fs.FileInfo, err error) error {
+		if d.IsDir() && d.Name() != ".one" {
+			return fs.SkipDir
+		}
+
+		if d.Mode()&fs.ModeSymlink != 0 {
+			// skip symlinks
+			return nil
+		}
+
+		fileExt := filepath.Ext(path)
+		isYamlFile := fileExt == ".yaml" || fileExt == ".yml"
+		if !isYamlFile {
+			return nil
+		}
+
+		patternRule, err := one.ReadFromFile(path)
+		if err != nil {
+			return err
+		}
+
+		lang := patternRule.Language()
+		rulesMap[lang] = append(rulesMap[lang], patternRule)
+		return nil
+	})
+
+	return rulesMap, err
+}
+
+func LintFile(
+	rulesMap map[one.Language][]one.Rule,
+	patternRules map[one.Language][]one.PatternRule,
+	path string,
+) ([]*one.Issue, error) {
+	lang := one.LanguageFromFilePath(path)
+	rules := rulesMap[lang]
+	if rules == nil && patternRules == nil {
 		// no rules are registered for this language
 		return nil, nil
 	}
@@ -25,6 +78,10 @@ func LintFile(rulesMap map[one.Language][]one.Rule, path string) ([]*one.Issue, 
 	analyzer, err := one.FromFile(path, rules)
 	if err != nil {
 		return nil, err
+	}
+
+	if patternRules != nil {
+		analyzer.PatternRules = patternRules[lang]
 	}
 
 	return analyzer.Analyze(), nil
@@ -35,7 +92,25 @@ type lintResult struct {
 	numFilesChecked int
 }
 
-func RunLints(rootDir string, globPattern string) error {
+var defaultIgnoreDirs = []string{
+	"node_modules",
+	"vendor",
+	"dist",
+	"build",
+	"out",
+	".git",
+	".svn",
+	"venv",
+	"__pycache__",
+	".idea",
+}
+
+// RunLints goes over all the files in the project and runs the lints for every file encountered
+func RunLints(
+	rootDir string,
+	globPattern string, // pattern to ignore files
+	patternRules map[one.Language][]one.PatternRule, // map of language id -> yaml rules
+) error {
 	ignorePattern, err := glob.Compile(globPattern)
 	if err != nil {
 		return err
@@ -47,7 +122,7 @@ func RunLints(rootDir string, globPattern string) error {
 	result := lintResult{}
 	err = filepath.Walk(rootDir, func(path string, d fs.FileInfo, err error) error {
 		if d.IsDir() {
-			if ignorePattern.Match(path) {
+			if ignorePattern.Match(path) || slices.Contains(defaultIgnoreDirs, d.Name()) {
 				return filepath.SkipDir
 			}
 
@@ -71,7 +146,7 @@ func RunLints(rootDir string, globPattern string) error {
 		result.numFilesChecked++
 
 		// run linter
-		issues, err := LintFile(allRules, path)
+		issues, err := LintFile(allRules, patternRules, path)
 		if err != nil {
 			// TODO: parse error on a single file should not exit the entire analysis process
 			return err
@@ -100,6 +175,18 @@ func RunLints(rootDir string, globPattern string) error {
 }
 
 func main() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal().Err(err)
+		return
+	}
+
+	patternRules, err := ReadCustomRules(cwd)
+	if err != nil {
+		log.Fatal().Err(err)
+		return
+	}
+
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
 			{
@@ -120,7 +207,7 @@ func main() {
 					}
 
 					ignorePattern := cmd.String("ignore")
-					return RunLints(rootDir, ignorePattern)
+					return RunLints(rootDir, ignorePattern, patternRules)
 				},
 			},
 			{

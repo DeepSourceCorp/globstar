@@ -69,6 +69,7 @@ func LanguageFromFilePath(path string) Language {
 	switch ext {
 	case ".py":
 		return LangPy
+		// TODO: .jsx and .js can both have JSX syntax -_-
 	case ".js", ".jsx":
 		return LangJs
 	case ".ts":
