@@ -10,6 +10,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// To get a node back from a tree-sitter query, it *must* have a capture name.
+// So: (call_expression) will match nothing, but (call_expression) @some_key
+// will match all call expressions.
+// For filtering patterns with clauses in the yaml file, like:
+// filters:
+//   - pattern-inside: (call_expression)
+//   - pattern-not-inside: (catch_block)
+//
+// We need a to append a key name at the end of the pattern written by the user.
+// This is the key that we will use.
+const filterPatternKey = "__filter__key__"
+
 // A PatternRule is a rule that matches a tree-sitter query pattern
 // and reports an issue when the pattern is found.
 // Unlike regular issues, PatternRules are not associated with a specific node type, rather
@@ -90,20 +102,20 @@ func CreatePatternRule(pattern *sitter.Query,
 	}
 }
 
-type Filter struct {
-	PatternInside    string `yaml:"patternInside,omitempty"`
-	PatternNotInside string `yaml:"patternNotInside,omitempty"`
+type filterYAML struct {
+	PatternInside    string `yaml:"pattern-inside,omitempty"`
+	PatternNotInside string `yaml:"pattern-not-inside,omitempty"`
 }
 
 type PatternRuleFile struct {
-	Language    string   `yaml:"language"`
-	Code        string   `yaml:"name"`
-	Message     string   `yaml:"message"`
-	Pattern     string   `yaml:"pattern"`
-	Filters     []Filter `yaml:"filters,omitempty"`
-	Description string   `yaml:"description,omitempty"`
-	Exclude     []string `yaml:"exclude,omitempty"`
-	Include     []string `yaml:"include,omitempty"`
+	Language    string       `yaml:"language"`
+	Code        string       `yaml:"name"`
+	Message     string       `yaml:"message"`
+	Pattern     string       `yaml:"pattern"`
+	Description string       `yaml:"description,omitempty"`
+	Filters     []filterYAML `yaml:"filters,omitempty"`
+	Exclude     []string     `yaml:"exclude,omitempty"`
+	Include     []string     `yaml:"include,omitempty"`
 }
 
 func DecodeLanguage(language string) Language {
@@ -173,9 +185,9 @@ func ReadFromFile(filePath string) (PatternRule, error) {
 	var filters []NodeFilter
 	if rule.Filters != nil {
 		for _, filter := range rule.Filters {
-
 			if filter.PatternInside != "" {
-				query, err := sitter.NewQuery([]byte(filter.PatternInside), lang.Grammar())
+				queryStr := filter.PatternInside + " @" + filterPatternKey
+				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
 				if err != nil {
 					return nil, err
 				}
@@ -184,11 +196,11 @@ func ReadFromFile(filePath string) (PatternRule, error) {
 					query:       query,
 					shouldMatch: true,
 				})
-
 			}
 
 			if filter.PatternNotInside != "" {
-				query, err := sitter.NewQuery([]byte(filter.PatternNotInside), lang.Grammar())
+				queryStr := filter.PatternNotInside + " @" + filterPatternKey
+				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
 				if err != nil {
 					return nil, err
 				}

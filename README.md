@@ -1,8 +1,9 @@
 ## OneLint
 
-A lightweight tool to write and execute lints with the tree-sitter QL.
+A lightweight tool to write and execute lints with the tree-sitter query language,
+with some custom filters on top.
 More sophisticated lints (e.g: with scope and import resolution) can be written
-using the Golang API.
+using the Go API.
 
 Keep all lints in the  `.one/` directory, and use the `one lint` command
 to run them all.
@@ -19,6 +20,11 @@ message: Remove the "debugger statement" before committing your code
 # capture name must be the same as the lint's `name` field.
 # Nested captures are allowed to have arbitrary names
 pattern: (debugger_statement) @js_no_debugger 
+filters:
+  # This will not flag any debugger statements nested inside catch blocks
+  - pattern-not-inside: (catch_statement)
+  # Only match debugger statements inside a function (or some other node that is inside a function)
+  - pattern-inside:     (function_declaration)
 exclude: # these files are excluded from analysis
   - test/*
   - build/*
@@ -29,5 +35,13 @@ description: |
   Remove the `debugger` statement before committing your code.
 ```
 
-
 A guide to writing tree-sitter queries can be found [here](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html), along with [this interactive playground](https://tree-sitter.github.io/tree-sitter/7-playground.html).
+
+## Building
+
+To run the tool locally:
+
+```sh
+go install ./cmd/one # ensure $GOPATH/bin is in $PATH
+one lint # ensure there's a .one directory in the directory root
+```

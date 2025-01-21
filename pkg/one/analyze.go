@@ -146,6 +146,61 @@ func (ana *Analyzer) shouldSkipRule(rule PatternRule) bool {
 	return false
 }
 
+func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node) bool {
+	qc := sitter.NewQueryCursor()
+	defer qc.Close()
+
+	qc.Exec(filter.query, parent)
+
+	// check if the filter matches the `parent` node
+	for {
+		m, ok := qc.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range m.Captures {
+			if filter.query.CaptureNameForId(capture.Index) == filterPatternKey &&
+				capture.Node == parent {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (ana *Analyzer) runParentFilters(rule PatternRule, node *sitter.Node) bool {
+	filters := rule.NodeFilters()
+	if len(filters) == 0 {
+		return true
+	}
+
+	for _, filter := range filters {
+		shouldMatch := filter.shouldMatch
+		nodeMatched := false
+
+		for parent := node.Parent(); parent != nil; parent = parent.Parent() {
+			if ana.filterMatchesParent(&filter, parent) {
+				nodeMatched = true
+				if !shouldMatch {
+					// pattern-not-inside matched, so this rule should be skipped
+					return false
+				} else {
+					// pattern-inside matched, so we can break out of the loop
+					break
+				}
+			}
+		}
+
+		if !nodeMatched && shouldMatch {
+			return false
+		}
+	}
+
+	return true
+}
+
 // runPatternRules executes all rules that are written as AST queries.
 func (ana *Analyzer) runPatternRules() {
 	for _, rule := range ana.PatternRules {
@@ -167,7 +222,7 @@ func (ana *Analyzer) runPatternRules() {
 
 			for _, capture := range m.Captures {
 				captureName := query.CaptureNameForId(capture.Index)
-				if captureName == rule.Name() {
+				if captureName == rule.Name() && ana.runParentFilters(rule, capture.Node) {
 					rule.OnMatch(ana, capture.Node)
 				}
 			}
