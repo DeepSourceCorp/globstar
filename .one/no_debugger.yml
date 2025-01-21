@@ -1,9 +1,19 @@
+# .one/no_debugger.yml
 language: js 
 name: js_no_debugger 
 message: Remove the "debugger statement" before committing your code
-pattern: (debugger_statement) @js_no_debugger
+# capture name must be the same as the lint's `name` field.
+# Nested captures are allowed to have arbitrary names
+pattern: (debugger_statement) @js_no_debugger 
 filters:
+  # This will not flag any debugger statements nested inside catch blocks
   - pattern-not-inside: (catch_clause)
+  # Only match debugger statements inside a function (or some other node that is inside a function)
+  - pattern-inside:     (function_declaration)
+exclude: # these files are excluded from analysis
+  - test/*
+  - build/*
+  - bin/*
 description: |
   The `debugger` statement is a debugging tool that is not meant to be committed to the repository.
   It can cause the application to stop unexpectedly and is generally considered bad practice.

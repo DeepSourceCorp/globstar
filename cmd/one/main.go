@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -52,7 +53,7 @@ func ReadCustomRules(projectRoot string) (map[one.Language][]one.PatternRule, er
 
 		patternRule, err := one.ReadFromFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("invalid rule '%s': %s", d.Name(), err.Error())
 		}
 
 		lang := patternRule.Language()
@@ -179,13 +180,13 @@ func RunLints(
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal().Err(err)
+		fmt.Fprint(os.Stderr, "Failed to get current working directory")
 		return
 	}
 
 	patternRules, err := ReadCustomRules(cwd)
 	if err != nil {
-		log.Fatal().Err(err)
+		fmt.Fprint(os.Stderr, err.Error())
 		return
 	}
 

@@ -22,7 +22,7 @@ message: Remove the "debugger statement" before committing your code
 pattern: (debugger_statement) @js_no_debugger 
 filters:
   # This will not flag any debugger statements nested inside catch blocks
-  - pattern-not-inside: (catch_statement)
+  - pattern-not-inside: (catch_clause)
   # Only match debugger statements inside a function (or some other node that is inside a function)
   - pattern-inside:     (function_declaration)
 exclude: # these files are excluded from analysis
