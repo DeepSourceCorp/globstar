@@ -159,9 +159,10 @@ func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node
 			break
 		}
 
+		m = qc.FilterPredicates(m, ana.ParseResult.Source)
 		for _, capture := range m.Captures {
-			if filter.query.CaptureNameForId(capture.Index) == filterPatternKey &&
-				capture.Node == parent {
+			captureName := filter.query.CaptureNameForId(capture.Index)
+			if captureName == filterPatternKey && capture.Node == parent {
 				return true
 			}
 		}
@@ -170,6 +171,7 @@ func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node
 	return false
 }
 
+// runParentFilters checks if the parent filters for a rule match the given node.
 func (ana *Analyzer) runParentFilters(rule PatternRule, node *sitter.Node) bool {
 	filters := rule.NodeFilters()
 	if len(filters) == 0 {
@@ -220,10 +222,11 @@ func (ana *Analyzer) runPatternRules() {
 				break
 			}
 
+			m = qc.FilterPredicates(m, ana.ParseResult.Source)
 			for _, capture := range m.Captures {
 				captureName := query.CaptureNameForId(capture.Index)
 				if captureName == rule.Name() && ana.runParentFilters(rule, capture.Node) {
-					rule.OnMatch(ana, capture.Node)
+					rule.OnMatch(ana, capture.Node, m.Captures)
 				}
 			}
 		}

@@ -30,7 +30,7 @@ type PatternRule interface {
 	Name() string
 	Pattern() *sitter.Query
 	Language() Language
-	OnMatch(ana *Analyzer, matchedNode *sitter.Node)
+	OnMatch(ana *Analyzer, matchedNode *sitter.Node, captures []sitter.QueryCapture)
 	PathFilter() *PathFilter
 	NodeFilters() []NodeFilter
 }
@@ -67,10 +67,29 @@ func (r *patternRuleImpl) Pattern() *sitter.Query {
 	return r.pattern
 }
 
-func (r *patternRuleImpl) OnMatch(ana *Analyzer, matchedNode *sitter.Node) {
+func (r *patternRuleImpl) OnMatch(
+	ana *Analyzer,
+	matchedNode *sitter.Node,
+	captures []sitter.QueryCapture,
+) {
+
+	// replace all '@<capture-name>' with the corresponding capture value
+	message := r.issueMessage
+	// TODO: 1. escape '@' in the message, 2. use a more efficient way to replace
+	for strings.ContainsRune(message, '@') {
+		for _, capture := range captures {
+			captureName := r.pattern.CaptureNameForId(capture.Index)
+			message = strings.ReplaceAll(
+				message,
+				"@"+captureName,
+				capture.Node.Content(ana.ParseResult.Source),
+			)
+		}
+	}
+
 	ana.Report(&Issue{
 		Range:   matchedNode.Range(),
-		Message: r.issueMessage,
+		Message: message,
 		Id:      &r.issueId,
 	})
 }
