@@ -1,9 +1,8 @@
 language: js 
-code: js-no-debugger 
+name: js_no_debugger 
 message: Remove the "debugger statement" before committing your code
 pattern: (debugger_statement) @js_no_debugger
 description: |
   The `debugger` statement is a debugging tool that is not meant to be committed to the repository.
   It can cause the application to stop unexpectedly and is generally considered bad practice.
   Remove the `debugger` statement before committing your code.
-

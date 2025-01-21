@@ -66,6 +66,7 @@ func ReadCustomRules(projectRoot string) (map[one.Language][]one.PatternRule, er
 func LintFile(
 	rulesMap map[one.Language][]one.Rule,
 	patternRules map[one.Language][]one.PatternRule,
+	workDir string,
 	path string,
 ) ([]*one.Issue, error) {
 	lang := one.LanguageFromFilePath(path)
@@ -79,6 +80,7 @@ func LintFile(
 	if err != nil {
 		return nil, err
 	}
+	analyzer.WorkDir = workDir
 
 	if patternRules != nil {
 		analyzer.PatternRules = patternRules[lang]
@@ -146,7 +148,7 @@ func RunLints(
 		result.numFilesChecked++
 
 		// run linter
-		issues, err := LintFile(allRules, patternRules, path)
+		issues, err := LintFile(allRules, patternRules, rootDir, path)
 		if err != nil {
 			// TODO: parse error on a single file should not exit the entire analysis process
 			return err

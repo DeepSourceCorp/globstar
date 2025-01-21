@@ -1,6 +1,8 @@
 package one
 
 import (
+	"path/filepath"
+
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -18,6 +20,8 @@ type Issue struct {
 
 type Analyzer struct {
 	Language Language
+	// WorkDir is the directory in which the analysis is being run.
+	WorkDir string
 	// ParseResult is the result of parsing a file with a tree-sitter parser,
 	// along with some extra appendages (e.g: scope information).
 	ParseResult *ParseResult
@@ -102,9 +106,53 @@ func (ana *Analyzer) OnLeaveNode(node *sitter.Node) {
 	}
 }
 
+func (ana *Analyzer) shouldSkipRule(rule PatternRule) bool {
+	pathFilter := rule.PathFilter()
+	if pathFilter == nil {
+		// no filter is set, so we should not skip this rule
+		return false
+	}
+
+	relPath := ana.ParseResult.FilePath
+	if ana.WorkDir != "" {
+		rel, err := filepath.Rel(ana.WorkDir, ana.ParseResult.FilePath)
+		if err == nil {
+			relPath = rel
+		}
+	}
+
+	if len(pathFilter.ExcludeGlobs) > 0 {
+		for _, excludeGlob := range pathFilter.ExcludeGlobs {
+			if excludeGlob.Match(relPath) {
+				return true
+			}
+		}
+
+		// no exclude globs matched, so we should not skip this rule
+		return false
+	}
+
+	if len(pathFilter.IncludeGlobs) > 0 {
+		for _, includeGlob := range pathFilter.IncludeGlobs {
+			if includeGlob.Match(relPath) {
+				return false
+			}
+		}
+
+		// no include globs matched, so we should skip this rule
+		return true
+	}
+
+	return false
+}
+
 // runPatternRules executes all rules that are written as AST queries.
 func (ana *Analyzer) runPatternRules() {
 	for _, rule := range ana.PatternRules {
+		if ana.shouldSkipRule(rule) {
+			continue
+		}
+
 		query := rule.Pattern()
 		qc := sitter.NewQueryCursor()
 		defer qc.Close()
@@ -112,13 +160,16 @@ func (ana *Analyzer) runPatternRules() {
 		qc.Exec(query, ana.ParseResult.Ast)
 		for {
 			m, ok := qc.NextMatch()
-			
+
 			if !ok {
 				break
 			}
 
 			for _, capture := range m.Captures {
-				rule.OnMatch(ana, capture.Node)
+				captureName := query.CaptureNameForId(capture.Index)
+				if captureName == rule.Name() {
+					rule.OnMatch(ana, capture.Node)
+				}
 			}
 		}
 	}
