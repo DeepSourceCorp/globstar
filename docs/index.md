@@ -3,23 +3,16 @@
 layout: home
 
 hero:
-  name: "Globstar"
-  text: "Open-source static analysis toolkit to help you easily write and run SAST and code quality checks."
-  tagline: My great project tagline
+  text: "The code analysis toolkit for uncompromising developers."
+  tagline: Write code quality and security rules with Globstar and run them in your CI/CD pipeline. It's fast, easy to write, and open-source.
   actions:
     - theme: brand
-      text: Markdown Examples
+      text: Getting Started
       link: /markdown-examples
     - theme: alt
-      text: API Examples
+      text: Installation
       link: /api-examples
-
-features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+    - theme: alt
+      text: Writing a Checker
+      link: /guide
 ---
-
