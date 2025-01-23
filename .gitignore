@@ -28,5 +28,6 @@ blah
 node_modules/
 .vitepress/cache/
 cache/
+dist/
 
 .DS_Store
