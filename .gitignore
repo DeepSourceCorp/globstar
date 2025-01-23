@@ -26,6 +26,7 @@ go.work.sum
 blah
 
 node_modules/
-.vitepress/
+.vitepress/cache/
+cache/
 
 .DS_Store
