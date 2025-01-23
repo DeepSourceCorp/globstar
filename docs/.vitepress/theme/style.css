@@ -127,7 +127,6 @@
   .VPHomeHero .tagline {
     font-size: 1.5rem;
   }
-  
 }
 
 .dark .VPHomeHero .tagline {
@@ -163,4 +162,3 @@
     flex-grow: 0;
   }
 }
-

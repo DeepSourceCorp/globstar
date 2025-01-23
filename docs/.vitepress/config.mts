@@ -1,14 +1,62 @@
 import { defineConfig } from 'vitepress'
 
+const SITE_TITLE = 'Globstar by DeepSource - The Open-Source Static Analysis Toolkit'
+const SITE_DESCRIPTION = 'Fast, feature-rich, open-source static analysis toolkit for writing and running code quality and SAST checkers.'
+
+// Helper function to get the site URL
+const getSiteUrl = () => {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return 'http://localhost:5173'
+}
+
+const SITE_URL = getSiteUrl()
+const OG_IMAGE = `${SITE_URL}/img/meta.png`
+const OG_IMAGE_WIDTH = '1200'
+const OG_IMAGE_HEIGHT = '630'
+
 export default defineConfig({
   lang: 'en-US',
-  title: "Globstar by DeepSource - The Static Analysis Toolkit",
-  description: "Fast, feature-rich, open-source static analysis toolkit for writing and running code quality and SAST checkers.",
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   head: [
+    // Favicons
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon.png', media: '(prefers-color-scheme: light)' }],
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-dark.png', media: '(prefers-color-scheme: dark)' }],
     ['link', { rel: 'icon', type: 'image/svg+xml', sizes: '32x32', href: '/favicon.svg' }],
+    
+    // Primary Meta Tags
+    ['meta', { name: 'title', content: SITE_TITLE }],
+    ['meta', { name: 'description', content: SITE_DESCRIPTION }],
+    ['meta', { name: 'keywords', content: 'static analysis, code quality, SAST, security analysis, developer tools' }],
+    ['link', { rel: 'canonical', href: SITE_URL }],
+    
+    // Open Graph / Facebook
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:url', content: SITE_URL }],
+    ['meta', { property: 'og:title', content: SITE_TITLE }],
+    ['meta', { property: 'og:description', content: SITE_DESCRIPTION }],
+    ['meta', { property: 'og:image', content: OG_IMAGE }],
+    ['meta', { property: 'og:image:type', content: 'image/png' }],
+    ['meta', { property: 'og:image:width', content: OG_IMAGE_WIDTH }],
+    ['meta', { property: 'og:image:height', content: OG_IMAGE_HEIGHT }],
+    ['meta', { property: 'og:image:alt', content: 'Globstar by DeepSource' }],
+    ['meta', { property: 'og:site_name', content: 'Globstar' }],
+    
+    // Twitter
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:url', content: SITE_URL }],
+    ['meta', { name: 'twitter:title', content: 'Globstar by DeepSource' }],
+    ['meta', { name: 'twitter:description', content: SITE_DESCRIPTION }],
+    ['meta', { name: 'twitter:image', content: OG_IMAGE }],
+    ['meta', { name: 'twitter:site', content: '@deepsourceHQ' }],
+    ['meta', { name: 'twitter:creator', content: '@deepsourceHQ' }],
+    ['meta', { name: 'twitter:image:alt', content: 'Globstar by DeepSource' }],
   ],
+  sitemap: {
+    hostname: SITE_URL
+  },
   cleanUrls: true,
   themeConfig: {
     siteTitle: false,
