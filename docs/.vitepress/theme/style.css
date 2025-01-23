@@ -65,32 +65,47 @@
 }
 
 :root {
-  --vp-nav-height: 72px;
+  --vp-nav-height: 64px;
   --vp-nav-logo-height: 28px;
 }
 
 .VPHomeHero .container {
   max-width: var(--vp-layout-max-width) !important;
-  padding: 4rem;
-  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .VPHomeHero .container {
+    padding: 4rem;
+  }
 }
 
 .VPHomeHero .heading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-.VPHomeHero .heading > .text {
-  max-width: 768px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 3rem;
-  letter-spacing: -0.8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
+.VPHomeHero .heading > .text {
+  max-width: 1200px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 2rem;
+  letter-spacing: -0.8px;
+  color: var(--vp-c-juniper-12);
+  text-wrap: pretty;
+}
 
+@media (min-width: 768px) {
+  .VPHomeHero .heading > .text {
+    font-size: 3rem;
+  }
+}
+
+.dark .VPHomeHero .heading > .text {
+  color: var(--vp-c-juniper-9);
+}
 
 .VPHomeHero .main {
   display: flex;
@@ -100,9 +115,52 @@
 }
 
 .VPHomeHero .tagline {
-    text-align: center;
-    max-width: 768px;
-    font-size: 1.5rem;
-    letter-spacing: -0.2px;
-    color: --var(--vp-c-gray-11)
+  text-align: center;
+  max-width: 768px;
+  font-size: 1.2rem;
+  letter-spacing: -0.2px;
+  color: var(--vp-c-gray-10);
+  text-wrap: pretty;
 }
+
+@media (min-width: 768px) {
+  .VPHomeHero .tagline {
+    font-size: 1.5rem;
+  }
+  
+}
+
+.dark .VPHomeHero .tagline {
+  color: var(--vp-c-gray-6);
+}
+
+.dark .VPButton.alt {
+  background-color: var(--vp-c-ink-50);
+  color: var(--vp-c-gray-4);
+}
+
+.dark .VPButton.alt:hover {
+  background-color: var(--vp-c-ink-100);
+}
+
+.VPHomeHero .actions {
+  justify-content: center;
+}
+
+.DocSearch-Button {
+  border-radius: 1.5rem;
+  padding: 0.25rem 1.5rem;
+  height: auto;
+}
+
+@media (min-width: 960px) {
+  .VPNavBarSearch {
+    padding-right: 16px;
+  }
+}
+@media (min-width: 768px) {
+  .VPNavBarSearch {
+    flex-grow: 0;
+  }
+}
+

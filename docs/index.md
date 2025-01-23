@@ -3,8 +3,8 @@
 layout: home
 
 hero:
-  text: "The code analysis toolkit for uncompromising developers."
-  tagline: Write code quality and security rules with Globstar and run them in your CI/CD pipeline. It's fast, easy to write, and open-source.
+  text: "The Open-Source Static Analysis Toolkit"
+  tagline: Write code quality and security checks with Globstar and run them in your CI pipeline. It's fast, easy to write, and MIT-licensed.
   actions:
     - theme: brand
       text: Getting Started
