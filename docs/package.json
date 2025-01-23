@@ -2,6 +2,7 @@
   "name": "globstar-docs",
   "private": true,
   "devDependencies": {
+    "@types/node": "^22.10.10",
     "vitepress": "^1.6.3"
   },
   "scripts": {
