@@ -144,6 +144,26 @@
 
 .VPHomeHero .actions {
   justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+}
+
+.VPHomeHero .actions > .action,
+.VPHomeHero .actions > .action > a {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .VPHomeHero .actions {
+    flex-direction: row;
+    justify-content: center;
+    width: auto;
+  }
+  .VPHomeHero .actions > .action,
+  .VPHomeHero .actions > .action > a {
+    width: auto;
+  }
 }
 
 .DocSearch-Button {
@@ -161,4 +181,43 @@
   .VPNavBarSearch {
     flex-grow: 0;
   }
+}
+
+@media (min-width: 960px) {
+  .VPHero[data-v-f44dcdd0] {
+    padding: calc(
+        var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 80px
+      )
+      64px 24px;
+  }
+}
+
+.VPFeature {
+  border-radius: 0.5rem !important;
+}
+
+.VPFeature .icon {
+  background-color: transparent;
+  width: auto;
+  height: auto;
+  justify-content: start;
+}
+
+.VPFeature .title {
+  letter-spacing: -0.2px;
+}
+
+.VPFeature .details {
+  letter-spacing: -0.2px;
+  line-height: 1.5;
+}
+
+.VPFeature .VPImage {
+  filter: brightness(0);
+  height: 28px;
+  width: 28px;
+}
+
+.dark .VPFeature .VPImage {
+  filter: brightness(0) invert(1);
 }
