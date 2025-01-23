@@ -25,3 +25,7 @@ go.work.sum
 .env
 blah
 
+node_modules/
+.vitepress/
+
+.DS_Store
