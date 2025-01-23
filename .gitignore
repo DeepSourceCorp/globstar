@@ -25,3 +25,5 @@ go.work.sum
 .env
 blah
 
+node_modules/
+.vitepress/
