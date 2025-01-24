@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "types": [
+      "@vue/runtime-core",
+      "node",
+      "vue"
+    ],
+    "paths": {
+      "@/*": ["./.vitepress/*"],
+      "vue": ["./node_modules/vue"]
+    },
+    "allowJs": true
+  },
+  "include": [
+    "./.vitepress/**/*.ts",
+    "./.vitepress/**/*.d.ts",
+    "./.vitepress/**/*.vue"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

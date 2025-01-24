@@ -57,6 +57,7 @@ export default defineConfig({
   sitemap: {
     hostname: SITE_URL
   },
+  appearance: 'dark',
   cleanUrls: true,
   themeConfig: {
     siteTitle: false,
@@ -105,8 +106,8 @@ export default defineConfig({
       provider: 'local'
     },
     footer: {
-      message: 'Globstar is an open-source project by DeepSource, released under the MIT License.',
-      copyright: '©️ 2025 DeepSource Corp.',
+      message: 'Made with &hearts; by DeepSource, released under the MIT License.',
+      copyright: '&copy; 2025 DeepSource Corp.',
     }
   }
 })
