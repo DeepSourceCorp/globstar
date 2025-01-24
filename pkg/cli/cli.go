@@ -2,9 +2,12 @@ package cli
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
 
@@ -105,6 +108,15 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 
 					fmt.Fprint(os.Stdout, "All tests passed")
 					return nil
+				},
+			},
+			{
+				Name:    "init",
+				Aliases: []string{"i"},
+				Usage:   "Create a globstar template",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					err := initializeDummyProject(c.RootDirectory, "glob.star")
+					return err
 				},
 			},
 		},
@@ -304,4 +316,56 @@ func (c *Cli) RunLints(
 	}
 
 	return err
+}
+
+//go:embed templates/*
+var templates embed.FS
+
+func initializeDummyProject(dir, projectName string) error {
+	// Create project directory
+	projectPath := path.Join(dir, ".globstar", "gorules")
+	println(projectPath)
+	if err := os.MkdirAll(projectPath, 0755); err != nil {
+		return fmt.Errorf("failed to create project directory: %w", err)
+	}
+
+	// Change to project directory
+	if err := os.Chdir(projectPath); err != nil {
+		return fmt.Errorf("failed to change directory: %w", err)
+	}
+
+	// Initialize Go module
+	if err := exec.Command("go", "mod", "init", projectName).Run(); err != nil {
+		return fmt.Errorf("failed to initialize go module: %w", err)
+	}
+
+	// Add dependencies
+	/* 	if err := exec.Command("go", "get", "https://github.com/deepsourcecorp/globstar").Run(); err != nil {
+		return fmt.Errorf("failed to add dependency: %w", err)
+	} */
+
+	if err := exec.Command("go", "get", "github.com/smacker/go-tree-sitter").Run(); err != nil {
+		return fmt.Errorf("failed to add dependency: %w", err)
+	}
+
+	// Create main.go file
+	mainContent, err := templates.ReadFile("templates/main.go.tmpl")
+	if err != nil {
+		return fmt.Errorf("failed to read main.go template: %w", err)
+	}
+	if err := os.WriteFile("main.go", mainContent, 0644); err != nil {
+		return fmt.Errorf("failed to create main.go: %w", err)
+	}
+
+	// Create rule.go file
+	ruleContent, err := templates.ReadFile("templates/rule.go.tmpl")
+	if err != nil {
+		return fmt.Errorf("failed to read rule.go template: %w", err)
+	}
+
+	if err := os.WriteFile("rule.go", ruleContent, 0644); err != nil {
+		return fmt.Errorf("failed to create rule.go: %w", err)
+	}
+
+	return nil
 }
