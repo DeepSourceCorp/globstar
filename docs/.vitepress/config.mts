@@ -98,7 +98,8 @@ export default defineConfig({
           { text: 'Writing a Checker', link: '/writing-a-checker' },
           { text: 'CI/CD Integration', link: '/ci-cd-integration' },
           { text: 'Supported Languages', link: '/supported-languages' },
-          { text: 'Roadmap', link: '/roadmap' }
+          { text: 'Roadmap', link: '/roadmap' },
+          { text: 'Contributing', link: '/contributing' }
         ]
       },
       {
