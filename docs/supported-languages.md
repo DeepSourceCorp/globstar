@@ -28,9 +28,7 @@ Presently, however, we use the wonderful [go-tree-sitter](https://github.com/sma
 | Scala | `scala` |
 | SQL | `sql` |
 | Swift | `swift` |
-| TOML | `toml` |
 | TypeScript | `typescript`, `ts`, `tsx` |
-| YAML | `yaml`, `yml` |
 
 In the checker YAML file, you can specify the language you want to run the checker on by setting the `language` field, which should be one of the identifiers listed above.
 
