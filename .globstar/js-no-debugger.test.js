@@ -1,2 +1,2 @@
 // <expect-error>
-debugger
+debugger;

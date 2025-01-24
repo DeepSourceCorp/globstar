@@ -1,0 +1,16 @@
+language: js
+name: js_weak_crypto
+message: Using cryptographically weak hash function
+pattern: |
+  (call_expression
+    function: (member_expression
+      object: (identifier) @obj
+      property: (property_identifier) @method)
+    (#match? @obj "^(crypto|CryptoJS|md5|sha1)$")
+    (#match? @method "^(MD5|SHA1|sha1|md5)$")) @js_weak_crypto
+exclude:
+  - test/*
+  - build/*
+  - dist/*
+description: |
+  MD5 and SHA-1 are cryptographically broken hash functions and should not be used for security purposes. They are vulnerable to collision attacks.
