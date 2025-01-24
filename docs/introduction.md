@@ -24,9 +24,14 @@ Whether you are a developer, a security researcher, or a code reviewer, Globstar
 
 ## Why tree-sitter?
 
-Static analysis tools often create their own domain-specific languages for writing rules, forcing you to learn yet another syntax that's often limiting and frustrating to work with. Instead, Globstar uses tree-sitter's native query syntax – the same powerful pattern-matching language used by GitHub, Neovim, and other major tools.
+Static analysis tools often create their own domain-specific languages for writing rules. While these DSLs can seem simpler at first, they inevitably hit limitations when you need to write complex, precise rules. Worse, you're dependent on the DSL maintainers to keep up with tree-sitter's evolving capabilities and language support. 
 
-Tree-sitter queries map directly to your code's AST structure, making rules predictable and debuggable. And since tree-sitter is widely adopted, modern AI coding assistants are already excellent at generating and modifying these queries. This means you get the full power of AST-based analysis with the simplicity of AI-assisted rule writing. No custom DSL needed – just a proven solution that works.
+That's why Globstar uses tree-sitter's native query syntax — yes, it has a learning curve, but you get direct access to the same powerful pattern-matching language used by GitHub, Neovim, and other major tools. No abstraction layers, no limitations, just pure AST matching power.
+
+Tree-sitter queries map directly to your code's AST structure, which means your rules work exactly as you'd expect them to. When you need to debug a rule, you're working with the actual structure of your code, not an abstraction that might hide important details. 
+
+And the best part: since tree-sitter is widely adopted, modern AI coding assistants are already excellent at generating and modifying these queries. This means you get industrial-strength pattern matching with AI-assisted rule writing that actually understands your code's structure. The learning curve becomes a non-issue, in our humble opinion.
+
 
 ## Where to go next?
 
