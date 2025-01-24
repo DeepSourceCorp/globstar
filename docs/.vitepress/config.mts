@@ -41,10 +41,14 @@ export default defineConfig({
           ] as [string, Record<string, string>, string]
         ]
       : []),
+
     // Favicons
-    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon.png', media: '(prefers-color-scheme: light)' }],
-    ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-dark.png', media: '(prefers-color-scheme: dark)' }],
     ['link', { rel: 'icon', type: 'image/svg+xml', sizes: '32x32', href: '/favicon.svg' }],
+    ['link', { rel: 'shortcut icon', href: '/favicon.ico' }],
+    ['link', { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }],
+    
+    ['link', { rel: 'manifest', href: '/site.webmanifest' }],
+    ['meta', { name: 'apple-mobile-web-app-title', content: 'Globstar' }],
     
     // Primary Meta Tags
     ['meta', { name: 'title', content: SITE_TITLE }],
