@@ -8,7 +8,7 @@ Globstar is meant to be a light-weight, yet powerful, way of defining code quali
 
 ## Future roadmap
 
-- **More pre-defined checkers**: We've currently been focusing on the Globstar runtime itself, so there are only a few pre-defined checkers available today. This is one of our top priorities. We'll be adding more security checkers, especially for categories like OWASP Top 10 and SANS/CWE Top 25, and common code quality checkers. The goal is to make `globstar check` as useful as possible out of the box.
+- **More builtin checkers**: We've currently been focusing on the Globstar runtime itself, so there are only a few builtin checkers available today. This is one of our top priorities. We'll be adding more security checkers, especially for categories like OWASP Top 10 and SANS/CWE Top 25, and common code quality checkers. The goal is to make `globstar check` as useful as possible out of the box.
 
 - **Imports and Scope Resolution**: This allows you to write sophisticated checkers that can understand the entire codebase, and not just a single file. We currently have support for this in the Go interface for Python and JavaScript, and will be adding support for other languages soon.
 

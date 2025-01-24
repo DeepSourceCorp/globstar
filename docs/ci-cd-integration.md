@@ -1,6 +1,6 @@
 # CI/CD Integration
 
-Run Globstar in your CI/CD pipeline to enforce checkers on every commit and pull request. By default, `globstar check` will run all pre-defined checkers an all checkers discovered in the `.globstar` directory in the root of your repository.
+Run Globstar in your CI/CD pipeline to enforce checkers on every commit and pull request. By default, `globstar check` will run all builtin checkers an all checkers discovered in the `.globstar` directory in the root of your repository.
 
 ## GitHub Actions
 
@@ -23,7 +23,7 @@ jobs:
       - name: Install Globstar
         run: curl -sSL https://get.globstar.dev | sh
       - name: Run Globstar checks
-        run: globstar check
+        run: ./bin/globstar check
 ```
 
 ## GitLab CI
@@ -38,7 +38,7 @@ globstar:
   stage: test
   script:
     - curl -sSL https://get.globstar.dev | sh
-    - globstar check
+    - ./bin/globstar check
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
@@ -63,7 +63,7 @@ jobs:
           command: curl -sSL https://get.globstar.dev | sh
       - run:
           name: Run Globstar checks
-          command: globstar check
+          command: ./bin/globstar check
 
 workflows:
   check:
@@ -90,7 +90,7 @@ steps:
 - script: curl -sSL https://get.globstar.dev | sh
   displayName: 'Install Globstar'
 
-- script: globstar check
+- script: ./bin/globstar check
   displayName: 'Run Globstar checks'
 ```
 
@@ -108,7 +108,7 @@ pipelines:
         image: golang:latest
         script:
           - curl -sSL https://get.globstar.dev | sh
-          - globstar check
+          - ./bin/globstar check
   pull-requests:
     '**':
       - step:
@@ -116,7 +116,7 @@ pipelines:
           image: golang:latest
           script:
             - curl -sSL https://get.globstar.dev | sh
-            - globstar check
+            - ./bin/globstar check
 ```
 
 ## Jenkins Pipeline
@@ -136,7 +136,7 @@ pipeline {
         }
         stage('Run Globstar checks') {
             steps {
-                sh 'globstar check'
+                sh './bin/globstar check'
             }
         }
     }
@@ -146,8 +146,4 @@ pipeline {
 > [!NOTE]
 > This pipeline assumes that you have [Declarative Pipeline](https://plugins.jenkins.io/pipeline-model-definition/) enabled in your Jenkins instance.
 
-Each configuration runs Globstar on the appropriate events (pull requests, merges to main branch) and uses the same basic flow:
-1. Install Globstar using the installation script
-2. Run the checks using `globstar check`
-
-Additional options like custom configuration paths or extra flags can be added to the `globstar check` command as needed.
+Each configuration runs Globstar on the appropriate events (pull requests, merges to main branch) and uses the same basic flow — install Globstar using the installation script, then run the checks using `globstar check`.

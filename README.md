@@ -26,18 +26,22 @@ Write all your checker checkers in the `.globstar` directory for your repository
 ### Installation
 
 ```bash
-# using homebrew
-brew install globstar
-
-# direct binary download
 curl -sSL https://get.globstar.dev | sh
 ```
 
-Once installed, you can run `globstar check` in your repository to run all the checkers in the repository's `.globstar` directory.
+This will download the latest version of Globstar to `./bin/globstar` in your current directory. You can also specify a different installation directory by setting the `BINDIR` environment variable. For example, to install Globstar globally on a Unix-like system, run:
 
-### Writing a Checker
+```bash
+BINDIR=/user/local/bin curl -sSL https://get.globstar.dev | sh
+```
 
-Here's an example checker that disallows the `debugger` statement in JavaScript files:
+Once installed, you can run `./bin/globstar check` or `globstar check` (if installed globally) in your repository to run all the checkers in the builtin checkers that come with Globstar along with all checkers defined in the repository's `.globstar` directory.
+
+### Writing a checker
+
+Create a new folder named `.globstar` in your repository's root. This is where you'll write all your custom checkers. Each checker is defined in a separate YAML file, with the filename being the checker's identifier and tree-sitter's S-expression query defining the pattern to match.
+
+For example, here's a checker that disallows the `debugger` statement in JavaScript files:
 
 ```yml
 # .globstar/no_debugger.yml
@@ -67,7 +71,7 @@ description: |
   Remove the `debugger` statement before committing your code.
 ```
 
-A guide to writing tree-sitter queries can be found [here](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html), along with [this interactive playground](https://tree-sitter.github.io/tree-sitter/7-playground.html).
+A guide to writing tree-sitter queries can be found [here](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html), along with [this interactive playground](https://tree-sitter.github.io/tree-sitter/7-playground.html). Refer to the [Checker YAML Interface](/reference/checker-yaml) for a detailed explanation of the fields in a checker definition.
 
 ### Running in CI
 
@@ -93,7 +97,7 @@ jobs:
         run: curl -sSL https://get.globstar.dev | sh
 
       - name: Run Globstar checks
-        run: globstar check
+        run: ./bin/globstar check
 ```
 
 ## Why Globstar?

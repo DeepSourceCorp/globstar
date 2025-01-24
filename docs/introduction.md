@@ -20,7 +20,7 @@ Whether you are a developer, a security researcher, or a code reviewer, Globstar
 
 * **CI-friendly**: Run Globstar in any CI/CD pipeline by downloading the binary. There are no dependencies to install. It'll automatically detect the `.globstar` directory and run all the checkers.
 
-* **Truly open-source**: The Globstar CLI and all pre-defined checkers are distributed under the MIT license, so you can use it in your commercial projects without any restrictions.
+* **Truly open-source**: The Globstar CLI and all builtin checkers are distributed under the MIT license, so you can use it in your commercial projects without any restrictions.
 
 ## Why tree-sitter?
 

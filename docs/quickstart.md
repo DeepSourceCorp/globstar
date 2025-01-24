@@ -4,30 +4,26 @@ Get Globstar on your system, and run your first custom checker in <5 minutes.
 
 ## Installation
 
-To install Globstar with [homebrew](https://brew.sh/):
-
-```bash
-brew install globstar
-```
-
-Or, install with [curl](https://curl.se/) on any Unix-like system:
+On a Unix-like system, run:
 
 ```bash
 curl -sSL https://get.globstar.dev | sh
 ```
 
-This script will download the latest release of Globstar and install it to `/usr/local/bin`. You can also specify a different installation directory by setting the `BINDIR` environment variable:
+This will download the latest version of Globstar to `./bin/globstar` in your current directory. You can also specify a different installation directory by setting the `BINDIR` environment variable. For example, to install Globstar globally on a Unix-like system, run:
 
 ```bash
-BINDIR=/.local/bin curl -sSL https://get.globstar.dev | sh
+BINDIR=/user/local/bin curl -sSL https://get.globstar.dev | sh
 ```
 
-## Running pre-defined checkers
+Once installed, you can run `./bin/globstar check` or `globstar check` (if installed globally) in your repository to run all the checkers in the builtin checkers that come with Globstar along with all checkers defined in the repository's `.globstar` directory.
 
-Globstar comes with a set of pre-defined checkers that you can run on your codebase. Go to the root of a repository and run:
+## Running builtin checkers
+
+Globstar comes with a set of builtin checkers that you can run on your codebase out-of-the-box. Go to the root of a repository and run:
 
 ```bash
-globstar check --pre-defined
+globstar check
 ```
 
 This will run all the checkers across all the files in your codebase and print the results to the console. 
@@ -77,10 +73,14 @@ description: |
   The `debugger` statement is a debugging tool that is not meant to be committed to the repository. It can cause the application to stop unexpectedly and is generally considered bad practice. Remove the `debugger` statement before committing your code.
 ```
 
-This checker will flag any `debugger` statements in your codebase. Run the checker with:
+This checker will flag any `debugger` statements in your codebase. 
+
+By default, Globstar will run this checker as well as all the builtin checkers. If you'd like to run only your local checkers:
+
+Run the checker with:
 
 ```bash
-globstar check
+globstar check --checkers=local
 ```
 
-That's it! You just ran your first custom checker with Globstar. All in under 5 minutes.
+That's it! You just ran your first custom checker with Globstar — all in under 5 minutes.
