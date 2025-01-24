@@ -29,7 +29,7 @@ features:
       src: /icon/oss.svg
       alt: Open-Source
     title: "MIT-licensed"
-    details: "Use Globstar in your projects, commercial or otherwise. It's MIT-licensed. amd we are committed to keeping it that way."
+    details: "Use Globstar in your projects, commercial or otherwise. It's MIT-licensed, and we are committed to keeping it that way."
   - icon:
       src: /icon/blocks.svg
       alt: CI Integration
