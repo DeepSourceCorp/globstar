@@ -7,9 +7,20 @@ import (
 	"path/filepath"
 
 	sitter "github.com/smacker/go-tree-sitter"
+
+	treeSitterCss "github.com/smacker/go-tree-sitter/css"
+	treeSitterDockerfile "github.com/smacker/go-tree-sitter/dockerfile"
+	treeSitterJava "github.com/smacker/go-tree-sitter/java"
+	treeSitterKotlin "github.com/smacker/go-tree-sitter/kotlin"
+	treeSitterLua "github.com/smacker/go-tree-sitter/lua"
+	treeSitterOCaml "github.com/smacker/go-tree-sitter/ocaml"
 	treeSitterPy "github.com/smacker/go-tree-sitter/python"
+	treeSitterRuby "github.com/smacker/go-tree-sitter/ruby"
+	treeSitterRust "github.com/smacker/go-tree-sitter/rust"
+	treeSitterSql "github.com/smacker/go-tree-sitter/sql"
 	treeSitterTsx "github.com/smacker/go-tree-sitter/typescript/tsx"
 	treeSitterTs "github.com/smacker/go-tree-sitter/typescript/typescript"
+	treeSitterYaml "github.com/smacker/go-tree-sitter/yaml"
 )
 
 // ParseResult is the result of parsing a file.
@@ -38,6 +49,17 @@ const (
 	LangJs  // vanilla JS and JSX
 	LangTs  // TypeScript (not TSX)
 	LangTsx // TypeScript with JSX extension
+	LangJava
+	LangRuby
+	LangRust
+	LangYaml
+	LangCss
+	LangDockerfile
+	LangMarkdown
+	LangSql
+	LangKotlin
+	LangOCaml
+	LangLua
 )
 
 // tsGrammarForLang returns the tree-sitter grammar for the given language.
@@ -47,11 +69,31 @@ func (lang Language) Grammar() *sitter.Language {
 	case LangPy:
 		return treeSitterPy.GetLanguage()
 	case LangJs:
-		return treeSitterTsx.GetLanguage()
+		return treeSitterTsx.GetLanguage() // Use TypeScript's JSX grammar for JS/JSX
 	case LangTs:
 		return treeSitterTs.GetLanguage()
 	case LangTsx:
 		return treeSitterTsx.GetLanguage()
+	case LangJava:
+		return treeSitterJava.GetLanguage()
+	case LangRuby:
+		return treeSitterRuby.GetLanguage()
+	case LangRust:
+		return treeSitterRust.GetLanguage()
+	case LangSql:
+		return treeSitterSql.GetLanguage()
+	case LangKotlin:
+		return treeSitterKotlin.GetLanguage()
+	case LangCss:
+		return treeSitterCss.GetLanguage()
+	case LangYaml:
+		return treeSitterYaml.GetLanguage()
+	case LangOCaml:
+		return treeSitterOCaml.GetLanguage()
+	case LangLua:
+		return treeSitterLua.GetLanguage()
+	case LangDockerfile:
+		return treeSitterDockerfile.GetLanguage()
 	default:
 		return nil
 	}

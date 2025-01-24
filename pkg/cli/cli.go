@@ -157,7 +157,8 @@ func RunLints(
 		}
 
 		if len(issues) > 0 {
-			log.Error().Msgf("Issues found in %s", color.YellowString(path))
+			relPath, _ := filepath.Rel(rootDir, path)
+			log.Error().Msgf("Issues found in %s", color.YellowString(relPath))
 		}
 
 		for _, issue := range issues {
