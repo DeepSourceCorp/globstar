@@ -91,9 +91,9 @@ builds:
 archives:
   - id: arch_rename
     builds:
-      #- globstar-darwin-amd64
+      - globstar-darwin-amd64
       - globstar-linux-amd64
-      #- windows-globstar
+      - globstar-windows-amd64
     name_template: >-
       globstar_{{ .Version }}_{{ .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
