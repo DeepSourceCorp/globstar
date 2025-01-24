@@ -7,8 +7,6 @@ Presently, however, we use the wonderful [go-tree-sitter](https://github.com/sma
 | Language | Identifier |
 |----------|----------------------|
 | Bash | `bash`, `sh` |
-| C | `c` |
-| C++ | `cpp` |
 | C# | `csharp`, `cs` |
 | CSS | `css`, `css3` |
 | Dockerfile | `docker`, `dockerfile` |
@@ -22,9 +20,8 @@ Presently, however, we use the wonderful [go-tree-sitter](https://github.com/sma
 | JavaScript | `javascript`, `js`, `jsx` |
 | Kotlin | `kotlin`, `kt` |
 | Lua | `lua` |
-| Markdown | `md`, `markdown` |
 | OCaml | `ocaml`, `ml` |
-| PHP | php |
+| PHP | `php` |
 | Python | `py`, `python` |
 | Ruby | `rb`, `ruby` |
 | Rust | `rust`, `rs` |

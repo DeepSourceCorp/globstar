@@ -123,6 +123,13 @@ export default defineConfig({
           { text: 'CLI', link: '/reference/cli' },
           { text: 'Cross-file Analysis', link: '/reference/cross-file-analysis' },
         ]
+      },
+      {
+        text: 'Guides',
+        items: [
+          { text: 'Cross-file Analysis', link: '/guides/cross-file-analysis' },
+          { text: 'Scope Resolution', link: '/guides/scope-resolution' },
+        ]
       }
     ],
     socialLinks: [
