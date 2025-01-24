@@ -5,7 +5,7 @@ const SITE_DESCRIPTION = 'Fast, feature-rich, open-source static analysis toolki
 
 const getSiteUrl = () => {
   if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   }
   return 'http://localhost:5173'
 }
