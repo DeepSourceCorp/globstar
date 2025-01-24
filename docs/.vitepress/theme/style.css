@@ -231,3 +231,12 @@
       padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 24px) 64px 24px !important;
   }
 }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th, table td {
+  width: 1%;
+}
