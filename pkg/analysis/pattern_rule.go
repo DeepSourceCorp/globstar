@@ -1,10 +1,11 @@
-package one
+package analysis
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/DeepSourceCorp/globstar/pkg/config"
 	"github.com/gobwas/glob"
 	sitter "github.com/smacker/go-tree-sitter"
 	"gopkg.in/yaml.v3"
@@ -30,6 +31,8 @@ type YmlRule interface {
 	Name() string
 	Patterns() []*sitter.Query
 	Language() Language
+	Category() config.Category
+	Severity() config.Severity
 	OnMatch(
 		ana *Analyzer, // the analyzer instance
 		matchedQuery *sitter.Query, // the query that found an AST node
@@ -60,6 +63,8 @@ type patternRuleImpl struct {
 	patterns     []*sitter.Query
 	issueMessage string
 	issueId      string
+	category     config.Category
+	severity     config.Severity
 	pathFilter   *PathFilter
 	filters      []NodeFilter
 }
@@ -94,9 +99,11 @@ func (r *patternRuleImpl) OnMatch(
 	}
 
 	ana.Report(&Issue{
-		Range:   matchedNode.Range(),
-		Message: message,
-		Id:      &r.issueId,
+		Range:    matchedNode.Range(),
+		Message:  message,
+		Category: r.Category(),
+		Severity: r.Severity(),
+		Id:       &r.issueId,
 	})
 }
 
@@ -110,6 +117,14 @@ func (r *patternRuleImpl) PathFilter() *PathFilter {
 
 func (r *patternRuleImpl) NodeFilters() []NodeFilter {
 	return r.filters
+}
+
+func (r *patternRuleImpl) Category() config.Category {
+	return r.category
+}
+
+func (r *patternRuleImpl) Severity() config.Severity {
+	return r.severity
 }
 
 func CreatePatternRule(
@@ -134,9 +149,11 @@ type filterYAML struct {
 }
 
 type PatternRuleFile struct {
-	Language string `yaml:"language"`
-	Code     string `yaml:"name"`
-	Message  string `yaml:"message"`
+	Language string          `yaml:"language"`
+	Code     string          `yaml:"name"`
+	Message  string          `yaml:"message"`
+	Category config.Category `yaml:"category"`
+	Severity config.Severity `yaml:"severity"`
 	// Pattern is a single pattern in the form of:
 	// pattern: (some_pattern)
 	// in the YAML file

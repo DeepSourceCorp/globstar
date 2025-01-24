@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/srijan-paul/deepgrep/pkg/one"
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 )
 
 func runTests(dir string) (bool, error) {
@@ -69,19 +69,19 @@ func runTestCases(dir string) (passed bool, err error) {
 	passed = true
 	for _, tc := range testCases {
 		// Read and parse the rule definition
-		rule, err := one.ReadFromFile(tc.ymlRulePath)
+		rule, err := analysis.ReadFromFile(tc.ymlRulePath)
 		if err != nil {
 			return false, err
 		}
 
 		// Parse the test file
-		parsed, err := one.ParseFile(tc.testFile)
+		parsed, err := analysis.ParseFile(tc.testFile)
 		if err != nil {
 			return false, err
 		}
 
 		// Run the analyzer
-		analyzer := one.NewAnalyzer(parsed, nil)
+		analyzer := analysis.NewAnalyzer(parsed, nil)
 		analyzer.YmlRules = append(analyzer.YmlRules, rule)
 		issues := analyzer.Analyze()
 

@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
+	"github.com/DeepSourceCorp/globstar/pkg/config"
+	"github.com/DeepSourceCorp/globstar/pkg/rules"
 	"github.com/fatih/color"
-	"github.com/gobwas/glob"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"github.com/srijan-paul/deepgrep/pkg/one"
-	"github.com/srijan-paul/deepgrep/pkg/rules"
 	"github.com/urfave/cli/v3"
 )
 
@@ -21,11 +21,28 @@ type Cli struct {
 	// RootDirectory is the target directory to analyze
 	RootDirectory string
 	// Rules is a list of lints that are applied to the files in `RootDirectory`
-	Rules []one.Rule
+	Rules  []analysis.Rule
+	Config *config.Config
+}
+
+func (c *Cli) loadConfig() error {
+	conf, err := config.NewConfigFromFile(filepath.Join(c.RootDirectory, ".globstar.yml"))
+	if err != nil {
+		return err
+	}
+
+	c.Config = conf
+	return nil
 }
 
 func (c *Cli) Run() error {
-	// read all yaml rules in the .one directory
+	err := c.loadConfig()
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+		return err
+	}
+
+	// read all yaml rules in the .globstar directory
 	patternRules, err := c.ReadCustomRules()
 	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
@@ -35,9 +52,9 @@ func (c *Cli) Run() error {
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
 			{
-				Name:    "lint",
-				Aliases: []string{"l"},
-				Usage:   "Run OneLint on the current project",
+				Name:    "check",
+				Aliases: []string{"c"},
+				Usage:   "Run Globstar on the current project",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "ignore",
@@ -53,18 +70,21 @@ func (c *Cli) Run() error {
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					ignorePattern := cmd.String("ignore")
-					useBuiltins := cmd.Bool("builtins")
+					if err := c.Config.AddExcludePatterns(ignorePattern); err != nil {
+						return err
+					}
 
-					return c.RunLints(ignorePattern, patternRules, useBuiltins)
+					useBuiltins := cmd.Bool("builtins")
+					return c.RunLints(patternRules, useBuiltins)
 				},
 			},
 			{
 				Name:    "test",
 				Aliases: []string{"t"},
-				Usage:   "Run all tests in the `.one` directory",
+				Usage:   "Run all tests in the `.globstar` directory",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					oneDir := filepath.Join(c.RootDirectory, ".one")
-					passed, err := runTests(oneDir)
+					analysisDir := filepath.Join(c.RootDirectory, c.Config.RuleDir)
+					passed, err := runTests(analysisDir)
 					if err != nil {
 						fmt.Fprintln(os.Stderr, err.Error())
 						return err
@@ -74,6 +94,7 @@ func (c *Cli) Run() error {
 						return fmt.Errorf("tests failed")
 					}
 
+					fmt.Fprint(os.Stdout, "All tests passed")
 					return nil
 				},
 			},
@@ -88,11 +109,11 @@ func (c *Cli) Run() error {
 	return err
 }
 
-// ReadCustomRules reads all the custom rules from the `.one/` directory in the project root
-func (c *Cli) ReadCustomRules() (map[one.Language][]one.YmlRule, error) {
-	oneDir := filepath.Join(c.RootDirectory, ".one")
+// ReadCustomRules reads all the custom rules from the `.globstar/` directory in the project root
+func (c *Cli) ReadCustomRules() (map[analysis.Language][]analysis.YmlRule, error) {
+	analysisDir := filepath.Join(c.RootDirectory, c.Config.RuleDir)
 
-	stat, err := os.Stat(oneDir)
+	stat, err := os.Stat(analysisDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -105,9 +126,9 @@ func (c *Cli) ReadCustomRules() (map[one.Language][]one.YmlRule, error) {
 		return nil, nil
 	}
 
-	rulesMap := make(map[one.Language][]one.YmlRule)
-	err = filepath.Walk(oneDir, func(path string, d fs.FileInfo, err error) error {
-		if d.IsDir() && d.Name() != ".one" {
+	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
+	err = filepath.Walk(analysisDir, func(path string, d fs.FileInfo, err error) error {
+		if d.IsDir() && d.Name() != c.Config.RuleDir {
 			return fs.SkipDir
 		}
 
@@ -122,7 +143,7 @@ func (c *Cli) ReadCustomRules() (map[one.Language][]one.YmlRule, error) {
 			return nil
 		}
 
-		patternRule, err := one.ReadFromFile(path)
+		patternRule, err := analysis.ReadFromFile(path)
 		if err != nil {
 			return fmt.Errorf("invalid rule '%s': %s", d.Name(), err.Error())
 		}
@@ -136,18 +157,18 @@ func (c *Cli) ReadCustomRules() (map[one.Language][]one.YmlRule, error) {
 }
 
 func (c *Cli) LintFile(
-	rulesMap map[one.Language][]one.Rule,
-	patternRules map[one.Language][]one.YmlRule,
+	rulesMap map[analysis.Language][]analysis.Rule,
+	patternRules map[analysis.Language][]analysis.YmlRule,
 	path string,
-) ([]*one.Issue, error) {
-	lang := one.LanguageFromFilePath(path)
+) ([]*analysis.Issue, error) {
+	lang := analysis.LanguageFromFilePath(path)
 	rules := rulesMap[lang]
 	if rules == nil && patternRules == nil {
 		// no rules are registered for this language
 		return nil, nil
 	}
 
-	analyzer, err := one.FromFile(path, rules)
+	analyzer, err := analysis.FromFile(path, rules)
 	if err != nil {
 		return nil, err
 	}
@@ -161,8 +182,26 @@ func (c *Cli) LintFile(
 }
 
 type lintResult struct {
-	issues          []*one.Issue
+	issues          []*analysis.Issue
 	numFilesChecked int
+}
+
+func (lr *lintResult) GetExitStatus(conf *config.Config) int {
+	for _, issue := range lr.issues {
+		for _, failCategory := range conf.FailWhen.CategoryIn {
+			if issue.Category == failCategory {
+				return conf.FailWhen.ExitCode
+			}
+		}
+
+		for _, failSeverity := range conf.FailWhen.SeverityIn {
+			if issue.Severity == failSeverity {
+				return conf.FailWhen.ExitCode
+			}
+		}
+	}
+
+	return 0
 }
 
 var defaultIgnoreDirs = []string{
@@ -176,31 +215,25 @@ var defaultIgnoreDirs = []string{
 	"venv",
 	"__pycache__",
 	".idea",
-	".one", // may contain test files
+	//".globstar", // may contain test files
 }
 
 // RunLints goes over all the files in the project and runs the lints for every file encountered
 func (c *Cli) RunLints(
-	globPattern string, // pattern to ignore files
-	patternRules map[one.Language][]one.YmlRule, // map of language id -> yaml rules
+	patternRules map[analysis.Language][]analysis.YmlRule, // map of language id -> yaml rules
 	runBuiltinRules bool,
 ) error {
-	ignorePattern, err := glob.Compile(globPattern)
-	if err != nil {
-		return err
-	}
-
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	var allRules map[one.Language][]one.Rule
+	var allRules map[analysis.Language][]analysis.Rule
 	if runBuiltinRules {
 		allRules = rules.CreateBaseRuleMap()
 	}
 
 	result := lintResult{}
-	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if d.IsDir() {
-			if ignorePattern.Match(path) || slices.Contains(defaultIgnoreDirs, d.Name()) {
+			if c.Config.ShouldExcludePath(path) || slices.Contains(defaultIgnoreDirs, d.Name()) {
 				return filepath.SkipDir
 			}
 
@@ -212,12 +245,12 @@ func (c *Cli) RunLints(
 			return nil
 		}
 
-		if ignorePattern.Match(path) {
+		if c.Config.ShouldExcludePath(path) {
 			return nil
 		}
 
-		language := one.LanguageFromFilePath(path)
-		if language == one.LangUnknown {
+		language := analysis.LanguageFromFilePath(path)
+		if language == analysis.LangUnknown {
 			return nil
 		}
 
@@ -252,6 +285,11 @@ func (c *Cli) RunLints(
 		log.Info().Msgf("Analyzed %d files and found %d issues.", result.numFilesChecked, len(result.issues))
 	} else {
 		log.Info().Msg("No files to analyze")
+	}
+
+	exitStatus := result.GetExitStatus(c.Config)
+	if exitStatus != 0 {
+		return fmt.Errorf("Found %d issues", len(result.issues))
 	}
 
 	return err

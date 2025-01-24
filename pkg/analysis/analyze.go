@@ -1,12 +1,17 @@
-package one
+package analysis
 
 import (
 	"path/filepath"
 
+	"github.com/DeepSourceCorp/globstar/pkg/config"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
 type Issue struct {
+	// The category of the issue
+	Category config.Category
+	// The severity of the issue
+	Severity config.Severity
 	// The message to display to the user
 	Message string
 	// The range of the issue in the source code
@@ -14,7 +19,7 @@ type Issue struct {
 	// (optional) The AST node that caused the issue
 	Node *sitter.Node
 	// Id is a unique ID for the issue.
-	// Issue that have 'Id's can be explained using the `one desc` command.
+	// Issue that have 'Id's can be explained using the `globstar desc` command.
 	Id *string
 }
 

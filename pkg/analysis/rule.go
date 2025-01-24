@@ -1,8 +1,6 @@
-package one
+package analysis
 
-import (
-	"github.com/smacker/go-tree-sitter"
-)
+import sitter "github.com/smacker/go-tree-sitter"
 
 type VisitFn func(rule Rule, analyzer *Analyzer, node *sitter.Node)
 
@@ -31,5 +29,5 @@ func CreateRule(nodeType string, language Language, onEnter, onLeave *VisitFn) R
 		language: language,
 		onEnter:  onEnter,
 		onLeave:  onLeave,
-	} 
+	}
 }

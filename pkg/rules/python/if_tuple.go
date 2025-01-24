@@ -1,22 +1,21 @@
 package python_rules
 
 import (
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
-	one "github.com/srijan-paul/deepgrep/pkg/one"
 )
 
-func checkIfTuple(r one.Rule, ana *one.Analyzer, node *sitter.Node) {
+func checkIfTuple(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
 	cond := node.ChildByFieldName("condition")
 	if cond.Type() == "tuple" {
-		ana.Report(&one.Issue{
+		ana.Report(&analysis.Issue{
 			Message: "Do not use 'if' with a tuple argument, as tuples always evaluate to true",
 			Range:   node.Range(),
 		})
 	}
 }
 
-func IfTuple() one.Rule {
-	var entry one.VisitFn = checkIfTuple
-	return one.CreateRule("if_statement", one.LangPy, &entry, nil)
+func IfTuple() analysis.Rule {
+	var entry analysis.VisitFn = checkIfTuple
+	return analysis.CreateRule("if_statement", analysis.LangPy, &entry, nil)
 }
-

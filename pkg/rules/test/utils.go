@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/srijan-paul/deepgrep/pkg/one"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,12 +23,12 @@ type ShouldRaise struct {
 
 type TestCase struct {
 	Name  string
-	Rule  one.Rule
+	Rule  analysis.Rule
 	Raise []ShouldRaise
 	Pass  []string
 }
 
-func serializeIssues(issues []*one.Issue) []string {
+func serializeIssues(issues []*analysis.Issue) []string {
 	issues_str := []string{}
 	for _, issue := range issues {
 		issues_str = append(issues_str, fmt.Sprintf("[%d:%d-%d:%d] %s",
@@ -48,11 +48,11 @@ func (testCase *TestCase) Run(t *testing.T) {
 		lang := testCase.Rule.GetLanguage()
 		grammar := lang.Grammar()
 
-		parseResult, err := one.Parse(testCase.Name, []byte(shouldRaise.Code), lang, grammar)
+		parseResult, err := analysis.Parse(testCase.Name, []byte(shouldRaise.Code), lang, grammar)
 		require.NoError(t, err)
 		require.NotNil(t, parseResult)
 
-		analyzer := one.NewAnalyzer(parseResult, []one.Rule{testCase.Rule})
+		analyzer := analysis.NewAnalyzer(parseResult, []analysis.Rule{testCase.Rule})
 		require.NotNil(t, analyzer)
 
 		got := analyzer.Analyze()
@@ -88,11 +88,11 @@ func (testCase *TestCase) Run(t *testing.T) {
 		lang := testCase.Rule.GetLanguage()
 		grammar := lang.Grammar()
 
-		parseResult, err := one.Parse(testCase.Name, []byte(pass), lang, grammar)
+		parseResult, err := analysis.Parse(testCase.Name, []byte(pass), lang, grammar)
 		require.NoError(t, err)
 		require.NotNil(t, parseResult)
 
-		analyzer := one.NewAnalyzer(parseResult, []one.Rule{testCase.Rule})
+		analyzer := analysis.NewAnalyzer(parseResult, []analysis.Rule{testCase.Rule})
 		require.NotNil(t, analyzer)
 		analyzer.AddRule(testCase.Rule)
 

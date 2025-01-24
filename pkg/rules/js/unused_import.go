@@ -3,8 +3,8 @@ package js_rules
 import (
 	"fmt"
 
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
-	one "github.com/srijan-paul/deepgrep/pkg/one"
 )
 
 func importSpecifierName(importSpecifier *sitter.Node, source []byte) string {
@@ -19,18 +19,18 @@ func importSpecifierName(importSpecifier *sitter.Node, source []byte) string {
 	return name.Content(source)
 }
 
-func isUnused(scopeTree *one.ScopeTree, name string) bool {
+func isUnused(scopeTree *analysis.ScopeTree, name string) bool {
 	variable, exists := scopeTree.Root.Variables[name]
 	return !exists || len(variable.Refs) == 0
 }
 
-func checkUnusedImport(r one.Rule, ana *one.Analyzer, importClause *sitter.Node) {
+func checkUnusedImport(r analysis.Rule, ana *analysis.Analyzer, importClause *sitter.Node) {
 	scopeTree := ana.ParseResult.ScopeTree
 	if scopeTree == nil {
 		return
 	}
 
-	namedImports := one.FirstChildOfType(importClause, "named_imports")
+	namedImports := analysis.FirstChildOfType(importClause, "named_imports")
 	if namedImports != nil {
 		nChildren := int(namedImports.NamedChildCount())
 		for i := 0; i < nChildren; i++ {
@@ -41,7 +41,7 @@ func checkUnusedImport(r one.Rule, ana *one.Analyzer, importClause *sitter.Node)
 
 			name := importSpecifierName(importSpecifier, ana.ParseResult.Source)
 			if isUnused(scopeTree, name) {
-				ana.Report(&one.Issue{
+				ana.Report(&analysis.Issue{
 					Message: fmt.Sprintf("'%s' is imported but never used", name),
 					Range:   importSpecifier.Range(),
 				})
@@ -49,12 +49,11 @@ func checkUnusedImport(r one.Rule, ana *one.Analyzer, importClause *sitter.Node)
 		}
 	}
 
-
-	defaultImport := one.FirstChildOfType(importClause, "identifier")
+	defaultImport := analysis.FirstChildOfType(importClause, "identifier")
 	if defaultImport != nil {
 		name := defaultImport.Content(ana.ParseResult.Source)
 		if isUnused(scopeTree, name) {
-			ana.Report(&one.Issue{
+			ana.Report(&analysis.Issue{
 				Message: fmt.Sprintf("'%s' is imported but never used", name),
 				Range:   defaultImport.Range(),
 			})
@@ -62,8 +61,7 @@ func checkUnusedImport(r one.Rule, ana *one.Analyzer, importClause *sitter.Node)
 	}
 }
 
-func UnusedImport() one.Rule {
-	var exit one.VisitFn = checkUnusedImport
-	return one.CreateRule("import_clause", one.LangJs, nil, &exit)
+func UnusedImport() analysis.Rule {
+	var exit analysis.VisitFn = checkUnusedImport
+	return analysis.CreateRule("import_clause", analysis.LangJs, nil, &exit)
 }
-

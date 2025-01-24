@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/srijan-paul/deepgrep/pkg/cli"
+	"github.com/DeepSourceCorp/globstar/pkg/cli"
 )
 
 func main() {

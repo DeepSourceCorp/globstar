@@ -1,4 +1,4 @@
-package one
+package analysis
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	treeSitterSql "github.com/smacker/go-tree-sitter/sql"
 	treeSitterTsx "github.com/smacker/go-tree-sitter/typescript/tsx"
 	treeSitterTs "github.com/smacker/go-tree-sitter/typescript/typescript"
-	treeSitterYaml "github.com/smacker/go-tree-sitter/yaml"
+	// treeSitterYaml "github.com/smacker/go-tree-sitter/yaml"
 )
 
 // ParseResult is the result of parsing a file.
@@ -86,8 +86,8 @@ func (lang Language) Grammar() *sitter.Language {
 		return treeSitterKotlin.GetLanguage()
 	case LangCss:
 		return treeSitterCss.GetLanguage()
-	case LangYaml:
-		return treeSitterYaml.GetLanguage()
+	// case LangYaml:
+	//	return treeSitterYaml.GetLanguage()
 	case LangOCaml:
 		return treeSitterOCaml.GetLanguage()
 	case LangLua:

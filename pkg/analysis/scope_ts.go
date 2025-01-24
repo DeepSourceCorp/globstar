@@ -1,5 +1,5 @@
 // scope resolution implementation for JS and TS files
-package one
+package analysis
 
 import (
 	"slices"

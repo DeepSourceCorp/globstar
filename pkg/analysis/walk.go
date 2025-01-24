@@ -1,4 +1,4 @@
-package one
+package analysis
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"

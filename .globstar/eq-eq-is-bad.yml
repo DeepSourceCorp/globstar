@@ -1,8 +1,7 @@
-# https://semgrep.dev/docs/writing-rules/rule-syntax#paths
 language: py
-name: bad_eq_eq 
+name: bad_eq_eq
 message: "Comparing '@a' to itself is useless"
-pattern: | 
+pattern: |
   (
     (comparison_operator (identifier)@a (identifier) @b )
     (#eq? @a @b)
@@ -14,7 +13,7 @@ filters:
         (function_definition name:(identifier) @fn_name)
         (#match? @fn_name "__(init|eq)__")
       )
-  # Allow `assertTrue` and `assertFalse` to have redundant comparisons 
+  # Allow `assertTrue` and `assertFalse` to have redundant comparisons
   - pattern-not-inside: |
       ((call function:(_)@fn_name)
         (#any-of? @fn_name  "assertTrue" "assertFalse" "assert"))

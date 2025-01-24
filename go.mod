@@ -1,4 +1,4 @@
-module github.com/srijan-paul/deepgrep
+module github.com/DeepSourceCorp/globstar
 
 go 1.23.2
 

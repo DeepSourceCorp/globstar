@@ -2,11 +2,9 @@
 // also handles forward declarations and references (e.g: hoisting).
 // BUT, references aren't tracked across files in a language like Golang or C++ (macros/extern/using namespace)
 
-package one
+package analysis
 
-import (
-	"github.com/smacker/go-tree-sitter"
-)
+import sitter "github.com/smacker/go-tree-sitter"
 
 // Reference represents a variable reference inside a source file
 // Cross-file references like those in Golang and C++ (macros/extern) are NOT supported,

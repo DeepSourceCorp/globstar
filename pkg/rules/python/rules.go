@@ -1,12 +1,11 @@
 package python_rules
 
-import "github.com/srijan-paul/deepgrep/pkg/one"
+import "github.com/DeepSourceCorp/globstar/pkg/analysis"
 
 // CreatePyRules returns a list of all python rules
-func CreatePyRules() []one.Rule {
-	return []one.Rule{
+func CreatePyRules() []analysis.Rule {
+	return []analysis.Rule{
 		IsLiteral(),
 		IfTuple(),
 	}
 }
-

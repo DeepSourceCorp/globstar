@@ -2,7 +2,8 @@ package rules
 
 import (
 	"testing"
-	py_rules "github.com/srijan-paul/deepgrep/pkg/rules/python"
+
+	py_rules "github.com/DeepSourceCorp/globstar/pkg/rules/python"
 )
 
 func TestIsLiteral(t *testing.T) {
@@ -49,4 +50,3 @@ func TestIsLiteral(t *testing.T) {
 
 	testCase.Run(t)
 }
-

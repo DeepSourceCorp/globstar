@@ -1,21 +1,21 @@
 package js_rules
 
 import (
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
-	one "github.com/srijan-paul/deepgrep/pkg/one"
 )
 
-func noDoubleEq(r one.Rule, ana *one.Analyzer, node *sitter.Node) {
+func noDoubleEq(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
 	op := node.ChildByFieldName("operator")
 	if op.Content(ana.ParseResult.Source) == "==" {
-		ana.Report(&one.Issue{
+		ana.Report(&analysis.Issue{
 			Message: "Do not use '==' for comparison. Prefer '===' instead.",
 			Range:   op.Range(),
 		})
 	}
 }
 
-func NoDoubleEq() one.Rule {
-	var entry one.VisitFn = noDoubleEq
-	return one.CreateRule("binary_expression", one.LangJs, &entry, nil)
+func NoDoubleEq() analysis.Rule {
+	var entry analysis.VisitFn = noDoubleEq
+	return analysis.CreateRule("binary_expression", analysis.LangJs, &entry, nil)
 }

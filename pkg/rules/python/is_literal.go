@@ -1,11 +1,11 @@
 package python_rules
 
 import (
+	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
-	one "github.com/srijan-paul/deepgrep/pkg/one"
 )
 
-func checkComparisonOp(r one.Rule, ana *one.Analyzer, node *sitter.Node) {
+func checkComparisonOp(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
 	lhs := node.Child(0)
 	operator := node.Child(1)
 	rhs := node.Child(2)
@@ -22,7 +22,7 @@ func checkComparisonOp(r one.Rule, ana *one.Analyzer, node *sitter.Node) {
 	lhsIsLiteral := false
 	if lhs != nil {
 		lhsType := lhs.Type()
-		lhsIsLiteral = lhsType == "integer" || lhsType == "float" || lhsType == "string" 
+		lhsIsLiteral = lhsType == "integer" || lhsType == "float" || lhsType == "string"
 	}
 
 	rhsIsLiteral := false
@@ -32,15 +32,14 @@ func checkComparisonOp(r one.Rule, ana *one.Analyzer, node *sitter.Node) {
 	}
 
 	if lhsIsLiteral || rhsIsLiteral {
-		ana.Report(&one.Issue{
+		ana.Report(&analysis.Issue{
 			Message: "Do not use 'is' to compare literals. Use '==' instead",
 			Range:   node.Range(),
 		})
 	}
 }
 
-func IsLiteral() one.Rule {
-	var entry one.VisitFn = checkComparisonOp 
-	return one.CreateRule("comparison_operator", one.LangPy, &entry, nil)
+func IsLiteral() analysis.Rule {
+	var entry analysis.VisitFn = checkComparisonOp
+	return analysis.CreateRule("comparison_operator", analysis.LangPy, &entry, nil)
 }
-
