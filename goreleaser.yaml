@@ -1,0 +1,118 @@
+version: 2
+project_name: globstar
+
+builds:
+  # darwin-amd64
+  - id: globstar-darwin-amd64
+    main: ./cmd/globstar
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+    flags:
+      - -tags=static_all
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    ldflags:
+      - "-X 'main.version={{ .Version }}'"
+  # darwin-arm64
+  - id: globstar-darwin-arm64
+    main: ./cmd/globstar
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+    flags:
+      - -tags=static_all
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    ldflags:
+      - "-X 'main.version={{ .Version }}'"
+  # linux-amd64
+  - id: globstar-linux-amd64
+    main: ./cmd/globstar
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+    flags:
+      - -tags=static_all
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - "-X 'main.version={{ .Version }}'"
+  # linux-arm64
+  - id: globstar-linux-arm64
+    main: ./cmd/globstar
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+    flags:
+      - -tags=static_all
+    goos:
+      - linux
+    goarch:
+      - arm64
+    ldflags:
+      - "-X 'main.version={{ .Version }}'"
+  # windows-amd64
+  - id: globstar-windows-amd64
+    main: ./cmd/globstar
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+    flags:
+      - -tags=static_all
+    goos:
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - buildmode=exe
+      - "-X 'main.version={{ .Version }}'"
+  # windows-arm64
+  - id: globstar-windows-arm64
+    main: ./cmd/globstar
+    env:
+      - CGO_ENABLED=1
+      - CC=/llvm-mingw/bin/aarch64-w64-mingw32-gcc
+    flags:
+      - -tags=static_all
+    goos:
+      - windows
+    goarch:
+      - arm64
+    ldflags:
+      - buildmode=exe
+      - "-X 'main.version={{ .Version }}'"
+archives:
+  - id: arch_rename
+    builds:
+      #- globstar-darwin-amd64
+      - globstar-linux-amd64
+      #- windows-globstar
+    name_template: >-
+      globstar_{{ .Version }}_{{ .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: default
+    name_template: >-
+      globstar_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+checksum:
+  name_template: "checksums.txt"
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^tests:"
+
+release:
+  github:
+    owner: DeepSourceCorp
+    name: globstar
