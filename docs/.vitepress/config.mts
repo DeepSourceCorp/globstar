@@ -16,11 +16,31 @@ const OG_IMAGE = `${SITE_URL}/img/meta.png`
 const OG_IMAGE_WIDTH = '1200'
 const OG_IMAGE_HEIGHT = '630'
 
+// Add this helper function near the top with other constants
+const isProd = process.env.NODE_ENV === 'production'
+
 export default defineConfig({
   lang: 'en-US',
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   head: [
+    ...(isProd
+      ? [
+          [
+            'script',
+            {
+              async: '',
+              src: 'https://www.googletagmanager.com/gtag/js?id=G-Z6WPGB3WNL',
+              type: 'text/javascript'
+            }
+          ] as [string, Record<string, string>],
+          [
+            'script',
+            {},
+            "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-Z6WPGB3WNL');"
+          ] as [string, Record<string, string>, string]
+        ]
+      : []),
     // Favicons
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon.png', media: '(prefers-color-scheme: light)' }],
     ['link', { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-dark.png', media: '(prefers-color-scheme: dark)' }],
