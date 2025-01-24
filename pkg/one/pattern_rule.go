@@ -28,9 +28,14 @@ const filterPatternKey = "__filter__key__"
 // they are invoked for *every* node that matches the pattern.
 type PatternRule interface {
 	Name() string
-	Pattern() *sitter.Query
+	Patterns() []*sitter.Query
 	Language() Language
-	OnMatch(ana *Analyzer, matchedNode *sitter.Node, captures []sitter.QueryCapture)
+	OnMatch(
+		ana *Analyzer, // the analyzer instance
+		matchedQuery *sitter.Query, // the query that found an AST node
+		matchedNode *sitter.Node, // the AST node that matched the query
+		captures []sitter.QueryCapture, // list of captures made inside the query
+	)
 	PathFilter() *PathFilter
 	NodeFilters() []NodeFilter
 }
@@ -52,7 +57,7 @@ type PathFilter struct {
 
 type patternRuleImpl struct {
 	language     Language
-	pattern      *sitter.Query
+	patterns     []*sitter.Query
 	issueMessage string
 	issueId      string
 	pathFilter   *PathFilter
@@ -63,12 +68,13 @@ func (r *patternRuleImpl) Language() Language {
 	return r.language
 }
 
-func (r *patternRuleImpl) Pattern() *sitter.Query {
-	return r.pattern
+func (r *patternRuleImpl) Patterns() []*sitter.Query {
+	return r.patterns
 }
 
 func (r *patternRuleImpl) OnMatch(
 	ana *Analyzer,
+	matchedQuery *sitter.Query,
 	matchedNode *sitter.Node,
 	captures []sitter.QueryCapture,
 ) {
@@ -78,7 +84,7 @@ func (r *patternRuleImpl) OnMatch(
 	// TODO: 1. escape '@' in the message, 2. use a more efficient way to replace
 	for strings.ContainsRune(message, '@') {
 		for _, capture := range captures {
-			captureName := r.pattern.CaptureNameForId(capture.Index)
+			captureName := matchedQuery.CaptureNameForId(capture.Index)
 			message = strings.ReplaceAll(
 				message,
 				"@"+captureName,
@@ -106,7 +112,8 @@ func (r *patternRuleImpl) NodeFilters() []NodeFilter {
 	return r.filters
 }
 
-func CreatePatternRule(pattern *sitter.Query,
+func CreatePatternRule(
+	patterns []*sitter.Query,
 	language Language,
 	issueMessage string,
 	issueId string,
@@ -114,7 +121,7 @@ func CreatePatternRule(pattern *sitter.Query,
 ) PatternRule {
 	return &patternRuleImpl{
 		language:     language,
-		pattern:      pattern,
+		patterns:     patterns,
 		issueMessage: issueMessage,
 		issueId:      issueId,
 		pathFilter:   pathFilter,
@@ -127,10 +134,17 @@ type filterYAML struct {
 }
 
 type PatternRuleFile struct {
-	Language    string       `yaml:"language"`
-	Code        string       `yaml:"name"`
-	Message     string       `yaml:"message"`
-	Pattern     string       `yaml:"pattern"`
+	Language string `yaml:"language"`
+	Code     string `yaml:"name"`
+	Message  string `yaml:"message"`
+	// Pattern is a single pattern in the form of:
+	// pattern: (some_pattern)
+	// in the YAML file
+	Pattern string `yaml:"pattern,omitempty"`
+	// Patterns are ultiple patterns in the form of:
+	// pattern:  (something)
+	// in the YAML file
+	Patterns    []string     `yaml:"patterns,omitempty"`
 	Description string       `yaml:"description,omitempty"`
 	Filters     []filterYAML `yaml:"filters,omitempty"`
 	Exclude     []string     `yaml:"exclude,omitempty"`
@@ -170,9 +184,27 @@ func ReadFromFile(filePath string) (PatternRule, error) {
 		return nil, fmt.Errorf("unknown language code: '%s'", rule.Language)
 	}
 
-	pattern, err := sitter.NewQuery([]byte(rule.Pattern), lang.Grammar())
-	if err != nil {
-		return nil, err
+	var patterns []*sitter.Query
+	if rule.Pattern != "" {
+		pattern, err := sitter.NewQuery([]byte(rule.Pattern), lang.Grammar())
+		if err != nil {
+			return nil, err
+		}
+		patterns = append(patterns, pattern)
+	} else if len(rule.Patterns) > 0 {
+		for _, patternStr := range rule.Patterns {
+			pattern, err := sitter.NewQuery([]byte(patternStr), lang.Grammar())
+			if err != nil {
+				return nil, err
+			}
+			patterns = append(patterns, pattern)
+		}
+	} else {
+		return nil, fmt.Errorf("no pattern provided in rule '%s'", rule.Code)
+	}
+
+	if rule.Pattern != "" && len(rule.Patterns) > 0 {
+		return nil, fmt.Errorf("only one of 'pattern' or 'patterns' can be provided in a rule definition")
 	}
 
 	// include and exclude patterns
@@ -234,7 +266,7 @@ func ReadFromFile(filePath string) (PatternRule, error) {
 
 	patternRule := &patternRuleImpl{
 		language:     lang,
-		pattern:      pattern,
+		patterns:     patterns,
 		issueMessage: rule.Message,
 		issueId:      rule.Code,
 		pathFilter:   pathFilter,

@@ -182,6 +182,12 @@ func (ana *Analyzer) runParentFilters(rule PatternRule, node *sitter.Node) bool 
 		shouldMatch := filter.shouldMatch
 		nodeMatched := false
 
+		// The matched node is expected to be a child of some other
+		// node, but it has no parents (is a top-level node)
+		if node.Parent() == nil && filter.shouldMatch {
+			return false
+		}
+
 		for parent := node.Parent(); parent != nil; parent = parent.Parent() {
 			if ana.filterMatchesParent(&filter, parent) {
 				nodeMatched = true
@@ -203,6 +209,28 @@ func (ana *Analyzer) runParentFilters(rule PatternRule, node *sitter.Node) bool 
 	return true
 }
 
+func (ana *Analyzer) executeRuleQuery(rule PatternRule, query *sitter.Query) {
+	qc := sitter.NewQueryCursor()
+	defer qc.Close()
+
+	qc.Exec(query, ana.ParseResult.Ast)
+	for {
+		m, ok := qc.NextMatch()
+
+		if !ok {
+			break
+		}
+
+		m = qc.FilterPredicates(m, ana.ParseResult.Source)
+		for _, capture := range m.Captures {
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName == rule.Name() && ana.runParentFilters(rule, capture.Node) {
+				rule.OnMatch(ana, query, capture.Node, m.Captures)
+			}
+		}
+	}
+}
+
 // runPatternRules executes all rules that are written as AST queries.
 func (ana *Analyzer) runPatternRules() {
 	for _, rule := range ana.PatternRules {
@@ -210,25 +238,9 @@ func (ana *Analyzer) runPatternRules() {
 			continue
 		}
 
-		query := rule.Pattern()
-		qc := sitter.NewQueryCursor()
-		defer qc.Close()
-
-		qc.Exec(query, ana.ParseResult.Ast)
-		for {
-			m, ok := qc.NextMatch()
-
-			if !ok {
-				break
-			}
-
-			m = qc.FilterPredicates(m, ana.ParseResult.Source)
-			for _, capture := range m.Captures {
-				captureName := query.CaptureNameForId(capture.Index)
-				if captureName == rule.Name() && ana.runParentFilters(rule, capture.Node) {
-					rule.OnMatch(ana, capture.Node, m.Captures)
-				}
-			}
+		queries := rule.Patterns()
+		for _, q := range queries {
+			ana.executeRuleQuery(rule, q)
 		}
 	}
 }
