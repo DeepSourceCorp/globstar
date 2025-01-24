@@ -2,9 +2,14 @@
 
 In the spirit of transparency, we share our roadmap with the community — so while [DeepSource](https://deepsource.com) is steering this project, the community can see where we're headed and contribute to the direction of the project. This roadmap is a living document and will be updated as we make progress.
 
+
 ## What's supported today
 
 Globstar is meant to be a light-weight, yet powerful, way of defining code quality and security checkers for your projects. Our [YAML interface](/reference/checker-yaml) allows single-file analysis and is easy to write and maintain — and should cover most of the use-cases you might have, in [20+ programming languages](/supported-languages) today. If you need sophisticated checkers, use the [Go interface](/reference/checker-go).
+
+::: warning IMPORTANT
+While the YAML interface is available in stable at the moment, the Go interface is still work-in-progress. We're actively working on it, and it should be available in the next couple of releases. This is a brand new project, with everything built from scratch, and we're working hard to sand off the rough edges. Please bear with us — and open [issues](https://github.com/DeepSourceCorp/globstar/issues) if you can. Better yet, send us [pull requests](/contributing)!
+:::
 
 ## Future roadmap
 
