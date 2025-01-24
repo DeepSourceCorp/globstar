@@ -141,9 +141,10 @@ pipeline {
         }
     }
 }
-
-> Note: This pipeline assumes that you have [Declarative Pipeline](https://plugins.jenkins.io/pipeline-model-definition/) enabled in your Jenkins instance.
 ```
+
+> [!NOTE]
+> This pipeline assumes that you have [Declarative Pipeline](https://plugins.jenkins.io/pipeline-model-definition/) enabled in your Jenkins instance.
 
 Each configuration runs Globstar on the appropriate events (pull requests, merges to main branch) and uses the same basic flow:
 1. Install Globstar using the installation script
