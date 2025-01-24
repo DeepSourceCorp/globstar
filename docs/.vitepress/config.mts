@@ -92,7 +92,8 @@ export default defineConfig({
     },
     nav: [
       { text: 'Docs', link: '/introduction' },
-      { text: 'Manifesto', link: '/manifesto' },
+      { text: 'Roadmap', link: '/roadmap' },
+      { text: 'Community', link: 'https://github.com/DeepSourceCorp/globstar/discussions' }
     ],
     sidebar: [
       {
