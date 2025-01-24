@@ -16,6 +16,8 @@ Globstar is meant to be a light-weight, yet powerful, way of defining code quali
 
 - **Support for more languages**: While we support most of the popular languages today, we'd like Globstar to be comprehensive.
 
+- **Hosted Globstar**: We'll bring Globstar support natively to DeepSource, so you can run Globstar checks on your repositories without having to install anything. This will also give you access to everything DeepSource already offers — sophisticated quality and security gates, baseline analysis, ignored rules, centralized configuration, reports, and Autofix™ AI. 
+
 ## Get involved
 
 We'd love you to help us shape the future of Globstar. If you have ideas, suggestions, or feedback, please [open a new thread](https://github.com/DeepSourceCorp/globstar/discussions) in our community or participate in an existing one. If you're a developer, you can also contribute to the project by [opening a pull request](https://github.com/DeepSourceCorp/globstar/pulls) or helping us with [issues](https://github.com/DeepSourceCorp/globstar/issues).
