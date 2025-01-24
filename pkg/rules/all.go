@@ -10,9 +10,9 @@ import (
 func CreateRules() map[one.Language][]one.Rule {
 	jsRules := js_rules.CreateJsRules()
 	return map[one.Language][]one.Rule{
-		one.LangPy: python_rules.CreatePyRules(),
-		one.LangJs: jsRules,
+		one.LangPy:  python_rules.CreatePyRules(),
+		one.LangJs:  jsRules,
 		one.LangTsx: jsRules,
-		one.LangTs: jsRules,
+		one.LangTs:  jsRules,
 	}
 }
