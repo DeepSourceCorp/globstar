@@ -9,7 +9,7 @@
 
 **Globstar** is an open-source static analysis toolkit that enables developers and security engineers to write code analysis checkers and run them using a single, portable binary. Built with performance in mind, Globstar leverages [tree-sitter](https://tree-sitter.github.io/tree-sitter/) for powerful AST-based analysis while providing a simple, intuitive interface for writing checkers using the tree-sitter query language. More sophisticated lints can be written using the Go API, which provides access to the tree-sitter AST and the ability to resolve imports and scopes.
 
-Write all your checker checkers in the `.globstar` directory for your repository and use the `globstar check` command to run them all across your codebase. It's as simple as that!
+Write all your checker checkers in the `.globstar` directory for your repository and use the `globstar check` command to run them all across your codebase. Configuration can be specified in `.globstar/.config.yml`.
 
 ## Key Features
 

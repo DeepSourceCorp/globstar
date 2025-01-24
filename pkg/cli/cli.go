@@ -26,7 +26,7 @@ type Cli struct {
 }
 
 func (c *Cli) loadConfig() error {
-	conf, err := config.NewConfigFromFile(filepath.Join(c.RootDirectory, ".globstar.yml"))
+	conf, err := config.NewConfigFromFile(filepath.Join(c.RootDirectory, ".globstar", ".config.yml"))
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (c *Cli) loadConfig() error {
 
 func (c *Cli) Run() error {
 	err := c.loadConfig()
-	if err != nil {
+	if (err != nil) {
 		fmt.Fprint(os.Stderr, err.Error())
 		return err
 	}

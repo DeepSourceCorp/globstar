@@ -38,4 +38,4 @@ globstar help
 
 ## Configuration
 
-Globstar looks for a `.globstar.yml` configuration file in the project root, which can be used to configure defaults. Read more in the [Configuration](#configuration) section.
+Globstar looks for a `.config.yml` configuration file in the `.globstar` directory, which can be used to configure defaults. Read more in the [Configuration](#configuration) section.
