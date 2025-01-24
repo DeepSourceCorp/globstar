@@ -22,6 +22,7 @@ const isProd = process.env.NODE_ENV === 'production'
 export default defineConfig({
   lang: 'en-US',
   title: SITE_TITLE,
+  titleTemplate: ':title | Globstar',
   description: SITE_DESCRIPTION,
   head: [
     ...(isProd
