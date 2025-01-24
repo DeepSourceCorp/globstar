@@ -25,7 +25,7 @@ jobs:
 
       - name: Setup environment variables
         run: |-
-          echo 'GITHUB_TOKEN=${{secrets.GITHUB_TOKEN}}' >> .release-env
+          echo 'GITHUB_TOKEN=${{secrets.PAT_GITHUB}}' >> .release-env
           echo 'HOMEBREW_TOKEN=${{secrets.DS_BOT_PAT}}' >> .release-env
 
       - name: Publish Release
