@@ -3,7 +3,6 @@ import { defineConfig } from 'vitepress'
 const SITE_TITLE = 'Globstar by DeepSource - The Open-Source Static Analysis Toolkit'
 const SITE_DESCRIPTION = 'Fast, feature-rich, open-source static analysis toolkit for writing and running code quality and SAST checkers.'
 
-// Helper function to get the site URL
 const getSiteUrl = () => {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`
@@ -16,7 +15,6 @@ const OG_IMAGE = `${SITE_URL}/img/meta.png`
 const OG_IMAGE_WIDTH = '1200'
 const OG_IMAGE_HEIGHT = '630'
 
-// Add this helper function near the top with other constants
 const isProd = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
