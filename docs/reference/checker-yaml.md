@@ -4,7 +4,7 @@ All Yaml lints are present inside a `.globstar` repo in the project root.
 
 ## Schema
 
-- `language`: Key specifying which language this lint is meant for. Check the [table](TODO) for possible languages.
+- `language`: Key specifying which language this lint is meant for. Check the for possible languages.
 
 - `name`: A unique ID by which this rule will be identified.
 - `message`: The error message shown by globstar when this lint is raised.

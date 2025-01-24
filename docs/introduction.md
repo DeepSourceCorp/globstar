@@ -35,9 +35,7 @@ And the best part: since tree-sitter is widely adopted, modern AI coding assista
 
 ## Where to go next?
 
-- [Installation](/quickstart): Install Globstar on your machine and try running the pre-defined checkers.
-
-- [Writing a Checker](/writing-a-checker): Learn how to write a simple checker in the `.globstar` directory of your repository.
+- [Installation](/quickstart): Install Globstar on your machine and write your first checker.
 
 - [Integrating with CI/CD](/ci-cd-integration): Learn how to integrate Globstar with your CI/CD pipeline to run checkers on every commit.
 
