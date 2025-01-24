@@ -31,3 +31,4 @@ cache/
 dist/
 
 .DS_Store
+.release-env
