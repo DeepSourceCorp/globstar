@@ -100,7 +100,6 @@ export default defineConfig({
         items: [
           { text: 'Introduction', link: '/introduction' },
           { text: 'Quickstart', link: '/quickstart' },
-          { text: 'Writing a Checker', link: '/writing-a-checker' },
           { text: 'CI/CD Integration', link: '/ci-cd-integration' },
           { text: 'Supported Languages', link: '/supported-languages' },
           { text: 'Roadmap', link: '/roadmap' },
@@ -124,13 +123,13 @@ export default defineConfig({
           { text: 'Checker Go Interface', link: '/reference/checker-go' }
         ]
       },
-      {
-        text: 'Guides',
-        items: [
-          { text: 'Cross-file Analysis', link: '/guides/cross-file-analysis' },
-          { text: 'Scope Resolution', link: '/guides/scope-resolution' },
-        ]
-      }
+      // {
+      //   text: 'Guides',
+      //   items: [
+      //     { text: 'Cross-file Analysis', link: '/guides/cross-file-analysis' },
+      //     { text: 'Scope Resolution', link: '/guides/scope-resolution' },
+      //   ]
+      // }
     ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/DeepSourceCorp/globstar' }

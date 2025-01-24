@@ -43,7 +43,7 @@ Here's an example checker that disallows the `debugger` statement in JavaScript 
 # .globstar/no_debugger.yml
 language: js 
 name: js_no_debugger 
-message: Remove the "debugger statement" before committing your code
+message: Remove debugger statements before committing your code
 
 # Capture name must be the same as the checker's `name` field.
 # Nested captures are allowed to have arbitrary names
