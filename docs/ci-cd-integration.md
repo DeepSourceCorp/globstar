@@ -18,8 +18,8 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-            
+      - uses: actions/checkout@v4
+
       - name: Install Globstar
         run: curl -sSL https://get.globstar.dev | sh
       - name: Run Globstar checks
@@ -66,7 +66,6 @@ jobs:
           command: globstar check
 
 workflows:
-  version: 2
   check:
     jobs:
       - globstar
@@ -87,10 +86,10 @@ pool:
 
 steps:
 - checkout: self
-  
+
 - script: curl -sSL https://get.globstar.dev | sh
   displayName: 'Install Globstar'
-  
+
 - script: globstar check
   displayName: 'Run Globstar checks'
 ```
@@ -128,7 +127,7 @@ Add this configuration to your `Jenkinsfile`:
 // Jenkinsfile
 pipeline {
     agent any
-    
+
     stages {
         stage('Install Globstar') {
             steps {
@@ -142,6 +141,8 @@ pipeline {
         }
     }
 }
+
+> Note: This pipeline assumes that you have [Declarative Pipeline](https://plugins.jenkins.io/pipeline-model-definition/) enabled in your Jenkins instance.
 ```
 
 Each configuration runs Globstar on the appropriate events (pull requests, merges to main branch) and uses the same basic flow:
