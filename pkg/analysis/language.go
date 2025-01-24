@@ -8,19 +8,29 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 
+	treeSitterBash "github.com/smacker/go-tree-sitter/bash"
+	treeSitterCsharp "github.com/smacker/go-tree-sitter/csharp"
 	treeSitterCss "github.com/smacker/go-tree-sitter/css"
 	treeSitterDockerfile "github.com/smacker/go-tree-sitter/dockerfile"
+	treeSitterElixir "github.com/smacker/go-tree-sitter/elixir"
+	treeSitterElm "github.com/smacker/go-tree-sitter/elm"
+	treeSitterGo "github.com/smacker/go-tree-sitter/golang"
+	treeSitterGroovy "github.com/smacker/go-tree-sitter/groovy"
+	treeSitterHcl "github.com/smacker/go-tree-sitter/hcl"
+	treeSitterHtml "github.com/smacker/go-tree-sitter/html"
 	treeSitterJava "github.com/smacker/go-tree-sitter/java"
 	treeSitterKotlin "github.com/smacker/go-tree-sitter/kotlin"
 	treeSitterLua "github.com/smacker/go-tree-sitter/lua"
 	treeSitterOCaml "github.com/smacker/go-tree-sitter/ocaml"
+	treeSitterPhp "github.com/smacker/go-tree-sitter/php"
 	treeSitterPy "github.com/smacker/go-tree-sitter/python"
 	treeSitterRuby "github.com/smacker/go-tree-sitter/ruby"
 	treeSitterRust "github.com/smacker/go-tree-sitter/rust"
+	treeSitterScala "github.com/smacker/go-tree-sitter/scala"
 	treeSitterSql "github.com/smacker/go-tree-sitter/sql"
+	treeSitterSwift "github.com/smacker/go-tree-sitter/swift"
 	treeSitterTsx "github.com/smacker/go-tree-sitter/typescript/tsx"
 	treeSitterTs "github.com/smacker/go-tree-sitter/typescript/typescript"
-	// treeSitterYaml "github.com/smacker/go-tree-sitter/yaml"
 )
 
 // ParseResult is the result of parsing a file.
@@ -60,6 +70,17 @@ const (
 	LangKotlin
 	LangOCaml
 	LangLua
+	LangBash
+	LangCsharp
+	LangElixir
+	LangElm
+	LangGo
+	LangGroovy
+	LangHcl
+	LangHtml
+	LangPhp
+	LangScala
+	LangSwift
 )
 
 // tsGrammarForLang returns the tree-sitter grammar for the given language.
@@ -86,14 +107,34 @@ func (lang Language) Grammar() *sitter.Language {
 		return treeSitterKotlin.GetLanguage()
 	case LangCss:
 		return treeSitterCss.GetLanguage()
-	// case LangYaml:
-	//	return treeSitterYaml.GetLanguage()
 	case LangOCaml:
 		return treeSitterOCaml.GetLanguage()
 	case LangLua:
 		return treeSitterLua.GetLanguage()
 	case LangDockerfile:
 		return treeSitterDockerfile.GetLanguage()
+	case LangBash:
+		return treeSitterBash.GetLanguage()
+	case LangCsharp:
+		return treeSitterCsharp.GetLanguage()
+	case LangElixir:
+		return treeSitterElixir.GetLanguage()
+	case LangElm:
+		return treeSitterElm.GetLanguage()
+	case LangGo:
+		return treeSitterGo.GetLanguage()
+	case LangGroovy:
+		return treeSitterGroovy.GetLanguage()
+	case LangHcl:
+		return treeSitterHcl.GetLanguage()
+	case LangHtml:
+		return treeSitterHtml.GetLanguage()
+	case LangPhp:
+		return treeSitterPhp.GetLanguage()
+	case LangScala:
+		return treeSitterScala.GetLanguage()
+	case LangSwift:
+		return treeSitterSwift.GetLanguage()
 	default:
 		return nil
 	}

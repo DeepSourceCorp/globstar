@@ -62,10 +62,12 @@ func (c *Cli) Run() error {
 						Aliases: []string{"i"},
 					},
 
-					&cli.BoolFlag{
-						Name:    "builtins",
-						Usage:   "Run all the builtin rules",
-						Aliases: []string{"b"},
+					&cli.StringFlag{
+						Name: "checkers",
+						Usage: `Specify whether to run the built-in checkers, the local checkers
+(in the .globstar directory) or both. Use --checkers=local to run only the local checkers, --checkers=builtin
+to run only the built-in checkers, and --checkers=all to run both.`,
+						Aliases: []string{"c"},
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -74,8 +76,15 @@ func (c *Cli) Run() error {
 						return err
 					}
 
-					useBuiltins := cmd.Bool("builtins")
-					return c.RunLints(patternRules, useBuiltins)
+					checkers := cmd.String("checkers")
+					if checkers == "local" {
+						return c.RunLints(patternRules, false)
+					} else if checkers == "builtin" {
+						return c.RunLints(nil, true)
+					} else if checkers == "all" || checkers == "" {
+						return c.RunLints(patternRules, true)
+					}
+					return fmt.Errorf("Invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s\n", checkers)
 				},
 			},
 			{
@@ -188,6 +197,7 @@ type lintResult struct {
 
 func (lr *lintResult) GetExitStatus(conf *config.Config) int {
 	for _, issue := range lr.issues {
+		fmt.Println(issue.Category, issue.Severity)
 		for _, failCategory := range conf.FailWhen.CategoryIn {
 			if issue.Category == failCategory {
 				return conf.FailWhen.ExitCode
@@ -215,7 +225,7 @@ var defaultIgnoreDirs = []string{
 	"venv",
 	"__pycache__",
 	".idea",
-	//".globstar", // may contain test files
+	".globstar", // may contain test files
 }
 
 // RunLints goes over all the files in the project and runs the lints for every file encountered
@@ -269,7 +279,7 @@ func (c *Cli) RunLints(
 		}
 
 		for _, issue := range issues {
-			log.Error().Msgf("[Ln %d:Col %d] %s",
+			log.Error().Msgf("\t[Ln %d:Col %d] %s",
 				issue.Range.StartPoint.Row,
 				issue.Range.StartPoint.Column,
 				color.YellowString(issue.Message),
@@ -289,6 +299,7 @@ func (c *Cli) RunLints(
 
 	exitStatus := result.GetExitStatus(c.Config)
 	if exitStatus != 0 {
+		fmt.Fprintf(os.Stderr, "Found %d issues\n", len(result.issues))
 		return fmt.Errorf("Found %d issues", len(result.issues))
 	}
 

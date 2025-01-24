@@ -203,6 +203,28 @@ func DecodeLanguage(language string) Language {
 		return LangCss
 	case "markdown", "md":
 		return LangMarkdown
+	case "sh", "bash":
+		return LangBash
+	case "csharp", "cs":
+		return LangCsharp
+	case "elixir", "ex":
+		return LangElixir
+	case "elm":
+		return LangElm
+	case "go":
+		return LangGo
+	case "groovy":
+		return LangGroovy
+	case "hcl", "tf":
+		return LangHcl
+	case "html":
+		return LangHtml
+	case "php":
+		return LangPhp
+	case "scala":
+		return LangScala
+	case "swift":
+		return LangSwift
 	default:
 		return LangUnknown
 	}
