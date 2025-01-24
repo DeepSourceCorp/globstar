@@ -1,5 +1,4 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
@@ -8,13 +7,13 @@ hero:
   actions:
     - theme: brand
       text: Getting Started
-      link: /markdown-examples
+      link: /introduction
     - theme: alt
-      text: Installation
-      link: /api-examples
+      text: Quickstart
+      link: /quickstart
     - theme: alt
       text: Writing a Checker
-      link: /guide
+      link: /writing-a-checker
 features:
   - icon:
       src: /icon/fast.svg
