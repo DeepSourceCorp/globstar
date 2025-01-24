@@ -95,6 +95,7 @@ export default defineConfig({
       { text: 'Roadmap', link: '/roadmap' },
       { text: 'Community', link: 'https://github.com/DeepSourceCorp/globstar/discussions' }
     ],
+    outline: 'deep',
     sidebar: [
       {
         text: 'Getting Started',
