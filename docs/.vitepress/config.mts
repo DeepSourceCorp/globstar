@@ -118,10 +118,10 @@ export default defineConfig({
       {
         text: 'Reference',
         items: [
-          { text: 'Configuration', link: '/reference/configuration' },
-          { text: 'Checker API', link: '/reference/checker-api' },
           { text: 'CLI', link: '/reference/cli' },
-          { text: 'Cross-file Analysis', link: '/reference/cross-file-analysis' },
+          { text: 'Configuration', link: '/reference/configuration' },
+          { text: 'Checker YAML Interface', link: '/reference/checker-yaml' },
+          { text: 'Checker Go Interface', link: '/reference/checker-go' }
         ]
       },
       {
