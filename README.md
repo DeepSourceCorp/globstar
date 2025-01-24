@@ -29,10 +29,10 @@ Write all your checker checkers in the `.globstar` directory for your repository
 curl -sSL https://get.globstar.dev | sh
 ```
 
-This will download the latest version of Globstar to `./bin/globstar` in your current directory. You can also specify a different installation directory by setting the `BINDIR` environment variable. For example, to install Globstar globally on a Unix-like system, run:
+This will download the latest version of Globstar to `./bin/globstar` in your current directory. You can also specify a different installation directory by setting the `BINDIR` environment variable.
 
 ```bash
-BINDIR=/user/local/bin curl -sSL https://get.globstar.dev | sh
+curl -sSL https://get.globstar.dev | BINDIR=$HOME/.local/bin sh
 ```
 
 Once installed, you can run `./bin/globstar check` or `globstar check` (if installed globally) in your repository to run all the checkers in the builtin checkers that come with Globstar along with all checkers defined in the repository's `.globstar` directory.
