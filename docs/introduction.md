@@ -32,7 +32,7 @@ Tree-sitter queries map directly to your code's AST structure, making rules pred
 
 - [Installation](/quickstart): Install Globstar on your machine and try running the pre-defined checkers.
 
-- [Writing a Checker](/writing-checkers): Learn how to write a simple checker in the `.globstar` directory of your repository.
+- [Writing a Checker](/writing-a-checker): Learn how to write a simple checker in the `.globstar` directory of your repository.
 
 - [Integrating with CI/CD](/ci-cd-integration): Learn how to integrate Globstar with your CI/CD pipeline to run checkers on every commit.
 
