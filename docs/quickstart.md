@@ -16,7 +16,15 @@ This will download the latest version of Globstar to `./bin/globstar` in your cu
 curl -sSL https://get.globstar.dev | BINDIR=$HOME/.local/bin sh
 ```
 
-Once installed, you can run `./bin/globstar check` or `globstar check` (if installed globally) in your repository to run all the checkers in the builtin checkers that come with Globstar along with all checkers defined in the repository's `.globstar` directory.
+#### Installing globally
+
+If you'd like to install Globstar globally, you can move the binary to a directory in your `PATH`.
+
+```bash
+mv ./bin/globstar /usr/local/bin
+```
+
+Once installed, you can run `globstar check` in any repository to run all the checkers in the builtin checkers that come with Globstar along with all checkers defined in the repository's `.globstar` directory.
 
 ## Running builtin checkers
 
