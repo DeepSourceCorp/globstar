@@ -30,7 +30,7 @@ type Analyzer struct {
 	rules []Rule
 	// patternRules is a list of all rules that run after a query is run on the AST.
 	// Usually, these are written in a DSL (which, for now, is the tree-sitter S-Expression query language)
-	PatternRules []PatternRule
+	YmlRules []YmlRule
 	// entryRules maps node types to the rules that should be applied
 	// when entering that node.
 	entryRulesForNode map[string][]Rule
@@ -106,7 +106,7 @@ func (ana *Analyzer) OnLeaveNode(node *sitter.Node) {
 	}
 }
 
-func (ana *Analyzer) shouldSkipRule(rule PatternRule) bool {
+func (ana *Analyzer) shouldSkipRule(rule YmlRule) bool {
 	pathFilter := rule.PathFilter()
 	if pathFilter == nil {
 		// no filter is set, so we should not skip this rule
@@ -172,7 +172,7 @@ func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node
 }
 
 // runParentFilters checks if the parent filters for a rule match the given node.
-func (ana *Analyzer) runParentFilters(rule PatternRule, node *sitter.Node) bool {
+func (ana *Analyzer) runParentFilters(rule YmlRule, node *sitter.Node) bool {
 	filters := rule.NodeFilters()
 	if len(filters) == 0 {
 		return true
@@ -209,7 +209,7 @@ func (ana *Analyzer) runParentFilters(rule PatternRule, node *sitter.Node) bool 
 	return true
 }
 
-func (ana *Analyzer) executeRuleQuery(rule PatternRule, query *sitter.Query) {
+func (ana *Analyzer) executeRuleQuery(rule YmlRule, query *sitter.Query) {
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()
 
@@ -233,7 +233,7 @@ func (ana *Analyzer) executeRuleQuery(rule PatternRule, query *sitter.Query) {
 
 // runPatternRules executes all rules that are written as AST queries.
 func (ana *Analyzer) runPatternRules() {
-	for _, rule := range ana.PatternRules {
+	for _, rule := range ana.YmlRules {
 		if ana.shouldSkipRule(rule) {
 			continue
 		}

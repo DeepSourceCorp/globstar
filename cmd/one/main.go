@@ -1,9 +1,26 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/srijan-paul/deepgrep/pkg/cli"
 )
 
 func main() {
-	cli.RunCli()
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
+	cli := cli.Cli{
+		RootDirectory: cwd,
+		Rules:         nil, // no custom rule set
+	}
+
+	err = cli.Run()
+	if err != nil {
+		os.Exit(1)
+	}
 }

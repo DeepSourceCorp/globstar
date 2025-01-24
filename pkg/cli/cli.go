@@ -17,9 +17,80 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+type Cli struct {
+	// RootDirectory is the target directory to analyze
+	RootDirectory string
+	// Rules is a list of lints that are applied to the files in `RootDirectory`
+	Rules []one.Rule
+}
+
+func (c *Cli) Run() error {
+	// read all yaml rules in the .one directory
+	patternRules, err := c.ReadCustomRules()
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+		return err
+	}
+
+	cmd := &cli.Command{
+		Commands: []*cli.Command{
+			{
+				Name:    "lint",
+				Aliases: []string{"l"},
+				Usage:   "Run OneLint on the current project",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "ignore",
+						Usage:   "Ignore file paths that match a pattern",
+						Aliases: []string{"i"},
+					},
+
+					&cli.BoolFlag{
+						Name:    "builtins",
+						Usage:   "Run all the builtin rules",
+						Aliases: []string{"b"},
+					},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					ignorePattern := cmd.String("ignore")
+					useBuiltins := cmd.Bool("builtins")
+
+					return c.RunLints(ignorePattern, patternRules, useBuiltins)
+				},
+			},
+			{
+				Name:    "test",
+				Aliases: []string{"t"},
+				Usage:   "Run all tests in the `.one` directory",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					oneDir := filepath.Join(c.RootDirectory, ".one")
+					passed, err := runTests(oneDir)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err.Error())
+						return err
+					}
+
+					if !passed {
+						return fmt.Errorf("tests failed")
+					}
+
+					return nil
+				},
+			},
+		},
+	}
+
+	err = cmd.Run(context.Background(), os.Args)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+	}
+
+	return err
+}
+
 // ReadCustomRules reads all the custom rules from the `.one/` directory in the project root
-func ReadCustomRules(projectRoot string) (map[one.Language][]one.PatternRule, error) {
-	oneDir := filepath.Join(projectRoot, ".one")
+func (c *Cli) ReadCustomRules() (map[one.Language][]one.YmlRule, error) {
+	oneDir := filepath.Join(c.RootDirectory, ".one")
 
 	stat, err := os.Stat(oneDir)
 	if err != nil {
@@ -34,7 +105,7 @@ func ReadCustomRules(projectRoot string) (map[one.Language][]one.PatternRule, er
 		return nil, nil
 	}
 
-	rulesMap := make(map[one.Language][]one.PatternRule)
+	rulesMap := make(map[one.Language][]one.YmlRule)
 	err = filepath.Walk(oneDir, func(path string, d fs.FileInfo, err error) error {
 		if d.IsDir() && d.Name() != ".one" {
 			return fs.SkipDir
@@ -64,10 +135,9 @@ func ReadCustomRules(projectRoot string) (map[one.Language][]one.PatternRule, er
 	return rulesMap, err
 }
 
-func LintFile(
+func (c *Cli) LintFile(
 	rulesMap map[one.Language][]one.Rule,
-	patternRules map[one.Language][]one.PatternRule,
-	workDir string,
+	patternRules map[one.Language][]one.YmlRule,
 	path string,
 ) ([]*one.Issue, error) {
 	lang := one.LanguageFromFilePath(path)
@@ -81,10 +151,10 @@ func LintFile(
 	if err != nil {
 		return nil, err
 	}
-	analyzer.WorkDir = workDir
+	analyzer.WorkDir = c.RootDirectory
 
 	if patternRules != nil {
-		analyzer.PatternRules = patternRules[lang]
+		analyzer.YmlRules = patternRules[lang]
 	}
 
 	return analyzer.Analyze(), nil
@@ -110,10 +180,10 @@ var defaultIgnoreDirs = []string{
 }
 
 // RunLints goes over all the files in the project and runs the lints for every file encountered
-func RunLints(
-	rootDir string,
+func (c *Cli) RunLints(
 	globPattern string, // pattern to ignore files
-	patternRules map[one.Language][]one.PatternRule, // map of language id -> yaml rules
+	patternRules map[one.Language][]one.YmlRule, // map of language id -> yaml rules
+	runBuiltinRules bool,
 ) error {
 	ignorePattern, err := glob.Compile(globPattern)
 	if err != nil {
@@ -121,10 +191,14 @@ func RunLints(
 	}
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	allRules := rules.CreateRules()
+
+	var allRules map[one.Language][]one.Rule
+	if runBuiltinRules {
+		allRules = rules.CreateBaseRuleMap()
+	}
 
 	result := lintResult{}
-	err = filepath.Walk(rootDir, func(path string, d fs.FileInfo, err error) error {
+	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if d.IsDir() {
 			if ignorePattern.Match(path) || slices.Contains(defaultIgnoreDirs, d.Name()) {
 				return filepath.SkipDir
@@ -150,14 +224,14 @@ func RunLints(
 		result.numFilesChecked++
 
 		// run linter
-		issues, err := LintFile(allRules, patternRules, rootDir, path)
+		issues, err := c.LintFile(allRules, patternRules, path)
 		if err != nil {
 			// TODO: parse error on a single file should not exit the entire analysis process
 			return err
 		}
 
 		if len(issues) > 0 {
-			relPath, _ := filepath.Rel(rootDir, path)
+			relPath, _ := filepath.Rel(c.RootDirectory, path)
 			log.Error().Msgf("Issues found in %s", color.YellowString(relPath))
 		}
 
@@ -181,71 +255,4 @@ func RunLints(
 	}
 
 	return err
-}
-
-func RunCli() {
-	cwd, err := os.Getwd()
-	if err != nil {
-		fmt.Fprint(os.Stderr, "Failed to get current working directory")
-		return
-	}
-
-	patternRules, err := ReadCustomRules(cwd)
-	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
-		return
-	}
-
-	cmd := &cli.Command{
-		Commands: []*cli.Command{
-			{
-				Name:    "lint",
-				Aliases: []string{"l"},
-				Usage:   "Run OneLint on the current project",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "ignore",
-						Usage:   "Ignore file paths that match a pattern",
-						Aliases: []string{"i"},
-					},
-				},
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					rootDir, err := os.Getwd()
-					if err != nil {
-						return err
-					}
-
-					ignorePattern := cmd.String("ignore")
-					return RunLints(rootDir, ignorePattern, patternRules)
-				},
-			},
-			{
-				Name:    "test",
-				Aliases: []string{"d"},
-				Usage:   "Run all tests in the `.one` directory",
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					rootDir, err := os.Getwd()
-					if err != nil {
-						return err
-					}
-
-					oneDir := filepath.Join(rootDir, ".one")
-					passed, err := runTests(oneDir)
-					if err != nil {
-						return err
-					}
-
-					if !passed {
-						return fmt.Errorf("tests failed")
-					}
-
-					return nil
-				},
-			},
-		},
-	}
-
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal().Err(err)
-	}
 }

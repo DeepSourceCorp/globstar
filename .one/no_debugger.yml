@@ -1,7 +1,7 @@
 # .one/no_debugger.yml
 language: js 
 name: js_no_debugger 
-message: Remove the "debugger statement" before committing your code
+message: Remove debugger statements before committing your code
 # capture name must be the same as the lint's `name` field.
 # Nested captures are allowed to have arbitrary names
 pattern: (debugger_statement) @js_no_debugger 

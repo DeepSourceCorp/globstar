@@ -6,8 +6,8 @@ import (
 	python_rules "github.com/srijan-paul/deepgrep/pkg/rules/python"
 )
 
-// CreateRules creates a base ruleset for each supported language
-func CreateRules() map[one.Language][]one.Rule {
+// CreateBaseRuleMap creates a base ruleset for each supported language
+func CreateBaseRuleMap() map[one.Language][]one.Rule {
 	jsRules := js_rules.CreateJsRules()
 	return map[one.Language][]one.Rule{
 		one.LangPy:  python_rules.CreatePyRules(),

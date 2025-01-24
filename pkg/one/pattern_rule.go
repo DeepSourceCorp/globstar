@@ -22,11 +22,11 @@ import (
 // This is the key that we will use.
 const filterPatternKey = "__filter__key__"
 
-// A PatternRule is a rule that matches a tree-sitter query pattern
+// A YmlRule is a rule that matches a tree-sitter query pattern
 // and reports an issue when the pattern is found.
 // Unlike regular issues, PatternRules are not associated with a specific node type, rather
 // they are invoked for *every* node that matches the pattern.
-type PatternRule interface {
+type YmlRule interface {
 	Name() string
 	Patterns() []*sitter.Query
 	Language() Language
@@ -118,7 +118,7 @@ func CreatePatternRule(
 	issueMessage string,
 	issueId string,
 	pathFilter *PathFilter,
-) PatternRule {
+) YmlRule {
 	return &patternRuleImpl{
 		language:     language,
 		patterns:     patterns,
@@ -151,6 +151,8 @@ type PatternRuleFile struct {
 	Include     []string     `yaml:"include,omitempty"`
 }
 
+// DecodeLanguage converts a stringified language name to its corresponding
+// Language enum
 func DecodeLanguage(language string) Language {
 	language = strings.ToLower(language)
 	switch language {
@@ -162,13 +164,35 @@ func DecodeLanguage(language string) Language {
 		return LangTsx
 	case "python", "py":
 		return LangPy
+	case "ocaml", "ml":
+		return LangOCaml
+	case "docker", "dockerfile":
+		return LangDockerfile
+	case "java":
+		return LangJava
+	case "kotlin", "kt":
+		return LangKotlin
+	case "rust", "rs":
+		return LangRust
+	case "ruby", "rb":
+		return LangRuby
+	case "lua":
+		return LangLua
+	case "yaml", "yml":
+		return LangYaml
+	case "sql":
+		return LangSql
+	case "css", "css3":
+		return LangCss
+	case "markdown", "md":
+		return LangMarkdown
 	default:
 		return LangUnknown
 	}
 }
 
 // ReadFromFile reads a pattern rule definition from a YAML config file.
-func ReadFromFile(filePath string) (PatternRule, error) {
+func ReadFromFile(filePath string) (YmlRule, error) {
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err

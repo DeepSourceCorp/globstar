@@ -66,6 +66,7 @@ func runTestCases(dir string) (passed bool, err error) {
 		return false, err
 	}
 
+	passed = true
 	for _, tc := range testCases {
 		// Read and parse the rule definition
 		rule, err := one.ReadFromFile(tc.ymlRulePath)
@@ -81,7 +82,7 @@ func runTestCases(dir string) (passed bool, err error) {
 
 		// Run the analyzer
 		analyzer := one.NewAnalyzer(parsed, nil)
-		analyzer.PatternRules = append(analyzer.PatternRules, rule)
+		analyzer.YmlRules = append(analyzer.YmlRules, rule)
 		issues := analyzer.Analyze()
 
 		want, err := findExpectedLines(tc.testFile)
