@@ -13,7 +13,7 @@ hero:
       link: /quickstart
     - theme: alt
       text: Writing a Checker
-      link: /writing-a-checker
+      link: /reference/checker-yaml
 features:
   - icon:
       src: /icon/fast.svg
