@@ -38,16 +38,27 @@ const props = defineProps<{
 // Use default props more efficiently
 const expressions = computed(() => props.expressions ?? [
   {
-    code: '(defn hello [name] (str "Hello, " name "!"))',
-    highlight: '(str "Hello, " name "!")'
+    code: '(if_statement condition: (tuple (integer) (integer)))',
+    highlight: '(tuple (integer) (integer))'
   },
   {
-    code: '(map #(* % 2) [1 2 3 4])',
-    highlight: '#(* % 2)'
+    code: '(binary_expression left: (integer) @left operator: "is" right: (integer) @right)',
+    highlight: 'operator: "is"'
   },
   {
-    code: '(filter even? (range 10))',
-    highlight: 'even?'
+    code: '(call_expression function: (member_expression object: "console" property: "log"))',
+    highlight: 'property: "log"'
+  },
+  {
+    code: '(try_statement (catch_clause parameter: (identifier) @err body: (return_statement)))',
+    highlight: '(return_statement)'
+  },
+  {code: '(function_definition parameters: (parameters (default_parameter value: (list))))',
+    highlight: '(list)'
+  },
+  {
+    code: '(if_statement consequence: (return_statement) alternative: (else_clause))',
+    highlight: '(else_clause)'
   }
 ])
 
