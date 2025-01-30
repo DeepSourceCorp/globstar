@@ -113,7 +113,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 			{
 				Name:    "init",
 				Aliases: []string{"i"},
-				Usage:   "Create a globstar template",
+				Usage:   "Create a globstar template with custom Golang rules",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					err := initializeDummyProject(c.RootDirectory, "glob.star")
 					return err
@@ -324,7 +324,13 @@ var templates embed.FS
 func initializeDummyProject(dir, projectName string) error {
 	// Create project directory
 	projectPath := path.Join(dir, ".globstar", "gorules")
-	println(projectPath)
+	if _, err := os.Stat(projectPath); err == nil {
+		// directory already exists
+		// TODO(@sourya): We should inform the user that a template exists,
+		// and ask if they want to overwrite it.
+		os.RemoveAll(projectPath)
+	}
+
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
@@ -340,12 +346,19 @@ func initializeDummyProject(dir, projectName string) error {
 	}
 
 	// Add dependencies
-	/* 	if err := exec.Command("go", "get", "https://github.com/deepsourcecorp/globstar").Run(); err != nil {
-		return fmt.Errorf("failed to add dependency: %w", err)
-	} */
+	deps := []string{
+		"github.com/DeepSourceCorp/globstar/pkg/analysis",
+		"github.com/DeepSourceCorp/globstar/pkg/config",
+		"github.com/DeepSourceCorp/globstar/pkg/cli",
+		"github.com/DeepSourceCorp/globstar/pkg/rules",
+		"github.com/DeepSourceCorp/globstar",
+		"github.com/smacker/go-tree-sitter",
+	}
 
-	if err := exec.Command("go", "get", "github.com/smacker/go-tree-sitter").Run(); err != nil {
-		return fmt.Errorf("failed to add dependency: %w", err)
+	for _, dep := range deps {
+		if err := exec.Command("go", "get", dep).Run(); err != nil {
+			return fmt.Errorf("failed to add dependency (%s): %w", dep, err)
+		}
 	}
 
 	// Create main.go file

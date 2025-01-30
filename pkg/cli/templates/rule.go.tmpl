@@ -1,4 +1,4 @@
-package js_rules
+package main
 
 import (
 	"github.com/DeepSourceCorp/globstar/pkg/analysis"
@@ -6,6 +6,7 @@ import (
 )
 
 func noDoubleEq(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
+  // Logic goes here
 	op := node.ChildByFieldName("operator")
 	if op.Content(ana.ParseResult.Source) == "==" {
 		ana.Report(&analysis.Issue{
@@ -17,5 +18,9 @@ func noDoubleEq(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
 
 func NoDoubleEq() analysis.Rule {
 	var entry analysis.VisitFn = noDoubleEq
-	return analysis.CreateRule("binary_expression", analysis.LangJs, &entry, nil)
+	return analysis.CreateRule(
+	 "binary_expression",  // Node type for which the rule is to be applied
+		analysis.LangJs, // Language for which the rule is to be applied
+		&entry,
+		nil)
 }
