@@ -303,11 +303,16 @@ onUnmounted(() => {
   display: inline-block;
   will-change: transform;
   opacity: 0.7;
+  text-align: center;
 }
 
 @media (max-width: 768px) {
     .globstar-logo {
         font-size: 1.1rem;
+        max-width: 95vw;
+        overflow-x: hidden;
+        height: 8rem;
+        padding: 0rem;
     }
 }
 
@@ -319,6 +324,13 @@ onUnmounted(() => {
 .globstar-logo code {
   font-family: inherit;
   white-space: pre;
+}
+
+@media (max-width: 768px) {
+    .globstar-logo code {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
 }
 
 .char {

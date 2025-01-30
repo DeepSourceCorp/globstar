@@ -165,7 +165,7 @@ export default defineConfig({
     },
     footer: {
       message:
-        "Made with &hearts; by DeepSource, released under the MIT License.",
+        "Made with &hearts; by <a href='https://deepsource.com'>DeepSource</a>, released under the MIT License.",
       copyright: "&copy; 2025 DeepSource Corp.",
     },
   },

@@ -38,7 +38,7 @@ features:
   - icon:
       src: /icon/star.svg
       alt: Feature-rich
-    title: "Feature-rich on Day One"
+    title: "Feature-rich"
     details: "Use the Go API for advanced checkers, with full access to the tree-sitter AST, imports and scope resolution, cross-file analysis, and more."
   - icon:
       src: /icon/battery.svg

@@ -187,15 +187,6 @@
   }
 }
 
-@media (min-width: 960px) {
-  .VPHero[data-v-f44dcdd0] {
-    padding: calc(
-        var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 80px
-      )
-      64px 24px;
-  }
-}
-
 .VPFeature {
   border-radius: 0.5rem !important;
 }
@@ -228,7 +219,7 @@
 
 @media (min-width: 960px) {
   .VPHero {
-      padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 24px) 64px 24px !important;
+      padding: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 12px) 64px 24px !important;
   }
 }
 
