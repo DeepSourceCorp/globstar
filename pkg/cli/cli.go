@@ -37,7 +37,7 @@ func (c *Cli) loadConfig() error {
 
 func (c *Cli) Run() error {
 	err := c.loadConfig()
-	if (err != nil) {
+	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		return err
 	}

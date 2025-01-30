@@ -45,3 +45,15 @@ release:
 		-w /go/src/$(PACKAGE_NAME) \
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
                 release --clean
+
+.PHONY: test
+test:
+	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic ./cmd/... ./pkg/... 
+	@go tool cover -func=coverage.out | grep total: | awk '{print "Total coverage: " $$3}'
+	@rm coverage.out
+
+.PHONY: fmt
+fmt:
+	@echo "Formatting Go files..."
+	@gofmt -s -w .
+	@echo "Done."

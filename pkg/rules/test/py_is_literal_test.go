@@ -24,12 +24,12 @@ func TestIsLiteral(t *testing.T) {
 			},
 
 			{
-				Code: "x = bar is 'baz'",
+				Code:     "x = bar is 'baz'",
 				Expected: expected,
 			},
 
 			{
-				Code: "x = 4.0 is x",
+				Code:     "x = 4.0 is x",
 				Expected: expected,
 			},
 		},
