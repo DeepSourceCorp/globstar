@@ -1,0 +1,47 @@
+language: py
+name: safe_string_extend
+message: Found a class extending 'SafeString', 'SafeText' or 'SafeData'
+category: security
+
+pattern: |
+  (
+    (class_definition
+      name: (identifier) @class_name
+      superclasses: (argument_list
+        (attribute
+          object: (attribute
+            object: (attribute
+              object: (identifier) @django
+              attribute: (identifier) @utils)
+            attribute: (identifier) @safestring)
+          attribute: (identifier) @safe_class)))
+    (#eq? @django "django")
+    (#eq? @utils "utils")
+    (#eq? @safestring "safestring")
+    (#match? @safe_class "^(SafeString|SafeText|SafeData)$")
+  ) @safe_string_extend
+
+  (
+    (class_definition
+      name: (identifier) @class_name
+      superclasses: (argument_list
+        (identifier) @safe_class))
+    (#match? @safe_class "^(SafeString|SafeText|SafeData$)")
+  ) @safe_string_extend
+
+  (
+    (class_definition
+      name: (identifier) @class_name
+      superclasses: (argument_list
+        (attribute
+          object: (identifier) @alias
+          attribute: (identifier) @safe_class)))
+    (#eq? @safe_class "^(SafeString|SafeText|SafeData)$")
+  ) @safe_string_extend
+
+description: |
+  Found a class extending 'SafeString', 'SafeText' or 'SafeData'. These classes are for bypassing the escaping engine built in to Django and should not be used directly. Improper use of this class exposes your application to cross-site scripting (XSS) vulnerabilities. If you need this functionality, use 'mark_safe' instead and ensure no user data can reach it.
+
+  Rule: python.django.security.audit.xss.class-extends-safestring.class-extends-safestring
+
+  

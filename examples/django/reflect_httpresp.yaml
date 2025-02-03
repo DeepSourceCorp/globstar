@@ -1,0 +1,190 @@
+language: py
+name: reflected_httpresp
+message: Found user-controlled request data passed into HttpResponse or HttpResponseBadRequest
+category: security
+
+pattern: |
+  (call
+    function: (identifier) @response
+    arguments: (argument_list
+      (_)*
+      [
+        (call
+          function: (attribute
+            object: [(string)
+                  (call
+                    function: (identifier)
+                    arguments: (argument_list
+                      (_)))]
+            attribute: (identifier) @format)
+          arguments: (argument_list
+            [
+            (call
+              function: (attribute
+                object: (attribute
+                  object: (identifier) @request
+                  attribute: (identifier) @method)
+                attribute: (identifier) @get)
+              arguments: (argument_list))
+            
+            [(call
+              function: (attribute
+                object: (identifier) @request
+                attribute: (identifier) @method)
+                arguments: (argument_list))
+              
+             (subscript
+               value: (attribute
+                 object: (identifier) @request
+                 attribute: (identifier) @method)
+               subscript: (string))
+            ]
+            
+            (identifier)
+            ]))
+        
+        (binary_operator
+          left: (string)
+          right: [
+            (call
+              function: (attribute
+                    object: (identifier) @request
+                    attribute: (identifier) @method)
+              arguments: (argument_list))
+
+            (call
+              function: (attribute
+                  object: (attribute
+                    object: (identifier) @request
+                    attribute: (identifier) @method)
+                  attribute: (identifier) @get)
+              arguments: (argument_list))
+            ])
+            
+          (string
+            (interpolation
+              expression: 
+              [
+              (call
+                function: (attribute
+                  object: (attribute
+                    object: (identifier) @request
+                    attribute: (identifier) @method)
+                  attribute: (identifier) @get)
+                arguments: (argument_list))
+              
+              (call
+                function: (attribute
+                  object: (identifier) @request
+                  attribute: (identifier) @method)
+                arguments: (argument_list))
+              ]))
+          [    
+          (call
+            function: (attribute
+              object: (attribute
+                object: (identifier) @request
+                attribute: (identifier) @method)
+              attribute: (identifier) @get)
+            arguments: (argument_list))
+          
+          (call
+            function: (attribute
+              object: (identifier) @request
+              attribute: (identifier) @method)
+            arguments: (argument_list))
+          ]
+        ]
+      (_)*)
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse)$")
+    (#eq? @format "format")
+    (#match? @method "^(GET|POST)$")
+    (#eq? @request "request")
+    (#eq? @get "get"))
+    @reflected_httpresp
+
+  (
+    function_definition
+      name: (identifier)
+      parameters: (parameters
+        (identifier))
+      body: (block
+        (expression_statement
+          (assignment
+            left: (identifier) @var_name
+            right: [
+              (binary_operator
+                left: (string)
+                right: [(call
+                  function: (attribute
+                    object: (attribute
+                      object: (identifier) @request
+                      attribute: (identifier) @method)
+                    attribute: (identifier) @get)
+                  arguments: (argument_list))
+
+                  (call
+                    function: (attribute
+                      object: (identifier) @request
+                      attribute: (identifier) @method)
+                    arguments: (argument_list))
+                ])
+
+              (call
+                function: (attribute
+                  object: (string)
+                  attribute: (identifier) @format)
+                arguments: (argument_list
+                  [
+                  (call
+                    function: (attribute
+                      object: (attribute
+                        object: (identifier) @request
+                        attribute: (identifier) @method)
+                      attribute: (identifier) @get)
+                    arguments: (argument_list))
+                  
+                  (call
+                    function: (attribute
+                      object: (identifier) @request
+                      attribute: (identifier) @method)
+                    arguments: (argument_list))
+                  ]))
+                
+              (string
+                (interpolation
+                  expression:
+                    [
+                    (call
+                      function: (attribute
+                        object: (attribute
+                          object: (identifier) @request
+                          attribute: (identifier) @method)
+                        attribute: (identifier) @get)
+                      arguments: (argument_list))
+                    
+                    (call
+                      function: (attribute
+                        object: (identifier) @request
+                        attribute: (identifier) @method)
+                      arguments: (argument_list))
+                    ]))
+
+            ]))
+        (return_statement
+          (call
+            function: (identifier) @response
+            arguments: (argument_list
+              (identifier) @response_arg))))
+  (#match? @response "^(HttpResponseBadRequest|HttpResponse)$")
+  (#eq? @request "request")
+  (#match? @method "^(GET|POST)$")
+  (#eq? @get "get")
+  (#eq? @var_name @response_arg)) @reflected_httpresp
+
+description: |
+  Found user-controlled request data passed into 'HttpResponse' or 'HttpResponseBadRequest'. This could be vulnerable to XSS, leading to attackers gaining access to user cookies and protected information. Ensure that the request data is properly escaped or sanitzed
+
+  Rules:
+  - python.django.security.injection.reflected-data-httpresponse.reflected-data-httpresponse
+  - python.django.security.injection.reflected-data-httpresponsebadrequest.reflected-data-httpresponsebadrequest
