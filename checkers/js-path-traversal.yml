@@ -1,0 +1,12 @@
+language: js
+name: js_path_traversal
+message: Potential path traversal vulnerability detected
+pattern: |
+  (call_expression
+    function: (member_expression
+      object: (identifier) @obj
+      property: (property_identifier) @method)
+    (#match? @obj "^(fs|path)$")
+    (#match? @method "^(readFile|readFileSync|writeFile|writeFileSync|unlink|readdir|access)$"))
+description: |
+  Path traversal vulnerabilities occur when file system operations use unsanitized input to construct file paths, potentially allowing attackers to access or modify files outside the intended directory structure. Always validate and sanitize file paths, use path.resolve() to get absolute paths, and implement proper access controls to prevent unauthorized file system access.

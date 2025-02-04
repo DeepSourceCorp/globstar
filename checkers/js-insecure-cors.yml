@@ -1,0 +1,16 @@
+language: js
+name: insecure_cors
+message: Potentially insecure CORS configuration detected
+pattern: |
+  (expression_statement
+    (assignment_expression
+      left: (subscript_expression
+        object: (identifier)
+        index: (string
+          (string_fragment) @prop))
+      right: (string
+        (string_fragment) @value))
+    (#eq? @prop "Access-Control-Allow-Origin")
+    (#eq? @value "*"))
+description: |
+  Setting Access-Control-Allow-Origin to '*' allows any domain to make cross-origin requests to your API. This can expose sensitive data to unauthorized domains. Instead, explicitly specify allowed origins or implement proper CORS policies.

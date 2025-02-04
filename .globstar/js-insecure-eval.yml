@@ -1,0 +1,9 @@
+language: js
+name: js_insecure_eval
+message: Avoid using eval or the Function constructor with untrusted input
+pattern: |
+  (call_expression
+  function: (identifier) @js_no_insecure_eval
+  (#match? @js_no_insecure_eval "^(eval|Function)$"))
+description: |
+  The use of eval() and the Function constructor with untrusted input can lead to code injection vulnerabilities. These functions execute any JavaScript code passed to them as a string, which can be dangerous if the input comes from an untrusted source.

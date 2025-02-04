@@ -1,0 +1,17 @@
+language: js
+name: js_nosql_injection
+message: Potential NoSQL injection vulnerability detected in MongoDB query
+pattern: |
+  (call_expression
+    function: (member_expression
+      object: (member_expression
+        property: (property_identifier) @collection)
+      property: (property_identifier) @method)
+    arguments: (arguments
+      (object_expression
+        (pair
+          value: (template_string) @query_value)))
+    (#match? @collection "^(collection|db)$")
+    (#match? @method "^(find|findOne|update|delete|remove)$"))
+description: |
+  NoSQL injection occurs when user input is directly embedded into MongoDB queries without proper sanitization. This can lead to data breaches, unauthorized access, or data manipulation. Always validate and sanitize user input, use type checking, and consider using MongoDB's query operators ($eq, $gt, etc.) instead of direct value insertion.
