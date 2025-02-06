@@ -1,0 +1,18 @@
+language: py
+name: issafe_filter
+message: Detected Django filters flagged with 'is_safe'
+
+pattern: |
+  (decorated_definition
+    (decorator
+      (call
+        function: (attribute
+          object: (identifier) @register
+          attribute: (identifier) @filter)
+        arguments: (argument_list
+          (keyword_argument
+            name: (identifier) @issafe
+            value: (true)))))
+  (#eq? @register "register")
+  (#eq? @filter "filter")
+  (#eq? @issafe "is_safe")) @issafe_filter

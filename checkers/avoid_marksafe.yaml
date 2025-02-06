@@ -1,0 +1,32 @@
+language: py
+name: avoid_marksafe
+message: Detected the usage of marksafe for HTML output
+category: security
+
+pattern: |
+  (call
+    function: (identifier) @marksafe
+    arguments: (argument_list
+          [
+            (string
+              (interpolation
+                (_)))
+            (binary_operator
+              left: (string)
+              right: (_))
+            (call
+              function: (attribute
+                object: (string)
+                attribute: (identifier) @format)
+              arguments: (argument_list
+                (_)))
+          ])
+    (#eq? @marksafe "mark_safe")
+    (#eq? @format "format")) @avoid_marksafe
+
+description: |
+  'mark_safe()' is used to mark a string as "safe" for HTML output. This disables escaping and could therefore subject the content to XSS attacks. Use 'django.utils.html.format_html()' to build HTML for rendering instead.
+
+  Rule: https://semgrep.dev/r?q=python.django.security.audit.avoid-mark-safe.avoid-mark-safe
+
+
