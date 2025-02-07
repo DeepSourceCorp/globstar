@@ -1,0 +1,23 @@
+name: build-and-test
+on:
+  pull-request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+      
+      - name: Build the binary
+        run: make build
+
+      - name: test-builtin-rules
+        run: make test-builtin-rules

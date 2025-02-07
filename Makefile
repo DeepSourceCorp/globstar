@@ -57,3 +57,10 @@ fmt:
 	@echo "Formatting Go files..."
 	@gofmt -s -w .
 	@echo "Done."
+
+build:
+	CGO_ENABLED=1 go build -o bin/globstar ./cmd/globstar
+
+test-builtin-rules:
+	echo "Testing built-in rules..."
+	./bin/globstar test -d checkers/
