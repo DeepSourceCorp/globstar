@@ -1,5 +1,5 @@
 language: py
-name: direct_httpresp
+name: direct_httpresponse
 message:  Detected data rendered directly to the end user via 'HttpResponse' or a similar object
 category: security
 severity: warning
