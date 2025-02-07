@@ -9,7 +9,7 @@ import (
 	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 )
 
-//go:embed *.yaml *.yml
+//go:embed *.y*ml
 var builtinCheckers embed.FS
 
 func LoadBuiltinCheckers() (map[analysis.Language][]analysis.YmlRule, error) {
