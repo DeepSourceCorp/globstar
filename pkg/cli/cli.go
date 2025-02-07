@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/DeepSourceCorp/globstar/checkers"
 	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	"github.com/DeepSourceCorp/globstar/pkg/config"
 	"github.com/DeepSourceCorp/globstar/pkg/rules"
@@ -258,7 +259,7 @@ func (c *Cli) RunLints(
 	var allRules map[analysis.Language][]analysis.Rule
 	if runBuiltinRules {
 		allRules = rules.CreateBaseRuleMap()
-		builtInPatternRules, err := c.LoadYamlRules("checkers")
+		builtInPatternRules, err := checkers.LoadBuiltinCheckers()
 		if err != nil {
 			return err
 		}
@@ -338,7 +339,7 @@ func (c *Cli) RunLints(
 	exitStatus := result.GetExitStatus(c.Config)
 	if exitStatus != 0 {
 		fmt.Fprintf(os.Stderr, "Found %d issues\n", len(result.issues))
-		return fmt.Errorf("Found %d issues", len(result.issues))
+		return fmt.Errorf("found %d issues", len(result.issues))
 	}
 
 	return err

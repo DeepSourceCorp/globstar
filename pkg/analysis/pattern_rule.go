@@ -237,8 +237,13 @@ func ReadFromFile(filePath string) (YmlRule, error) {
 		return nil, err
 	}
 
+	return ReadFromBytes(fileContent)
+}
+
+// ReadFromBytes reads a pattern rule definition from bytes array
+func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 	var rule PatternRuleFile
-	if err = yaml.Unmarshal(fileContent, &rule); err != nil {
+	if err := yaml.Unmarshal(fileContent, &rule); err != nil {
 		return nil, err
 	}
 
