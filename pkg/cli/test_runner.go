@@ -15,8 +15,6 @@ import (
 func runTests(dir string) (bool, error) {
 	passed, err := runTestCases(dir)
 	if err != nil {
-		message := fmt.Sprintf("failed %v", err)
-		fmt.Fprintln(os.Stderr, message)
 		return false, err
 	}
 
@@ -31,28 +29,42 @@ type testCase struct {
 func findTestCases(dir string) ([]testCase, error) {
 	var pairs []testCase // List of rule file/test file pairs
 
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.Walk(dir, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
-			return err
-		}
-
-		if d.IsDir() {
 			return nil
 		}
 
-		fileName := d.Name()
-		if strings.Contains(fileName, ".test") {
-			baseName := strings.Split(fileName, ".test")[0]
-			ymlFilePath := filepath.Join(dir, baseName+".yml")
-			if _, err := os.Stat(ymlFilePath); err == nil {
-				pairs = append(pairs, testCase{ymlRulePath: ymlFilePath, testFile: path})
-			}
-
-			ymlFilePath = baseName + ".yaml"
-			if _, err := os.Stat(ymlFilePath); err == nil {
-				pairs = append(pairs, testCase{ymlRulePath: ymlFilePath, testFile: path})
-			}
+		if d.IsDir() && path != dir {
+			return fs.SkipDir
 		}
+
+		if d.Mode()&fs.ModeSymlink != 0 {
+			// skip symlinks
+			return nil
+		}
+
+		fileExt := filepath.Ext(path)
+		isYamlFile := fileExt == ".yaml" || fileExt == ".yml"
+		if !isYamlFile {
+			return nil
+		}
+
+		patternRule, err := analysis.ReadFromFile(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid rule '%s': %s", d.Name(), err.Error())
+			return nil
+		}
+
+		testFile := strings.TrimSuffix(path, fileExt) + ".test" + analysis.GetExtFromLanguage(patternRule.Language())
+
+		if _, err := os.Stat(testFile); os.IsNotExist(err) {
+			testFile = ""
+		}
+
+		pairs = append(pairs, testCase{
+			ymlRulePath: path,
+			testFile:    testFile,
+		})
 
 		return nil
 	})
@@ -66,8 +78,18 @@ func runTestCases(dir string) (passed bool, err error) {
 		return false, err
 	}
 
+	if len(testCases) == 0 {
+		return false, fmt.Errorf("no test cases found")
+	}
+
 	passed = true
 	for _, tc := range testCases {
+		if tc.testFile == "" {
+			fmt.Fprintf(os.Stderr, "No test cases found for test: %s\n", filepath.Base(tc.ymlRulePath))
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(tc.ymlRulePath))
 		// Read and parse the rule definition
 		rule, err := analysis.ReadFromFile(tc.ymlRulePath)
 		if err != nil {
@@ -75,13 +97,11 @@ func runTestCases(dir string) (passed bool, err error) {
 		}
 
 		// Parse the test file
-		parsed, err := analysis.ParseFile(tc.testFile)
+		analyzer, err := analysis.FromFile(tc.testFile, []analysis.Rule{})
 		if err != nil {
 			return false, err
 		}
-
-		// Run the analyzer
-		analyzer := analysis.NewAnalyzer(parsed, nil)
+		analyzer.WorkDir = dir
 		analyzer.YmlRules = append(analyzer.YmlRules, rule)
 		issues := analyzer.Analyze()
 

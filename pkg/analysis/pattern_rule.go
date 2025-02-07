@@ -87,16 +87,16 @@ func (r *patternRuleImpl) OnMatch(
 	// replace all '@<capture-name>' with the corresponding capture value
 	message := r.issueMessage
 	// TODO: 1. escape '@' in the message, 2. use a more efficient way to replace
-	for strings.ContainsRune(message, '@') {
-		for _, capture := range captures {
-			captureName := matchedQuery.CaptureNameForId(capture.Index)
-			message = strings.ReplaceAll(
-				message,
-				"@"+captureName,
-				capture.Node.Content(ana.ParseResult.Source),
-			)
-		}
-	}
+	// for strings.ContainsRune(message, '@') {
+	// 	for _, capture := range captures {
+	// 		captureName := matchedQuery.CaptureNameForId(capture.Index)
+	// 		message = strings.ReplaceAll(
+	// 			message,
+	// 			"@"+captureName,
+	// 			capture.Node.Content(ana.ParseResult.Source),
+	// 		)
+	// 	}
+	// }
 
 	ana.Report(&Issue{
 		Range:    matchedNode.Range(),

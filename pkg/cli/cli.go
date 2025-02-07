@@ -43,7 +43,7 @@ func (c *Cli) Run() error {
 	}
 
 	// read all yaml rules in the .globstar directory
-	patternRules, err := c.ReadCustomRules()
+	patternRules, err := c.LoadYamlRules(c.Config.RuleDir)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		return err
@@ -84,15 +84,26 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					} else if checkers == "all" || checkers == "" {
 						return c.RunLints(patternRules, true)
 					}
-					return fmt.Errorf("Invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s\n", checkers)
+					return fmt.Errorf("invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s", checkers)
 				},
 			},
 			{
 				Name:    "test",
 				Aliases: []string{"t"},
-				Usage:   "Run all tests in the `.globstar` directory",
+				Usage:   "Run all tests in the specified directory. If no directory is specified, the tests are run in the `.globstar` directory.",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "directory",
+						Usage:   "Specify the directory to run tests in",
+						Aliases: []string{"d"},
+					},
+				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					analysisDir := filepath.Join(c.RootDirectory, c.Config.RuleDir)
+					dir := cmd.String("directory")
+					if dir == "" {
+						dir = c.Config.RuleDir
+					}
+					analysisDir := filepath.Join(c.RootDirectory, dir)
 					passed, err := runTests(analysisDir)
 					if err != nil {
 						fmt.Fprintln(os.Stderr, err.Error())
@@ -118,9 +129,10 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 	return err
 }
 
-// ReadCustomRules reads all the custom rules from the `.globstar/` directory in the project root
-func (c *Cli) ReadCustomRules() (map[analysis.Language][]analysis.YmlRule, error) {
-	analysisDir := filepath.Join(c.RootDirectory, c.Config.RuleDir)
+// LoadYamlRules reads all the custom rules from the `.globstar/` directory in the project root,
+// or from checkers/ dir for built-in rules
+func (c *Cli) LoadYamlRules(ruleDir string) (map[analysis.Language][]analysis.YmlRule, error) {
+	analysisDir := filepath.Join(c.RootDirectory, ruleDir)
 
 	stat, err := os.Stat(analysisDir)
 	if err != nil {
@@ -137,7 +149,11 @@ func (c *Cli) ReadCustomRules() (map[analysis.Language][]analysis.YmlRule, error
 
 	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
 	err = filepath.Walk(analysisDir, func(path string, d fs.FileInfo, err error) error {
-		if d.IsDir() && d.Name() != c.Config.RuleDir {
+		if err != nil {
+			return nil
+		}
+
+		if d.IsDir() && d.Name() != ruleDir {
 			return fs.SkipDir
 		}
 
@@ -235,13 +251,35 @@ func (c *Cli) RunLints(
 ) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
+	if patternRules == nil {
+		patternRules = make(map[analysis.Language][]analysis.YmlRule)
+	}
+
 	var allRules map[analysis.Language][]analysis.Rule
 	if runBuiltinRules {
 		allRules = rules.CreateBaseRuleMap()
+		builtInPatternRules, err := c.LoadYamlRules("checkers")
+		if err != nil {
+			return err
+		}
+
+		// merge the built-in rules with the custom rules
+		for lang, rules := range builtInPatternRules {
+			if _, ok := patternRules[lang]; ok {
+				patternRules[lang] = append(patternRules[lang], rules...)
+			} else {
+				patternRules[lang] = rules
+			}
+		}
 	}
 
 	result := lintResult{}
 	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+		if err != nil {
+			// skip this path
+			return nil
+		}
+
 		if d.IsDir() {
 			if c.Config.ShouldExcludePath(path) || slices.Contains(defaultIgnoreDirs, d.Name()) {
 				return filepath.SkipDir

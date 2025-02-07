@@ -158,9 +158,106 @@ func LanguageFromFilePath(path string) Language {
 	case ".ts":
 		return LangTs
 	case ".tsx":
-		return LangTsx
+		return LangTs
+	case ".java":
+		return LangJava
+	case ".rb":
+		return LangRuby
+	case ".rs":
+		return LangRust
+	case ".css":
+		return LangCss
+	case ".Dockerfile":
+		return LangDockerfile
+	case ".sql":
+		return LangSql
+	case ".kt":
+		return LangKotlin
+	case ".ml":
+		return LangOCaml
+	case ".lua":
+		return LangLua
+	case ".sh":
+		return LangBash
+	case ".cs":
+		return LangCsharp
+	case ".ex":
+		return LangElixir
+	case ".elm":
+		return LangElm
+	case ".go":
+		return LangGo
+	case ".groovy":
+		return LangGroovy
+	case ".tf":
+		return LangHcl
+	case ".html":
+		return LangHtml
+	case ".php":
+		return LangPhp
+	case ".scala":
+		return LangScala
+	case ".swift":
+		return LangSwift
 	default:
 		return LangUnknown
+	}
+}
+
+func GetExtFromLanguage(lang Language) string {
+	switch lang {
+	case LangPy:
+		return ".py"
+	case LangJs:
+		return ".js"
+	case LangTs:
+		return ".ts"
+	case LangTsx:
+		return ".tsx"
+	case LangJava:
+		return ".java"
+	case LangRuby:
+		return ".rb"
+	case LangRust:
+		return ".rs"
+	case LangYaml:
+		return ".yaml"
+	case LangCss:
+		return ".css"
+	case LangDockerfile:
+		return ".Dockerfile"
+	case LangSql:
+		return ".sql"
+	case LangKotlin:
+		return ".kt"
+	case LangOCaml:
+		return ".ml"
+	case LangLua:
+		return ".lua"
+	case LangBash:
+		return ".sh"
+	case LangCsharp:
+		return ".cs"
+	case LangElixir:
+		return ".ex"
+	case LangElm:
+		return ".elm"
+	case LangGo:
+		return ".go"
+	case LangGroovy:
+		return ".groovy"
+	case LangHcl:
+		return ".tf"
+	case LangHtml:
+		return ".html"
+	case LangPhp:
+		return ".php"
+	case LangScala:
+		return ".scala"
+	case LangSwift:
+		return ".swift"
+	default:
+		return ""
 	}
 }
 

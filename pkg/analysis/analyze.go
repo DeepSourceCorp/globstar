@@ -229,6 +229,7 @@ func (ana *Analyzer) executeRuleQuery(rule YmlRule, query *sitter.Query) {
 		m = qc.FilterPredicates(m, ana.ParseResult.Source)
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
+			// TODO: explain why captureName == rule.Name()
 			if captureName == rule.Name() && ana.runParentFilters(rule, capture.Node) {
 				rule.OnMatch(ana, query, capture.Node, m.Captures)
 			}
