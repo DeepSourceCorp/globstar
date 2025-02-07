@@ -1,5 +1,5 @@
 language: py
-name: autoescape_off
+name: py_autoescape_off
 message: Detected a context with autoescape disabled
 category: security
 
@@ -8,9 +8,8 @@ pattern: |
     (pair
       key: (string (string_content) @autoescape)
       value: (false))
-  (#eq? @autoescape "autoescape")) @autoescape_off
+  (#eq? @autoescape "autoescape")) @py_autoescape_off
 
 description: |
   Detected a Context with autoescape disabled. If you are rendering any web pages, this exposes your application to cross-site scripting (XSS) vulnerabilities. Remove 'autoescape: False' or set it to 'True'.
 
-  Rule: https://semgrep.dev/r?q=python.django.security.audit.xss.context-autoescape-off.context-autoescape-off

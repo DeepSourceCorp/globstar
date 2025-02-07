@@ -1,5 +1,5 @@
 language: py
-name: reflected_httpresponse
+name: py_reflect_httpresp
 message: Found user-controlled request data passed into HttpResponse or HttpResponseBadRequest
 
 pattern: |
@@ -92,7 +92,7 @@ pattern: |
     (#match? @method "^(GET|POST)$")
     (#eq? @request "request")
     (#eq? @get "get"))
-    @reflected_httpresponse
+    @py_reflect_httpresp
 
   (call
     function: (identifier) @response
@@ -143,7 +143,7 @@ pattern: |
       (#match? @method "^(GET|POST)$")
       (#eq? @request "request")
       (#eq? @get "get"))
-      @reflected_httpresponse
+      @py_reflect_httpresp
 
   (function_definition
     name: (identifier)
@@ -205,13 +205,10 @@ pattern: |
         (#match? @method "^(GET|POST)$")
         (#eq? @get "get")
         (#eq? @request_var @httpvar)
-        (#match? @response "^(HttpResponse|HttpResponseBadRequest)$")) @reflected_httpresponse
+        (#match? @response "^(HttpResponse|HttpResponseBadRequest)$")) @py_reflect_httpresp
 
 
 
 description: |
   Found user-controlled request data passed into 'HttpResponse' or 'HttpResponseBadRequest'. This could be vulnerable to XSS, leading to attackers gaining access to user cookies and protected information. Ensure that the request data is properly escaped or sanitzed
 
-  Rules:
-  - python.django.security.injection.reflected-data-httpresponse.reflected-data-httpresponse
-  - python.django.security.injection.reflected-data-httpresponsebadrequest.reflected-data-httpresponsebadrequest

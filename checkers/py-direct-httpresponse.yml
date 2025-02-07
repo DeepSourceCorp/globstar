@@ -1,5 +1,5 @@
 language: py
-name: direct_httpresponse
+name: py_direct_httpresponse
 message:  Detected data rendered directly to the end user via 'HttpResponse' or a similar object
 category: security
 severity: warning
@@ -52,7 +52,7 @@ pattern: |
     (#eq? @http "http")
     (#eq? @kw "content_type")
     (#match? @content_type ".*[tT][eE][xX][tT]/[hH][tT][mM][lL].*")
-    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$"))@direct_httpresp
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @py_direct_httpresponse
   
   (call
     function: (identifier) @response
@@ -99,7 +99,7 @@ pattern: |
       ])
     (#eq? @kw "content_type")
     (#match? @content_type ".*[tT][eE][xX][tT]/[hH][tT][mM][lL].*")
-    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @direct_httpresp
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @py_direct_httpresponse
 
   (call
     function: (identifier) @response
@@ -130,10 +130,9 @@ pattern: |
       (_)*]])
     (#eq? @kw "content_type")
     (#match? @content_type ".*[tT][eE][xX][tT]/[hH][tT][mM][lL].*")
-    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @direct_httpresp
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @py_direct_httpresponse
 
 
 description: |
   Rendering data directly to the end user via 'HttpResponse' or a similar object bypasses Django's built-in cross-site scripting(XSS) defenses and could result in an XSS vulnerability. Use Django's template engine to safely render HTML
 
-  Rule: python.django.security.audit.xss.direct-use-of-httpresponse.direct-use-of-httpresponse

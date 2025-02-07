@@ -1,5 +1,5 @@
 language: py
-name: format_html_param
+name: py_format_html_param
 message: Passing a formatted string as first parameter to `format_html` 
 category: security
 
@@ -32,10 +32,9 @@ pattern: |
         (identifier)
       ])
     (#eq? @format_html "format_html")
-  ) @format_html_param
+  ) @py_format_html_param
 
 
 description: |
   Passing a formatted string as first parameter to `format_html` disables the proper encoding of variables. Any HTML in the first parameter is not encoded. Using a formatted string as first parameter obscures which parameters are encoded. Correct use of `format_html` is passing a static format string as first parameter, and the variables to substitute as subsequent parameters.
 
-  Rule: https://semgrep.dev/r?q=python.django.security.audit.xss.formathtml-fstring-parameter.formathtml-fstring-parameter
