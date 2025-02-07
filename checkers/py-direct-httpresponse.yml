@@ -1,5 +1,5 @@
 language: py
-name: py_direct_httpresponse
+name: direct-httpresponse
 message:  Detected data rendered directly to the end user via 'HttpResponse' or a similar object
 category: security
 severity: warning
@@ -52,7 +52,7 @@ pattern: |
     (#eq? @http "http")
     (#eq? @kw "content_type")
     (#match? @content_type ".*[tT][eE][xX][tT]/[hH][tT][mM][lL].*")
-    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @py_direct_httpresponse
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @direct-httpresponse
   
   (call
     function: (identifier) @response
@@ -99,7 +99,7 @@ pattern: |
       ])
     (#eq? @kw "content_type")
     (#match? @content_type ".*[tT][eE][xX][tT]/[hH][tT][mM][lL].*")
-    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @py_direct_httpresponse
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @direct-httpresponse
 
   (call
     function: (identifier) @response
@@ -130,7 +130,7 @@ pattern: |
       (_)*]])
     (#eq? @kw "content_type")
     (#match? @content_type ".*[tT][eE][xX][tT]/[hH][tT][mM][lL].*")
-    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @py_direct_httpresponse
+    (#match? @response "^(HttpResponseBadRequest|HttpResponse|HttpResponseNotFound|HttpResponseGone|HttpResponseForbidden|HttpResponseServerError|HttpResponseNotAllowed)$")) @direct-httpresponse
 
 
 description: |

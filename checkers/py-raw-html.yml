@@ -1,5 +1,5 @@
 language: py
-name: py_raw_html
+name: raw-html
 message: Detected user input flowing into a manually constructed HTML string.
 category: security
 
@@ -18,7 +18,7 @@ pattern: |
     (#match? @htmlstr ".*<[^>]+>.*")
     (#eq? @format "format")
     (#eq? @request "request")
-    (#match? @method "^(GET|POST)$")) @py_raw_html
+    (#match? @method "^(GET|POST)$")) @raw-html
 
   (call
     function: (attribute
@@ -34,7 +34,7 @@ pattern: |
     (#match? @htmlstr ".*<[^>]+>.*")
     (#eq? @format "format")
     (#eq? @request "request")
-    (#match? @method "^(GET|POST)$")) @py_raw_html
+    (#match? @method "^(GET|POST)$")) @raw-html
 
   (binary_operator
     left: (string
@@ -46,7 +46,7 @@ pattern: |
       arguments: (argument_list))
     (#match? @htmlstr ".*<[^>]+>.*")
     (#eq? @request "request")
-    (#match? @method "^(GET|POST)$")) @py_raw_html
+    (#match? @method "^(GET|POST)$")) @raw-html
 
   (binary_operator
     left: (string
@@ -58,7 +58,7 @@ pattern: |
       subscript: (_))
     (#match? @htmlstr ".*<[^>]+>.*")
     (#eq? @request "request")
-    (#match? @method "^(GET|POST)$")) @py_raw_html
+    (#match? @method "^(GET|POST)$")) @raw-html
 
   (string
     (string_start)
@@ -74,7 +74,7 @@ pattern: |
     (#eq? @request "request")
     (#match? @htmlstr1 ".*<[^>]")
     (#match? @htmlstr2 "[^<]+>.*")
-    (#match? @method "^(GET|POST)$")) @py_raw_html
+    (#match? @method "^(GET|POST)$")) @raw-html
 
   (string
     (string_start)
@@ -90,7 +90,7 @@ pattern: |
     (#eq? @request "request")
     (#match? @htmlstr1 ".*<[^>]")
     (#match? @htmlstr2 "[^<]+>.*")
-    (#match? @method "^(GET|POST)$")) @py_raw_html
+    (#match? @method "^(GET|POST)$")) @raw-html
 
   (function_definition
     body: (block
@@ -121,7 +121,7 @@ pattern: |
       (#match? @htmlstr ".*<[^>]+>.*")
       (#match? @method "^(GET|POST)$")
       (#eq? @html_var @unsafe_left)
-      (#eq? @request_var @unsafe_right)) @py_raw_html
+      (#eq? @request_var @unsafe_right)) @raw-html
 
   (function_definition
     body: (block
@@ -152,7 +152,7 @@ pattern: |
       (#match? @htmlstr ".*<[^>]+>.*")
       (#match? @method "^(GET|POST)$")
       (#eq? @html_var @unsafe_left)
-      (#eq? @request_var @unsafe_right)) @py_raw_html
+      (#eq? @request_var @unsafe_right)) @raw-html
 
   (function_definition
     body: (block
@@ -186,7 +186,7 @@ pattern: |
       (#match? @method "^(GET|POST)$")
       (#eq? @html_var @unsafe_left)
       (#eq? @format "format")
-      (#eq? @request_var @unsafe_right)) @py_raw_html
+      (#eq? @request_var @unsafe_right)) @raw-html
 
   (function_definition
     body: (block
@@ -220,7 +220,7 @@ pattern: |
       (#match? @method "^(GET|POST)$")
       (#eq? @html_var @unsafe_left)
       (#eq? @format "format")
-      (#eq? @request_var @unsafe_right)) @py_raw_html
+      (#eq? @request_var @unsafe_right)) @raw-html
 
 
 description: |

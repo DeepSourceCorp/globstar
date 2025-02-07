@@ -1,5 +1,5 @@
 language: py
-name: py_avoid_marksafe
+name: avoid-marksafe
 message: Detected the usage of marksafe for HTML output
 category: security
 
@@ -22,7 +22,7 @@ pattern: |
                 (_)))
           ])
     (#eq? @marksafe "mark_safe")
-    (#eq? @format "format")) @py_avoid_marksafe
+    (#eq? @format "format")) @avoid-marksafe
 
 description: |
   'mark_safe()' is used to mark a string as "safe" for HTML output. This disables escaping and could therefore subject the content to XSS attacks. Use 'django.utils.html.format_html()' to build HTML for rendering instead.

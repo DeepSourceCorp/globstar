@@ -1,5 +1,5 @@
 language: py
-name: py_reflect_httpresp
+name: reflect-httpresp
 message: Found user-controlled request data passed into HttpResponse or HttpResponseBadRequest
 
 pattern: |
@@ -92,7 +92,7 @@ pattern: |
     (#match? @method "^(GET|POST)$")
     (#eq? @request "request")
     (#eq? @get "get"))
-    @py_reflect_httpresp
+    @reflect-httpresp
 
   (call
     function: (identifier) @response
@@ -143,7 +143,7 @@ pattern: |
       (#match? @method "^(GET|POST)$")
       (#eq? @request "request")
       (#eq? @get "get"))
-      @py_reflect_httpresp
+      @reflect-httpresp
 
   (function_definition
     name: (identifier)
@@ -205,7 +205,7 @@ pattern: |
         (#match? @method "^(GET|POST)$")
         (#eq? @get "get")
         (#eq? @request_var @httpvar)
-        (#match? @response "^(HttpResponse|HttpResponseBadRequest)$")) @py_reflect_httpresp
+        (#match? @response "^(HttpResponse|HttpResponseBadRequest)$")) @reflect-httpresp
 
 
 

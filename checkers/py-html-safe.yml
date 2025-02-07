@@ -1,5 +1,5 @@
 language: py
-name: py_html_safe
+name: html-safe
 message: Unsafe html_safe() detected. Use mark_safe() instead.
 category: security
 
@@ -20,7 +20,7 @@ pattern: |
     (#eq? @django "django")
     (#eq? @utils "utils")
     (#eq? @html "html")
-    (#eq? @func "html_safe")) @py_html_safe
+    (#eq? @func "html_safe")) @html-safe
   
   (decorated_definition
     (decorator
@@ -35,14 +35,14 @@ pattern: |
     (#eq? @django "django")
     (#eq? @utils "utils")
     (#eq? @html "html")
-    (#eq? @func "html_safe")) @py_html_safe
+    (#eq? @func "html_safe")) @html-safe
 
   ;; Match class with imported html_safe decorator
   (decorated_definition
     (decorator
       (identifier) @func)
     (class_definition) @class
-    (#eq? @func "html_safe")) @py_html_safe
+    (#eq? @func "html_safe")) @html-safe
 
 description: |
   'mark_safe()' is used to mark a string as "safe" for HTML output. This disables escaping and could therefore subject the content to XSS attacks. Use 'django.utils.html.format_html()' to build HTML for rendering instead

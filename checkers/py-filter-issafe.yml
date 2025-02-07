@@ -1,5 +1,5 @@
 language: py
-name: py_filter_issafe
+name: filter-issafe
 message: Detected Django filters flagged with 'is_safe'
 
 pattern: |
@@ -15,7 +15,7 @@ pattern: |
             value: (true)))))
   (#eq? @register "register")
   (#eq? @filter "filter")
-  (#eq? @issafe "is_safe")) @py_filter_issafe
+  (#eq? @issafe "is_safe")) @filter-issafe
 
 description: |
   The `is_safe` filter tells Django to not apply escaping

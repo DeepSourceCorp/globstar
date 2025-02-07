@@ -1,5 +1,5 @@
 language: py
-name: py_format_html_param
+name: format-html-param
 message: Passing a formatted string as first parameter to `format_html` 
 category: security
 
@@ -32,7 +32,7 @@ pattern: |
         (identifier)
       ])
     (#eq? @format_html "format_html")
-  ) @py_format_html_param
+  ) @format-html-param
 
 
 description: |
