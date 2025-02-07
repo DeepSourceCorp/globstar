@@ -1,9 +1,9 @@
 name: build-and-test
 on:
-  pull-request:
+  pull_request:
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -14,7 +14,7 @@ jobs:
         with:
           go-version: 1.23
       
-      - name: Build the binary
+      - name: build
         run: make build
 
       - name: test-builtin-rules
