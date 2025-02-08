@@ -11,14 +11,14 @@ from django.views.decorators.csrf import csrf_exempt
 
 def file_access(request):
     msg = request.GET.get('msg', '')
-    # ok: context-autoescape-off
+    # <no-error>
     return render(request, 'vulnerable/injection/file_access.html',
             {'msg': msg})
 
 ## 03 - XSS
 
 def xss_form(request):
-    # ruleid: context-autoescape-off
+    # <expect-error>
     env = {'qs': request.GET.get('qs', 'hello'), 'autoescape': False}
     response = render(request, 'vulnerable/xss/form.html', env)
     response.set_cookie(key='monster', value='omnomnomnomnom!')
@@ -26,11 +26,11 @@ def xss_form(request):
 
 
 def xss_path(request, path='default'):
-    # ruleid: context-autoescape-off
+    # <expect-error>
     env = {'autoescape': False, 'path': path}
     return render(request, 'vulnerable/xss/path.html', env)
 
 
 def xss_query(request):
-    # ruleid: context-autoescape-off
+    # <expect-error>
     return render(request, 'vulnerable/xss/query.html', {'qs': request.GET.get('qs', 'hello'), "autoescape":False})

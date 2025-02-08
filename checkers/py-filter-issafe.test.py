@@ -16,7 +16,7 @@ from django.utils.translation import (
 
 register = template.Library()
 
-# ruleid:filter-with-is-safe
+# <expect-error>
 @register.filter(is_safe=True)
 def ordinal(value):
     """
@@ -57,7 +57,7 @@ def ordinal(value):
     # Mark value safe so i18n does not break with <sup> or <sub> see #19988
     return mark_safe(value)
 
-# ruleid:filter-with-is-safe
+# <expect-error>
 @register.filter(is_safe=True)
 def intcomma(value, use_l10n=True):
     """
@@ -95,7 +95,7 @@ intword_converters = (
     (100, lambda number: ngettext('%(value)s googol', '%(value)s googol', number)),
 )
 
-# ok:filter-with-is-safe
+# <no-error>
 @register.filter(is_safe=False)
 def intword(value):
     """
@@ -122,7 +122,7 @@ def intword(value):
             }
     return value
 
-# ruleid:filter-with-is-safe
+# <expect-error>
 @register.filter(is_safe=True)
 def apnumber(value):
     """
@@ -141,7 +141,7 @@ def apnumber(value):
 
 # Perform the comparison in the default time zone when USE_TZ = True
 # (unless a specific time zone has been applied with the |timezone filter).
-# ok:filter-with-is-safe
+# <no-error>
 @register.filter(expects_localtime=True)
 def naturalday(value, arg=None):
     """
@@ -168,7 +168,7 @@ def naturalday(value, arg=None):
 
 # This filter doesn't require expects_localtime=True because it deals properly
 # with both naive and aware datetimes. Therefore avoid the cost of conversion.
-# ok:filter-with-is-safe
+# <no-error>
 @register.filter
 def naturaltime(value):
     """

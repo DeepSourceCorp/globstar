@@ -5,7 +5,7 @@ from django.template import loader
 
 def not_really_safe(request):
     template = loader.get_template('contents.html')
-    # ruleid:avoid-mark-safe
+    # <expect-error>
     not_actually_safe = mark_safe(
         """
         <div>
@@ -17,7 +17,7 @@ def not_really_safe(request):
 
 def fine(request):
     template = loader.get_template('contents.html')
-    # ok:avoid-mark-safe
+    # <no-error>
     fine = mark_safe(
         """
         <div>
@@ -29,7 +29,7 @@ def fine(request):
 
 def not_really_safe(request):
     template = loader.get_template('contents.html')
-    # ok:avoid-mark-safe
+    # <no-error>
     this_is_ok = format_html(
         """
         <div>

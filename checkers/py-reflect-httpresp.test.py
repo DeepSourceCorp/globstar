@@ -7,7 +7,7 @@ from django.utils.translation import ugettext as _
 from org import engines, manageNoEngine, genericApiException
 
 def search_certificates(request):
-    # ruleid: reflected-data-httpresponse
+    # <expect-error>
     user_filter = request.GET.get("user", "")
     if not user_filter:
         msg = _("user is not given.")
@@ -22,7 +22,7 @@ def previewNode(request, uid):
     """Preview evaluante node"""
     try:
         if uid in engines:
-            # ok: reflected-data-httpresponse
+            # <no-error>
             _nodeId = request.data.get('nodeId')
             engines[uid].stoppable = True
             _res = engines[uid].model.previewNode(_nodeId)
@@ -36,5 +36,5 @@ def previewNode(request, uid):
         engines[uid].stoppable = False
 
 def inline_test(request):
-    # ruleid: reflected-data-httpresponse
+    # <expect-error>
     return HttpResponse("Received {}".format(request.POST.get('message')))
