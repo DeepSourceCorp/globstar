@@ -51,7 +51,7 @@ func findTestCases(dir string) ([]testCase, error) {
 
 		patternRule, err := analysis.ReadFromFile(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid rule '%s': %s", d.Name(), err.Error())
+			fmt.Fprintf(os.Stderr, "invalid rule '%s': %s\n", d.Name(), err.Error())
 			return nil
 		}
 
@@ -121,7 +121,7 @@ func runTestCases(dir string) (passed bool, err error) {
 
 		if len(want) != len(got) {
 			message := fmt.Sprintf(
-				"(%s): expected issues on the following lines: %v\nbut issues were raised on lines: %v",
+				"(%s): expected issues on the following lines: %v\nbut issues were raised on lines: %v\n",
 				testName,
 				want,
 				got,
@@ -135,13 +135,13 @@ func runTestCases(dir string) (passed bool, err error) {
 		for i := range want {
 			if want[i] != got[i] {
 				message := fmt.Sprintf(
-					"(%s): expected lint on line %d, but next occurrence is on line %d",
+					"(%s): expected lint on line %d, but next occurrence is on line %d\n",
 					testName,
 					want,
 					got,
 				)
 
-				fmt.Fprintf(os.Stderr, "%s", message)
+				fmt.Fprintf(os.Stderr, "%s\n", message)
 				passed = false
 			}
 		}
