@@ -1,0 +1,23 @@
+language: py
+name: filter-issafe
+message: Detected Django filters flagged with 'is_safe'
+
+pattern: |
+  (decorated_definition
+    (decorator
+      (call
+        function: (attribute
+          object: (identifier) @register
+          attribute: (identifier) @filter)
+        arguments: (argument_list
+          (keyword_argument
+            name: (identifier) @issafe
+            value: (true)))))
+  (#eq? @register "register")
+  (#eq? @filter "filter")
+  (#eq? @issafe "is_safe")) @filter-issafe
+
+description: |
+  The `is_safe` filter tells Django to not apply escaping
+  which can expose the application to Cross Site Scripting(XSS) vulnerabilities.
+  Consider replacing it with `mark_safe()`

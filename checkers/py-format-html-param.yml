@@ -1,0 +1,40 @@
+language: py
+name: format-html-param
+message: Passing a formatted string as first parameter to `format_html` 
+category: security
+
+pattern: |
+  (call
+    function: (identifier) @format_html
+    arguments: (argument_list
+      .
+      [
+        (binary_operator
+          left: (string)
+          right: (identifier))
+        (string
+          (interpolation
+            (_)))
+        (call
+          function: (attribute
+            object: (call
+              function: (identifier)
+                arguments: (argument_list
+                (string)))
+            attribute: (identifier))
+            arguments: (argument_list))
+        (call
+          function: (attribute
+            object: (string)
+            attribute: (identifier))
+          arguments: (argument_list
+            (_)))
+        (identifier)
+      ])
+    (#eq? @format_html "format_html")
+  ) @format-html-param
+
+
+description: |
+  Passing a formatted string as first parameter to `format_html` disables the proper encoding of variables. Any HTML in the first parameter is not encoded. Using a formatted string as first parameter obscures which parameters are encoded. Correct use of `format_html` is passing a static format string as first parameter, and the variables to substitute as subsequent parameters.
+
