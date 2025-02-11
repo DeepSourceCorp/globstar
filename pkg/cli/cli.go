@@ -119,6 +119,20 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					return nil
 				},
 			},
+			{
+				Name:    "gen",
+				Aliases: []string{"g"},
+				Usage:   "Generate a new rule",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					goRules, err := analysis.DiscoverGoRules(".globstar")
+					if err != nil {
+						return err
+					}
+					mainFunc := analysis.GenerateMainFunction(goRules)
+					fmt.Println(mainFunc)
+					return nil
+				},
+			},
 		},
 	}
 
