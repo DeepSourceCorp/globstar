@@ -1,0 +1,21 @@
+language: py
+name: empty-aes-key
+message: Found empty AES key
+category: security
+
+pattern: |
+  (call
+    function: (attribute
+      object: (identifier) @aes
+      attribute: (identifier) @new)
+    arguments: (argument_list
+      .
+      (string
+        (string_start)
+        (string_end))
+      (_)*)
+    (#eq? @aes "AES")
+    (#eq? @new "new")) @empty-aes-key
+
+description: |
+  Possible empty AES encryption key detected. An empty key weakens encryption and makes data vulnerable to attackers. Use a strong, non-empty key for security.
