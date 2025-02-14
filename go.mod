@@ -1,4 +1,4 @@
-module github.com/DeepSourceCorp/globstar
+module globstar.dev/globstar
 
 go 1.23.2
 
