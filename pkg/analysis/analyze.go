@@ -1,10 +1,12 @@
 package analysis
 
 import (
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 
-	"github.com/DeepSourceCorp/globstar/pkg/config"
 	sitter "github.com/smacker/go-tree-sitter"
+	"globstar.dev/globstar/pkg/config"
 )
 
 type Issue struct {
@@ -14,13 +16,59 @@ type Issue struct {
 	Severity config.Severity
 	// The message to display to the user
 	Message string
+	// The file path of the file that the issue was found in
+	Filepath string
 	// The range of the issue in the source code
 	Range sitter.Range
 	// (optional) The AST node that caused the issue
-	Node *sitter.Node
+	Node *Node
 	// Id is a unique ID for the issue.
 	// Issue that have 'Id's can be explained using the `globstar desc` command.
 	Id *string
+}
+
+func (i *Issue) AsJson() ([]byte, error) {
+	type location struct {
+		Row    int `json:"row"`
+		Column int `json:"column"`
+	}
+
+	type position struct {
+		Filename string   `json:"filename"`
+		Start    location `json:"start"`
+		End      location `json:"end"`
+	}
+
+	type issueJson struct {
+		Category config.Category `json:"category"`
+		Severity config.Severity `json:"severity"`
+		Message  string          `json:"message"`
+		Range    position        `json:"range"`
+		Id       string          `json:"id"`
+	}
+	issue := issueJson{
+		Category: i.Category,
+		Severity: i.Severity,
+		Message:  i.Message,
+		Range: position{
+			Filename: i.Filepath,
+			Start: location{
+				Row:    int(i.Range.StartPoint.Row),
+				Column: int(i.Range.StartPoint.Column),
+			},
+			End: location{
+				Row:    int(i.Range.EndPoint.Row),
+				Column: int(i.Range.EndPoint.Column),
+			},
+		},
+		Id: *i.Id,
+	}
+
+	return json.Marshal(issue)
+}
+
+func (i *Issue) AsText() ([]byte, error) {
+	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, i.Range.StartPoint.Row, i.Range.StartPoint.Column, i.Message)), nil
 }
 
 type Analyzer struct {

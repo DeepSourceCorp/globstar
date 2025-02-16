@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/require"
+	"globstar.dev/globstar/pkg/analysis"
 )
 
 type ExpectedIssue struct {

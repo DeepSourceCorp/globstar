@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/DeepSourceCorp/globstar/checkers"
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
-	"github.com/DeepSourceCorp/globstar/pkg/config"
-	"github.com/DeepSourceCorp/globstar/pkg/rules"
 	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v3"
+	"globstar.dev/globstar/checkers"
+	"globstar.dev/globstar/pkg/analysis"
+	"globstar.dev/globstar/pkg/config"
+	"globstar.dev/globstar/pkg/rules"
 )
 
 type Cli struct {
@@ -128,7 +128,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					if err != nil {
 						return err
 					}
-					mainFunc := analysis.GenerateMainFunction(goRules)
+					mainFunc := analysis.GenerateAnalyzer(goRules)
 					fmt.Println(mainFunc)
 					return nil
 				},

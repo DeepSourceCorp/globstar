@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/DeepSourceCorp/globstar/pkg/config"
 	"github.com/gobwas/glob"
 	sitter "github.com/smacker/go-tree-sitter"
+	"globstar.dev/globstar/pkg/config"
 	"gopkg.in/yaml.v3"
 )
 

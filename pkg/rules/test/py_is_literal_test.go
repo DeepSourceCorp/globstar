@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	py_rules "github.com/DeepSourceCorp/globstar/pkg/rules/python"
+	py_rules "globstar.dev/globstar/pkg/rules/python"
 )
 
 func TestIsLiteral(t *testing.T) {

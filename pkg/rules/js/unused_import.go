@@ -3,8 +3,8 @@ package js_rules
 import (
 	"fmt"
 
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
+	"globstar.dev/globstar/pkg/analysis"
 )
 
 func importSpecifierName(importSpecifier *sitter.Node, source []byte) string {

@@ -1,9 +1,9 @@
 package rules
 
 import (
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
-	js_rules "github.com/DeepSourceCorp/globstar/pkg/rules/js"
-	python_rules "github.com/DeepSourceCorp/globstar/pkg/rules/python"
+	"globstar.dev/globstar/pkg/analysis"
+	js_rules "globstar.dev/globstar/pkg/rules/js"
+	python_rules "globstar.dev/globstar/pkg/rules/python"
 )
 
 // CreateBaseRuleMap creates a base ruleset for each supported language

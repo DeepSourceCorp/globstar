@@ -1,8 +1,8 @@
 package js_rules
 
 import (
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
 	sitter "github.com/smacker/go-tree-sitter"
+	"globstar.dev/globstar/pkg/analysis"
 )
 
 func noDoubleEq(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
