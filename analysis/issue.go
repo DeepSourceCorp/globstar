@@ -49,11 +49,11 @@ func (i *Issue) AsJson() ([]byte, error) {
 		Range: position{
 			Filename: i.Filepath,
 			Start: location{
-				Row:    int(i.Node.Range().StartPoint.Row),
+				Row:    int(i.Node.Range().StartPoint.Row) + 1, // 0-indexed to 1-indexed
 				Column: int(i.Node.Range().StartPoint.Column),
 			},
 			End: location{
-				Row:    int(i.Node.Range().EndPoint.Row),
+				Row:    int(i.Node.Range().EndPoint.Row) + 1, // 0-indexed to 1-indexed
 				Column: int(i.Node.Range().EndPoint.Column),
 			},
 		},
@@ -64,5 +64,5 @@ func (i *Issue) AsJson() ([]byte, error) {
 }
 
 func (i *Issue) AsText() ([]byte, error) {
-	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, i.Node.Range().StartPoint.Row, i.Node.Range().StartPoint.Column, i.Message)), nil
+	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, int(i.Node.Range().StartPoint.Row)+1, i.Node.Range().StartPoint.Column, i.Message)), nil
 }

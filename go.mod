@@ -3,9 +3,6 @@ module globstar.dev/globstar
 go 1.23.2
 
 require (
-	github.com/DeepSourceCorp/globstar v0.1.1
-	github.com/dlclark/regexp2 v1.11.5
-	github.com/fatih/color v1.18.0
 	github.com/gobwas/glob v0.2.3
 	github.com/rs/zerolog v1.33.0
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82

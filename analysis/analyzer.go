@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -91,10 +90,8 @@ func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 			return nil
 		}
 
-		fmt.Println("Analyzing", path)
 		file, err := ParseFile(path)
 		if err != nil {
-			fmt.Println("Error parsing file", path, err)
 			return nil
 		}
 

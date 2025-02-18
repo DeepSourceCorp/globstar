@@ -152,13 +152,57 @@ func LanguageFromFilePath(path string) Language {
 	switch ext {
 	case ".py":
 		return LangPy
-		// TODO: .jsx and .js can both have JSX syntax -_-
+	// TODO: .jsx and .js can both have JSX syntax -_-
 	case ".js", ".jsx":
 		return LangJs
 	case ".ts":
 		return LangTs
 	case ".tsx":
 		return LangTsx
+	case ".java":
+		return LangJava
+	case ".rb":
+		return LangRuby
+	case ".rs":
+		return LangRust
+	case ".yaml", ".yml":
+		return LangYaml
+	case ".css":
+		return LangCss
+	case ".dockerfile":
+		return LangDockerfile
+	case ".md":
+		return LangMarkdown
+	case ".sql":
+		return LangSql
+	case ".kt":
+		return LangKotlin
+	case ".ml":
+		return LangOCaml
+	case ".lua":
+		return LangLua
+	case ".sh":
+		return LangBash
+	case ".cs":
+		return LangCsharp
+	case ".ex":
+		return LangElixir
+	case ".elm":
+		return LangElm
+	case ".go":
+		return LangGo
+	case ".groovy":
+		return LangGroovy
+	case ".tf":
+		return LangHcl
+	case ".html":
+		return LangHtml
+	case ".php":
+		return LangPhp
+	case ".scala":
+		return LangScala
+	case ".swift":
+		return LangSwift
 	default:
 		return LangUnknown
 	}
@@ -187,7 +231,6 @@ func Parse(filePath string, source []byte, language Language, grammar *sitter.La
 // tree-sitter grammar.
 func ParseFile(filePath string) (*ParseResult, error) {
 	lang := LanguageFromFilePath(filePath)
-	fmt.Println(lang)
 	grammar := lang.Grammar()
 	if grammar == nil {
 		return nil, fmt.Errorf("unsupported file type: %s", filePath)
