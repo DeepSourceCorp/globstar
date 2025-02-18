@@ -1,0 +1,13 @@
+<html>
+
+<head>
+    <title>globstar.dev</title>
+    <meta name="go-import" content="globstar.dev/globstar git https://github.com/DeepSourceCorp/globstar">
+</head>
+
+<body>
+    <h1>globstar.dev</h1>
+    <p>Documentation for the globstar project.</p>
+</body>
+
+</html>

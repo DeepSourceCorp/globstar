@@ -7,7 +7,6 @@
 *.dll
 *.so
 *.dylib
-globstar
 cmd/globstar/globstar
 bin/
 
