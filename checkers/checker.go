@@ -6,25 +6,22 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
+	goAnalysis "globstar.dev/globstar/analysis"
+	"globstar.dev/globstar/checkers/javascript"
+	"globstar.dev/globstar/pkg/analysis"
 )
 
 //go:embed *.y*ml
 var builtinCheckers embed.FS
 
-func LoadBuiltinCheckers() (map[analysis.Language][]analysis.YmlRule, error) {
+func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
 	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
-	d, err := builtinCheckers.ReadDir(".")
-	fmt.Printf("d: %v, err: %s\n", d, err)
-	err = fs.WalkDir(builtinCheckers, ".", func(path string, d fs.DirEntry, err error) error {
-		fmt.Println(path)
+	err := fs.WalkDir(builtinCheckers, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Println(err)
 			return nil
 		}
 
 		if d.IsDir() {
-			fmt.Println("is dir", path)
 			return nil
 		}
 
@@ -49,4 +46,10 @@ func LoadBuiltinCheckers() (map[analysis.Language][]analysis.YmlRule, error) {
 		return nil
 	})
 	return rulesMap, err
+}
+
+func LoadGoRules() []*goAnalysis.Analyzer {
+	return []*goAnalysis.Analyzer{
+		&javascript.NoDoubleEq,
+	}
 }

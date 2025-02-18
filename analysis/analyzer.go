@@ -74,7 +74,8 @@ func Preorder(pass *Pass, fn func(*sitter.Node)) {
 	}
 }
 
-func RunAnalyzers(path string, analyzers []*Analyzer, format string) error {
+func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
+	raisedIssues := []*Issue{}
 	langAnalyzerMap := make(map[Language][]*Analyzer)
 	for _, analyzer := range analyzers {
 		langAnalyzerMap[analyzer.Language] = append(langAnalyzerMap[analyzer.Language], analyzer)
@@ -102,15 +103,15 @@ func RunAnalyzers(path string, analyzers []*Analyzer, format string) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return raisedIssues, err
 	}
 
-	raisedIssues := []*Issue{}
 	reportFunc := func(pass *Pass, node *sitter.Node, message string) {
 		raisedIssues = append(raisedIssues, &Issue{
-			Id:      &pass.Analyzer.Name,
-			Node:    node,
-			Message: message,
+			Id:       &pass.Analyzer.Name,
+			Node:     node,
+			Message:  message,
+			Filepath: pass.FileContext.FilePath,
 		})
 	}
 
@@ -131,22 +132,16 @@ func RunAnalyzers(path string, analyzers []*Analyzer, format string) error {
 
 				_, err := analyzer.Run(pass)
 				if err != nil {
-					return err
+					return raisedIssues, err
 				}
 			}
 		}
 	}
 
-	output, err := reportIssues(raisedIssues, format)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stdout.Write(output)
-	return err
+	return raisedIssues, nil
 }
 
-func reportIssues(issues []*Issue, format string) ([]byte, error) {
+func ReportIssues(issues []*Issue, format string) ([]byte, error) {
 	switch format {
 	case "json":
 		return reportJSON(issues)
