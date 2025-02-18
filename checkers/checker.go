@@ -11,7 +11,7 @@ import (
 	"globstar.dev/globstar/pkg/analysis"
 )
 
-//go:embed *.y*ml
+//go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
 func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
