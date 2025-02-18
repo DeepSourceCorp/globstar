@@ -11,10 +11,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v3"
-	goAnalysis "globstar.dev/globstar/analysis"
-	"globstar.dev/globstar/checkers"
-	"globstar.dev/globstar/pkg/analysis"
-	"globstar.dev/globstar/pkg/config"
+	goAnalysis "globstar.dev/analysis"
+	"globstar.dev/checkers"
+	"globstar.dev/pkg/analysis"
+	"globstar.dev/pkg/config"
 )
 
 type Cli struct {
