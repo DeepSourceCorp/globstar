@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DeepSourceCorp/globstar/pkg/cli"
+	"globstar.dev/globstar/pkg/cli"
 )
 
 func main() {

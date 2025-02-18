@@ -5,9 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/DeepSourceCorp/globstar/pkg/config"
 	"github.com/gobwas/glob"
 	sitter "github.com/smacker/go-tree-sitter"
+	"globstar.dev/globstar/pkg/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -100,7 +100,9 @@ func (r *patternRuleImpl) OnMatch(
 
 	ana.Report(&Issue{
 		Range:    matchedNode.Range(),
+		Node:     matchedNode,
 		Message:  message,
+		Filepath: ana.ParseResult.FilePath,
 		Category: r.Category(),
 		Severity: r.Severity(),
 		Id:       &r.issueId,
@@ -250,6 +252,14 @@ func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 	lang := DecodeLanguage(rule.Language)
 	if lang == LangUnknown {
 		return nil, fmt.Errorf("unknown language code: '%s'", rule.Language)
+	}
+
+	if rule.Code == "" {
+		return nil, fmt.Errorf("no name provided in rule definition")
+	}
+
+	if rule.Message == "" {
+		return nil, fmt.Errorf("no message provided in rule '%s'", rule.Code)
 	}
 
 	var patterns []*sitter.Query

@@ -8,14 +8,13 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/DeepSourceCorp/globstar/checkers"
-	"github.com/DeepSourceCorp/globstar/pkg/analysis"
-	"github.com/DeepSourceCorp/globstar/pkg/config"
-	"github.com/DeepSourceCorp/globstar/pkg/rules"
-	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v3"
+	goAnalysis "globstar.dev/globstar/analysis"
+	"globstar.dev/globstar/checkers"
+	"globstar.dev/globstar/pkg/analysis"
+	"globstar.dev/globstar/pkg/config"
 )
 
 type Cli struct {
@@ -214,7 +213,6 @@ type lintResult struct {
 
 func (lr *lintResult) GetExitStatus(conf *config.Config) int {
 	for _, issue := range lr.issues {
-		fmt.Println(issue.Category, issue.Severity)
 		for _, failCategory := range conf.FailWhen.CategoryIn {
 			if issue.Category == failCategory {
 				return conf.FailWhen.ExitCode
@@ -256,10 +254,10 @@ func (c *Cli) RunLints(
 		patternRules = make(map[analysis.Language][]analysis.YmlRule)
 	}
 
-	var allRules map[analysis.Language][]analysis.Rule
+	var goAnalyzers []*goAnalysis.Analyzer
 	if runBuiltinRules {
-		allRules = rules.CreateBaseRuleMap()
-		builtInPatternRules, err := checkers.LoadBuiltinCheckers()
+		goAnalyzers = checkers.LoadGoRules()
+		builtInPatternRules, err := checkers.LoadYamlRules()
 		if err != nil {
 			return err
 		}
@@ -306,23 +304,19 @@ func (c *Cli) RunLints(
 		result.numFilesChecked++
 
 		// run linter
-		issues, err := c.LintFile(allRules, patternRules, path)
+		// the first arg is empty, since the format for inbuilt Go-based rules has changed
+		// TODO: factor it in later
+		issues, err := c.LintFile(map[analysis.Language][]analysis.Rule{}, patternRules, path)
 		if err != nil {
-			// TODO: parse error on a single file should not exit the entire analysis process
-			return err
-		}
-
-		if len(issues) > 0 {
-			relPath, _ := filepath.Rel(c.RootDirectory, path)
-			log.Error().Msgf("Issues found in %s", color.YellowString(relPath))
+			// parse error on a single file should not exit the entire analysis process
+			// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
+			// fmt.Fprintf(os.Stderr, "Error parsing file %s: %s\n", path, err)
+			return nil
 		}
 
 		for _, issue := range issues {
-			log.Error().Msgf("\t[Ln %d:Col %d] %s",
-				issue.Range.StartPoint.Row,
-				issue.Range.StartPoint.Column,
-				color.YellowString(issue.Message),
-			)
+			txt, _ := issue.AsText()
+			log.Error().Msg(string(txt))
 
 			result.issues = append(result.issues, issue)
 		}
@@ -330,6 +324,30 @@ func (c *Cli) RunLints(
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
+	goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers)
+	if err != nil {
+		return fmt.Errorf("failed to run Go-based analyzers: %w", err)
+	}
+
+	for _, issue := range goIssues {
+		txt, _ := issue.AsText()
+		log.Error().Msg(string(txt))
+
+		result.issues = append(result.issues, &analysis.Issue{
+			Filepath: issue.Filepath,
+			Message:  issue.Message,
+			Severity: config.Severity(issue.Severity),
+			Category: config.Category(issue.Category),
+			Node:     issue.Node,
+			Id:       issue.Id,
+		})
+	}
+
+	// FIXME: go based rules do not increment the numFilesChecked counter
 	if result.numFilesChecked > 0 {
 		log.Info().Msgf("Analyzed %d files and found %d issues.", result.numFilesChecked, len(result.issues))
 	} else {
