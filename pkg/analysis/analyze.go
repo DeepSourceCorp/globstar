@@ -21,7 +21,7 @@ type Issue struct {
 	// The range of the issue in the source code
 	Range sitter.Range
 	// (optional) The AST node that caused the issue
-	Node *Node
+	Node *sitter.Node
 	// Id is a unique ID for the issue.
 	// Issue that have 'Id's can be explained using the `globstar desc` command.
 	Id *string
