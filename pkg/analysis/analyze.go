@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	sitter "github.com/smacker/go-tree-sitter"
-	"globstar.dev/globstar/pkg/config"
+	"globstar.dev/pkg/config"
 )
 
 type Issue struct {

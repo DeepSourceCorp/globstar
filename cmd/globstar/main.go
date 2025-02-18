@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"globstar.dev/globstar/pkg/cli"
+	"globstar.dev/pkg/cli"
 )
 
 func main() {

@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"globstar.dev/globstar/pkg/analysis"
+	"globstar.dev/pkg/analysis"
 )
 
 func runTests(dir string) (bool, error) {

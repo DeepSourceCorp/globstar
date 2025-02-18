@@ -27,20 +27,20 @@ export default defineConfig({
   head: [
     ...(isProd
       ? [
-          [
-            "script",
-            {
-              async: "",
-              src: "https://www.googletagmanager.com/gtag/js?id=G-Z6WPGB3WNL",
-              type: "text/javascript",
-            },
-          ] as [string, Record<string, string>],
-          [
-            "script",
-            {},
-            "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-Z6WPGB3WNL');",
-          ] as [string, Record<string, string>, string],
-        ]
+        [
+          "script",
+          {
+            async: "",
+            src: "https://www.googletagmanager.com/gtag/js?id=G-Z6WPGB3WNL",
+            type: "text/javascript",
+          },
+        ] as [string, Record<string, string>],
+        [
+          "script",
+          {},
+          "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-Z6WPGB3WNL');",
+        ] as [string, Record<string, string>, string],
+      ]
       : []),
 
     // Favicons
@@ -78,6 +78,8 @@ export default defineConfig({
       },
     ],
     ["link", { rel: "canonical", href: SITE_URL }],
+    // Go imports
+    ["meta", { name: "go-import", content: "globstar.dev git https://github.com/DeepSourceCorp/globstar" }],
 
     // Open Graph / Facebook
     ["meta", { property: "og:type", content: "website" }],
