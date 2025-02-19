@@ -1,0 +1,17 @@
+language: py
+name: django-class-custom-extends
+message: Detected class extension with custom expression
+category: security
+severity: warning
+
+pattern: |
+  (class_definition
+    name: (identifier)
+    superclasses: (argument_list
+      (_)*
+      (identifier) @superclasses
+      (_)*)
+  (#match? @superclasses "^(django\\.db\\.models\\.(expressions\\.)?)?(Func|Expression|Value|DurationValue|RawSQL|Star|Random|Col|Ref|ExpressionList|ExpressionWrapper|When|Case|Window|WindowFrame|RowRange|ValueRange|Subquery|Exists)$")) @django-class-custom-extends
+
+description: |
+  xtending Django's expression classes can introduce security risks, such as SQL injection, if user input is not properly sanitized. Ensure that any user input is validated and does not directly enter custom expressions.
