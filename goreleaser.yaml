@@ -15,7 +15,7 @@ builds:
     goarch:
       - amd64
     ldflags:
-      - "-X 'main.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
   # darwin-arm64
   - id: globstar-darwin-arm64
     main: ./cmd/globstar
@@ -29,7 +29,7 @@ builds:
     goarch:
       - arm64
     ldflags:
-      - "-X 'main.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
   # linux-amd64
   - id: globstar-linux-amd64
     main: ./cmd/globstar
@@ -43,7 +43,7 @@ builds:
     goarch:
       - amd64
     ldflags:
-      - "-X 'main.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
   # linux-arm64
   - id: globstar-linux-arm64
     main: ./cmd/globstar
@@ -57,7 +57,7 @@ builds:
     goarch:
       - arm64
     ldflags:
-      - "-X 'main.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
   # windows-amd64
   - id: globstar-windows-amd64
     main: ./cmd/globstar
@@ -72,7 +72,7 @@ builds:
       - amd64
     ldflags:
       - buildmode=exe
-      - "-X 'main.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
   # windows-arm64
   - id: globstar-windows-arm64
     main: ./cmd/globstar
@@ -87,7 +87,7 @@ builds:
       - arm64
     ldflags:
       - buildmode=exe
-      - "-X 'main.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
 archives:
   - id: arch_rename
     builds:

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -49,9 +50,15 @@ func (c *Cli) Run() error {
 		return err
 	}
 
+	cli.VersionPrinter = func(cmd *cli.Command) {
+		version := strings.TrimPrefix(cmd.Version, "v")
+		fmt.Println(version)
+	}
+
 	cmd := &cli.Command{
-		Name:  "globstar",
-		Usage: "The open-source static analysis toolkit",
+		Name:    "globstar",
+		Usage:   "The open-source static analysis toolkit",
+		Version: version,
 		Description: `Globstar helps you write and run custom checkers for bad and insecure patterns and run them on
 your codebase with a simple command. It comes with built-in checkers that you can use out-of-the-box,\
 or you can write your own in the .globstar directory of any repository.`,
