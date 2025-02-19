@@ -50,6 +50,11 @@ func (c *Cli) Run() error {
 	}
 
 	cmd := &cli.Command{
+		Name:  "globstar",
+		Usage: "The open-source static analysis toolkit",
+		Description: `Globstar helps you write and run custom checkers for bad and insecure patterns and run them on
+your codebase with a simple command. It comes with built-in checkers that you can use out-of-the-box,\
+or you can write your own in the .globstar directory of any repository.`,
 		Commands: []*cli.Command{
 			{
 				Name:    "check",
