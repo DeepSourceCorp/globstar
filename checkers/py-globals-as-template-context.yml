@@ -1,0 +1,34 @@
+language: py
+name: globals-as-template-context
+message: Detected the usage of `globals()` as context to `render()`
+category: security
+severity: error
+
+pattern: |
+  (call
+    function: (identifier) @render
+    arguments: (argument_list
+      (_)*
+      (call
+        function: (identifier) @globals
+        arguments: (argument_list))
+      (_)*)
+    (#eq? @render "render")
+    (#eq? @globals "globals")) @globals-as-template-context
+
+  (call
+    function: (attribute
+      object: (identifier) @template
+      attribute: (identifier) @render)
+    arguments: (argument_list
+      (_)*
+      (call
+        function: (identifier) @globals
+        arguments: (argument_list))
+      (_)*)
+    (#eq? @template "Template")
+    (#eq? @render "render")
+    (#eq? @globals "globals")) @globals-as-template-context
+
+description: |
+  Using globals() in render(...) is dangerous—it exposes unintended Python functions, leading to server-side template injection (SSTI). Attackers could execute arbitrary code. Instead, pass only the required variables in a dictionary or `django.template.Context`.
