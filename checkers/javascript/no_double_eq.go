@@ -2,7 +2,7 @@ package javascript
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"
-	"globstar.dev/globstar/analysis"
+	"globstar.dev/analysis"
 )
 
 var NoDoubleEq analysis.Analyzer = analysis.Analyzer{

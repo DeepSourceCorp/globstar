@@ -1,4 +1,4 @@
-module globstar.dev/globstar
+module globstar.dev
 
 go 1.23.2
 

@@ -6,12 +6,12 @@ import (
 	"io/fs"
 	"path/filepath"
 
-	goAnalysis "globstar.dev/globstar/analysis"
-	"globstar.dev/globstar/checkers/javascript"
-	"globstar.dev/globstar/pkg/analysis"
+	goAnalysis "globstar.dev/analysis"
+	"globstar.dev/checkers/javascript"
+	"globstar.dev/pkg/analysis"
 )
 
-//go:embed *.y*ml
+//go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
 func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {

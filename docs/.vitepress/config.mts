@@ -27,20 +27,20 @@ export default defineConfig({
   head: [
     ...(isProd
       ? [
-          [
-            "script",
-            {
-              async: "",
-              src: "https://www.googletagmanager.com/gtag/js?id=G-Z6WPGB3WNL",
-              type: "text/javascript",
-            },
-          ] as [string, Record<string, string>],
-          [
-            "script",
-            {},
-            "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-Z6WPGB3WNL');",
-          ] as [string, Record<string, string>, string],
-        ]
+        [
+          "script",
+          {
+            async: "",
+            src: "https://www.googletagmanager.com/gtag/js?id=G-Z6WPGB3WNL",
+            type: "text/javascript",
+          },
+        ] as [string, Record<string, string>],
+        [
+          "script",
+          {},
+          "window.dataLayer = window.dataLayer || [];\nfunction gtag(){dataLayer.push(arguments);}\ngtag('js', new Date());\ngtag('config', 'G-Z6WPGB3WNL');",
+        ] as [string, Record<string, string>, string],
+      ]
       : []),
 
     // Favicons
@@ -78,6 +78,8 @@ export default defineConfig({
       },
     ],
     ["link", { rel: "canonical", href: SITE_URL }],
+    // Go imports
+    ["meta", { name: "go-import", content: "globstar.dev git https://github.com/DeepSourceCorp/globstar" }],
 
     // Open Graph / Facebook
     ["meta", { property: "og:type", content: "website" }],
@@ -134,13 +136,6 @@ export default defineConfig({
         ],
       },
       {
-        text: "Examples",
-        items: [
-          { text: "Python", link: "/examples/python" },
-          { text: "JavaScript", link: "/examples/javascript" },
-        ],
-      },
-      {
         text: "Reference",
         items: [
           { text: "CLI", link: "/reference/cli" },
@@ -149,13 +144,20 @@ export default defineConfig({
           { text: "Checker Go Interface", link: "/reference/checker-go" },
         ],
       },
-      // {
-      //   text: 'Guides',
-      //   items: [
-      //     { text: 'Cross-file Analysis', link: '/guides/cross-file-analysis' },
-      //     { text: 'Scope Resolution', link: '/guides/scope-resolution' },
-      //   ]
-      // }
+      {
+        text: 'Guides',
+        items: [
+          { text: 'Writing a checker in YAML', link: '/guides/writing-yaml-checker' },
+          { text: 'Contributing built-in checkers', link: '/guides/contributing-built-in-checkers' },
+        ]
+      },
+      {
+        text: "Examples",
+        items: [
+          { text: "JavaScript", link: "/examples/javascript" },
+          { text: "Python", link: "/examples/python" }
+        ],
+      }
     ],
     socialLinks: [
       { icon: "github", link: "https://github.com/DeepSourceCorp/globstar" },

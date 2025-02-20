@@ -1,79 +1,158 @@
-# Python
+# Python Command Injection Checker
 
-## Self-Comparison Detection
+Command injection vulnerabilities occur when shell commands are constructed using unvalidated user input. This checker detects potentially dangerous command execution patterns that could lead to command injection attacks.
 
-Detects redundant comparisons where a variable is compared to itself.
+## Step 1: Writing the test file
 
-### What it does
+First, let's create a test file that covers various command injection patterns. Create `.globstar/command_injection.test.py`:
 
-Identifies instances where a variable is being compared to itself, which is typically a logical error or code smell.
-
-### Why it matters
-
-Self-comparisons are usually bugs and can indicate copying errors or incomplete refactoring. They can lead to logic errors since they always evaluate to true.
-
-### Examples
-
-**Dangerous:**
 ```python
-# Don't do this
-x = 5
-if x == x:
-    print("This is redundant")
+import os
+import subprocess
+from pathlib import Path
 
-# Don't do this either
-value = 42
-result = value is value
+def test_dangerous_os_commands():
+    user_input = get_user_input()
+    filename = "data.txt"
+
+    # <expect-error>
+    os.system("git clone " + user_input)
+
+    # <expect-error>
+    os.popen(f"cat {filename}")
+
+    # <expect-error>
+    subprocess.call("ping " + ip_addr, shell=True)
+
+    # These are safe and should not be flagged
+
+    # Safe - using lists for command arguments
+    subprocess.run(["git", "clone", user_input])
+
+    # Safe - using proper file operations
+    Path(filename).read_text()
+
+    # Safe - string literal without variables
+    os.system("ls -l")
+
+def test_edge_cases():
+    # Should not flag non-command string concatenation
+    greeting = "Hello, " + name
+
+    # Should not flag multiline commands without variables
+    subprocess.run("""
+        ls -l
+        pwd
+    """)
+
+    # Should not flag when shell=False
+    subprocess.call("echo test", shell=False)
+
+# Helper function to reduce noise in examples
+def get_user_input():
+    return input("Enter repository URL: ")
 ```
 
-**Safe:**
-```python
-# Do this instead
-x = 5
-if x == expected_value:
-    print("This is meaningful")
+Our test file:
+1. Includes clear examples of dangerous patterns to catch
+2. Shows safe alternatives that shouldn't be flagged
+3. Covers edge cases to avoid false positives
+4. Uses `<expect-error>` to mark lines that should trigger the checker
 
-# For object identity checks
-if id(value) == id(other_value):
-    print("Same object")
-```
+## Step 2: Writing the checker
 
-### Prevention
-1. Always compare variables against other values
-2. Use proper comparison operators
-3. Review comparisons during code review
+Now that we have our test file ready, let's create the checker in `.globstar/command_injection.yml`:
 
-### Rule Configuration
-```yml
-language: py
-name: bad_eq_eq
-message: "Comparing '@a' to itself is useless"
-pattern: |
-  (
-    (comparison_operator (identifier)@a (identifier) @b )
-    (#eq? @a @b)
-  )  @bad_eq_eq
+```yaml
+language: python
+name: command_injection
+message: "Possible command injection vulnerability detected. Use subprocess.run() with a list of arguments instead."
+category: security
+severity: critical
+pattern: >
+  [
+    (call
+      function: (attribute
+        object: (identifier) @obj
+        attribute: (identifier) @func)
+      arguments: (argument_list
+        [(binary_operator
+            left: (string)
+            operator: "+")
+          (string
+            (interpolation))])
+      (#eq? @obj "os")
+      (#any-of? @func "system" "popen")) @command_injection
+
+    (call
+      function: (attribute
+        object: (identifier) @sub
+        attribute: (identifier) @call_func)
+      arguments: (argument_list
+        (binary_operator)
+        .
+        (keyword_argument
+          name: (identifier) @shell_arg
+          value: (true))
+      (#eq? @sub "subprocess")
+      (#eq? @call_func "call")
+      (#eq? @shell_arg "shell"))) @command_injection
+  ]
 filters:
-  - pattern-not-inside: |
-      (
-        (function_definition name:(identifier) @fn_name)
-        (#match? @fn_name "__(init|eq)__")
-      )
-  - pattern-not-inside: |
-      ((call function:(_)@fn_name)
-        (#any-of? @fn_name  "assertTrue" "assertFalse" "assert"))
-
+  - pattern-inside: (function_definition)
 exclude:
-  - venv/*
-  - build/*
-  - bin/*
+  - "test/**"
+  - "*_test.py"
+  - "tests/**"
+description: |
+  Command injection vulnerabilities occur when shell commands are constructed using
+  unvalidated user input. This can allow attackers to execute arbitrary commands
+  on the system.
+
+  Instead of using string concatenation or shell=True, use subprocess.run() with
+  a list of arguments, which properly escapes command arguments.
 ```
 
-### Special Cases
-The rule includes exceptions for:
-1. Special Methods: `__init__` and `__eq__`
-2. Test Assertions: `assertTrue`, `assertFalse`, and `assert`
-3. Excluded Directories: `venv/`, `build/`, `bin/`
+Let's break down how this checker matches our test cases:
 
-### Further Reading
-- [Python Identity vs Equality](https://realpython.com/python-is-identity-vs-equality/)
+1. **First Pattern Block**
+   ```
+   (call
+     function: (attribute
+       object: (identifier) @obj
+       attribute: (identifier) @func
+     )
+     arguments: (argument_list [...])
+   ```
+   This matches function calls like `os.system()` and `os.popen()`, capturing the object (`os`) and function name (`system`/`popen`).
+
+2. **Second Pattern Block**
+   ```
+   (call
+     function: (attribute
+       object: (identifier) @sub
+       attribute: (identifier) @call_func
+     )
+     arguments: (argument_list ... (keyword ...))
+   ```
+   This matches `subprocess.call()` with `shell=True`, checking for string concatenation or interpolation in the command argument.
+
+3. **Filters**
+   ```yaml
+   filters:
+     - pattern-inside: (function_definition)
+   ```
+   Ensures we only match patterns inside function definitions, reducing false positives.
+
+## Testing the checker
+
+Run the checker against your test file:
+
+```bash
+globstar test
+```
+
+## Further Reading
+- [OWASP Command Injection](https://owasp.org/www-community/attacks/Command_Injection)
+- [Python subprocess documentation](https://docs.python.org/3/library/subprocess.html)
+- [CWE-78: OS Command Injection](https://cwe.mitre.org/data/definitions/78.html)

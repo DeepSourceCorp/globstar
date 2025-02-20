@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"globstar.dev/globstar/pkg/analysis"
+	"globstar.dev/pkg/analysis"
 )
 
 func runTests(dir string) (bool, error) {
@@ -34,8 +34,8 @@ func findTestCases(dir string) ([]testCase, error) {
 			return nil
 		}
 
-		if d.IsDir() && path != dir {
-			return fs.SkipDir
+		if d.IsDir() {
+			return nil
 		}
 
 		if d.Mode()&fs.ModeSymlink != 0 {

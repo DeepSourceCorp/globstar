@@ -4,6 +4,8 @@ GOLANG_CROSS_VERSION  ?= v1.23
 SYSROOT_DIR     ?= sysroots
 SYSROOT_ARCHIVE ?= sysroots.tar.bz2
 
+CLI_BUILD_FLAGS := -X 'globstar.dev/pkg/cli.version=$$(git describe --tags 2>/dev/null || echo dev)'
+
 .PHONY: sysroot-pack
 sysroot-pack:
 	@tar cf - $(SYSROOT_DIR) -P | pv -s $[$(du -sk $(SYSROOT_DIR) | awk '{print $1}') * 1024] | pbzip2 > $(SYSROOT_ARCHIVE)
@@ -48,7 +50,7 @@ release:
 
 .PHONY: test
 test:
-	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic ./cmd/... ./pkg/... 
+	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic ./cmd/... ./pkg/...
 	@go tool cover -func=coverage.out | grep total: | awk '{print "Total coverage: " $$3}'
 	@rm coverage.out
 
@@ -59,7 +61,7 @@ fmt:
 	@echo "Done."
 
 build:
-	CGO_ENABLED=1 go build -o bin/globstar ./cmd/globstar
+	CGO_ENABLED=1 go build -ldflags "$(CLI_BUILD_FLAGS)" -o bin/globstar ./cmd/globstar
 
 test-builtin-rules:
 	echo "Testing built-in rules..."
