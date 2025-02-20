@@ -64,3 +64,5 @@ build:
 test-builtin-rules:
 	echo "Testing built-in rules..."
 	./bin/globstar test -d checkers/
+
+testall: test-builtin-rules test
