@@ -1,0 +1,32 @@
+language: py
+name: csrf-exempt
+message: Detected usage of csrf_exempt which indicates no CSRF
+category: security
+
+pattern: |
+  (decorated_definition
+    (decorator
+      (identifier) @csrf)
+  (#eq? @csrf "csrf_exempt")) @csrf-exempt
+
+
+  (decorated_definition
+    (decorator
+      (attribute
+        object: (attribute
+          object: (attribute
+            object: (attribute
+              object: (identifier) @django
+              attribute: (identifier) @views)
+            attribute: (identifier) @decorator)
+          attribute: (identifier) @csrf)
+        attribute: (identifier) @csrf_exempt))
+  (#eq? @django "django")
+  (#eq? @views "views")
+  (#eq? @decorator "decorators")
+  (#eq? @csrf "csrf")
+  (#eq? @csrf_exempt "csrf_exempt")) @csrf-exempt
+
+
+description: |
+  The decorator `csrf_exempt` disables CSRF protection, making routes vulnerable to attacks. Instead, define the function without this decorator to prevent unauthorized requests.

@@ -1,0 +1,18 @@
+language: py
+name: query-set-extra
+message: Detected usage of `QuerySet.extra` method
+category: security
+
+pattern: |
+  (call
+    function: (attribute
+      attribute: (identifier) @method)
+    arguments: (argument_list
+      (keyword_argument
+        name: (identifier) @select
+        value: (_)))?
+    (#eq? @method "extra")
+    (#not-eq? @select "select")) @query-set-extra
+
+description: |
+  QuerySet.extra is vulnerable to SQL injection and should be used cautiously. Instead, use Django's ORM with parameterized queries like People.objects.get(name='Bob') to prevent security risks.
