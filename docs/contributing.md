@@ -10,7 +10,7 @@ If you find a bug or have a feature request, please open an issue on [deepsource
 
 Here are some ideas for contributions:
 
-- **Writing checkers**: Globstar ships with a set of builtin checkers for common issues like security vulnerabilities, code quality, and more. We would like to expand this list with more checkers for different languages and frameworks. The builtin checkers are in the [.globstar](https://github.com/DeepSourceCorp/globstar/tree/master/.globstar) directory of the upstream repository.
+- **Writing checkers**: Globstar ships with a set of builtin checkers for common issues like security vulnerabilities, code quality, and more. We would like to expand this list with more checkers for different languages and frameworks. The builtin checkers are in the [.globstar](https://github.com/DeepSourceCorp/globstar/tree/master/checkers) directory of the upstream repository.
 
 - **Improving documentation**: We're always looking to improve our documentation. If you find something that's unclear, or if you think we can add more information, please open a pull request.
 
