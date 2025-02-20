@@ -3,6 +3,7 @@ package analysis
 import (
 	"os"
 	"path/filepath"
+	"encoding/json"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -144,6 +145,8 @@ func ReportIssues(issues []*Issue, format string) ([]byte, error) {
 		return reportJSON(issues)
 	case "text":
 		return reportText(issues)
+	case "sarif":
+		return reportSARIF(issues)
 	default:
 		return reportText(issues)
 	}
@@ -173,4 +176,91 @@ func reportText(issues []*Issue) ([]byte, error) {
 		output = append(output, []byte("\n")...)
 	}
 	return output, nil
+}
+
+func reportSARIF(issues []*Issue) ([]byte, error) {
+	type sarifLocation struct {
+		Uri string `json:"uri"`
+	}
+
+	type sarifRegion struct {
+		StartLine   int `json:"startLine"`
+		StartColumn int `json:"startColumn"`
+		EndLine     int `json:"endLine"`
+		EndColumn   int `json:"endColumn"`
+	}
+
+	type sarifPhysicalLocation struct {
+		ArtifactLocation sarifLocation `json:"artifactLocation"`
+		Region           sarifRegion   `json:"region"`
+	}
+
+	type sarifResult struct {
+		RuleId           string               `json:"ruleId"`
+		Message          string               `json:"message"`
+		Level            string               `json:"level"`
+		PhysicalLocation sarifPhysicalLocation `json:"physicalLocation"`
+	}
+
+	type sarifRun struct {
+		Tool struct {
+			Driver struct {
+				Name           string `json:"name"`
+				Version        string `json:"version"`
+				InformationUri string `json:"informationUri"`
+				Rules          []struct {
+					Id          string `json:"id"`
+					Name        string `json:"name"`
+					ShortDescription struct {
+						Text string `json:"text"`
+					} `json:"shortDescription"`
+					FullDescription struct {
+						Text string `json:"text"`
+					} `json:"fullDescription"`
+					HelpUri string `json:"helpUri"`
+				} `json:"rules"`
+			} `json:"driver"`
+		} `json:"tool"`
+		Results []sarifResult `json:"results"`
+	}
+
+	type sarifLog struct {
+		Version string    `json:"version"`
+		Runs    []sarifRun `json:"runs"`
+	}
+
+	sarif := sarifLog{
+		Version: "2.1.0",
+		Runs:    []sarifRun{},
+	}
+
+	run := sarifRun{}
+	run.Tool.Driver.Name = "Globstar"
+	run.Tool.Driver.Version = "1.0.0"
+	run.Tool.Driver.InformationUri = "https://globstar.dev"
+
+	for _, issue := range issues {
+		result := sarifResult{
+			RuleId:  *issue.Id,
+			Message: issue.Message,
+			Level:   string(issue.Severity),
+			PhysicalLocation: sarifPhysicalLocation{
+				ArtifactLocation: sarifLocation{
+					Uri: issue.Filepath,
+				},
+				Region: sarifRegion{
+					StartLine:   int(issue.Node.Range().StartPoint.Row) + 1,
+					StartColumn: int(issue.Node.Range().StartPoint.Column),
+					EndLine:     int(issue.Node.Range().EndPoint.Row) + 1,
+					EndColumn:   int(issue.Node.Range().EndPoint.Column),
+				},
+			},
+		}
+
+		run.Results = append(run.Results, result)
+	}
+
+	sarif.Runs = append(sarif.Runs, run)
+
+	return json.Marshal(sarif)
 }
