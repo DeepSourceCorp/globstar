@@ -66,3 +66,47 @@ func (i *Issue) AsJson() ([]byte, error) {
 func (i *Issue) AsText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, int(i.Node.Range().StartPoint.Row)+1, i.Node.Range().StartPoint.Column, i.Message)), nil
 }
+
+func (i *Issue) AsSARIF() ([]byte, error) {
+	type sarifLocation struct {
+		Uri string `json:"uri"`
+	}
+
+	type sarifRegion struct {
+		StartLine   int `json:"startLine"`
+		StartColumn int `json:"startColumn"`
+		EndLine     int `json:"endLine"`
+		EndColumn   int `json:"endColumn"`
+	}
+
+	type sarifPhysicalLocation struct {
+		ArtifactLocation sarifLocation `json:"artifactLocation"`
+		Region           sarifRegion   `json:"region"`
+	}
+
+	type sarifResult struct {
+		RuleId           string               `json:"ruleId"`
+		Message          string               `json:"message"`
+		Level            string               `json:"level"`
+		PhysicalLocation sarifPhysicalLocation `json:"physicalLocation"`
+	}
+
+	result := sarifResult{
+		RuleId:  *i.Id,
+		Message: i.Message,
+		Level:   string(i.Severity),
+		PhysicalLocation: sarifPhysicalLocation{
+			ArtifactLocation: sarifLocation{
+				Uri: i.Filepath,
+			},
+			Region: sarifRegion{
+				StartLine:   int(i.Node.Range().StartPoint.Row) + 1,
+				StartColumn: int(i.Node.Range().StartPoint.Column),
+				EndLine:     int(i.Node.Range().EndPoint.Row) + 1,
+				EndColumn:   int(i.Node.Range().EndPoint.Column),
+			},
+		},
+	}
+
+	return json.Marshal(result)
+}

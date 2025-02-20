@@ -24,6 +24,8 @@ type Cli struct {
 	// Rules is a list of lints that are applied to the files in `RootDirectory`
 	Rules  []analysis.Rule
 	Config *config.Config
+	// OutputFormat specifies the format of the output (text, json, sarif)
+	OutputFormat string
 }
 
 func (c *Cli) loadConfig() error {
