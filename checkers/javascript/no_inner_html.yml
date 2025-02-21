@@ -2,7 +2,7 @@
 
 language: js 
 name: no_inner_html 
-message: Remove usage of URLSearchParams or document.getElementById inside location.assign()
+message: Remove usage of .innerHTML when used with dynamic code
 category: security
 # Capture name must be the same as the checker's `name` field.
 # Nested captures are allowed to have arbitrary names
@@ -69,4 +69,4 @@ exclude:
   - bin/*
 
 description: |
-  To identify location.assign() where the argument is user-controlled.If an attacker can inject JavaScript into url or html elements, they can execute arbitrary code and redirect to hackers website. 
+  To identify .innerHTML the assigment is user-controlled.If an attacker can inject html elements, they can execute arbitrary. 
