@@ -1,9 +1,9 @@
-# .globstar/no_debugger.yml
+# .globstar/location_assign.yml
 
 language: js 
 name: location_assign 
-message: Remove the debugger statement before committing your code
-
+message: Remove usage of URLSearchParams or document.getElementById inside location.assign()
+category: security
 # Capture name must be the same as the checker's `name` field.
 # Nested captures are allowed to have arbitrary names
 pattern: |
@@ -55,7 +55,7 @@ pattern: |
         )]
         
     )
-  ) 
+  )  @location_assign
 
 filters:
   # This will not flag any debugger statements
@@ -72,4 +72,4 @@ exclude:
   - bin/*
 
 description: |
-  The `debugger` statement is a debugging tool that is not meant to be committed to the repository. It can cause the application to stop unexpectedly and is generally considered bad practice. Remove the `debugger` statement before committing your code.
+  To identify location.assign() where the argument is user-controlled.If an attacker can inject JavaScript into url or html elements, they can execute arbitrary code and redirect to hackers website. 
