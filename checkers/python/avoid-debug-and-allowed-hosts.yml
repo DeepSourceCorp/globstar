@@ -1,0 +1,21 @@
+language: py
+name: avoid-debug-and-allowed-hosts
+message: Detected setting the value of DEBUG = True or ALLOWED_HOSTS = ["*""]
+category: security
+
+pattern: |
+  (assignment_expression
+    left: (identifier) @var (#eq? @var "DEBUG")
+    right: (identifier) @debug_value (#eq? @debug_value "True")
+  ) @avoid-debug-and-allowed-hosts
+  (assignment_expression
+    left: (identifier) @var (#eq? @var "ALLOWED_HOSTS")
+    right: (array
+      (string) @host_list
+      (#match? @host_list "\\*")
+    )
+  ) @avoid-debug-and-allowed-hosts
+
+description: |
+  Debug = True and ALLOWED_HOSTS = ["*"] cannot be used in production in django framework.
+
