@@ -1,0 +1,72 @@
+# .globstar/no_inner_html.yml
+
+language: js 
+name: no_inner_html 
+message: Remove usage of URLSearchParams or document.getElementById inside location.assign()
+category: security
+# Capture name must be the same as the checker's `name` field.
+# Nested captures are allowed to have arbitrary names
+pattern: |
+  (expression_statement
+    [(augmented_assignment_expression
+      left: (member_expression
+        object: (_) 
+        property: (property_identifier) @innerHTML (#eq? @innerHTML "innerHTML")
+      )
+      right: [
+      	(template_string) 
+        (member_expression
+        	object : (call_expression
+            function: (member_expression
+          		object: (identifier) @getElement (#eq? @getElement "document")
+          		property: (property_identifier) @getId (#eq? @getId "getElementById")
+        	)
+            arguments: (arguments
+              (string)
+            )
+            
+            )
+            property: (property_identifier) @value (#eq? @value "value")
+        ) 
+      ]
+    )
+    (assignment_expression
+      left: (member_expression
+        object: (_) 
+        property: (property_identifier) @innerHTML (#eq? @innerHTML "innerHTML")
+      )
+      right: [
+      	(template_string) 
+        (member_expression
+        	object : (call_expression
+            function: (member_expression
+          		object: (identifier) @getElement (#eq? @getElement "document")
+          		property: (property_identifier) @getId (#eq? @getId "getElementById")
+        	)
+            arguments: (arguments
+              (string)
+            )
+            
+            )
+            property: (property_identifier) @value (#eq? @value "value")
+        ) 
+      ]
+    )]
+  ) @no_inner_html
+
+filters:
+  # This will not flag any debugger statements
+  # nested inside catch blocks
+  - pattern-not-inside: (catch_clause)
+  # Only match debugger statements inside a function
+  # (or some other node that is inside a function)
+  # - pattern-inside:     (function_declaration)
+
+# files matching these patterns are excluded from analysis
+exclude:
+  - test/*
+  - build/*
+  - bin/*
+
+description: |
+  To identify location.assign() where the argument is user-controlled.If an attacker can inject JavaScript into url or html elements, they can execute arbitrary code and redirect to hackers website. 
