@@ -16,6 +16,7 @@ pattern: |
     )
   ) @avoid-debug-and-allowed-hosts
 
+inculde: ["**/settings.py"]
 description: |
   Debug = True and ALLOWED_HOSTS = ["*"] cannot be used in production in django framework.
 
