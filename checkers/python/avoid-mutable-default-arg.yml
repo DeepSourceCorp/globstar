@@ -1,6 +1,6 @@
 language: py
 name: avoid-mutable-default-arg
-message: "Avoid using mutable default arguments in function definitions. Use None as the default and initialize the mutable object inside the function."
+message: Avoid using mutable default arguments in function definitions. Use None as the default and initialize the mutable object inside the function.
 category: bug-risk
 severity: error
 
