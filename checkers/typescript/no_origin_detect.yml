@@ -1,6 +1,6 @@
 language: ts
 name: no_origin_detect
-message: Detected not validating if origin to websocket is correct or not
+message: Not validating origin inside websocket connection
 category: security
 
 pattern: |
