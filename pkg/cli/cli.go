@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -26,6 +28,7 @@ type Cli struct {
 	Config *config.Config
 }
 
+
 func (c *Cli) loadConfig() error {
 	conf, err := config.NewConfigFromFile(filepath.Join(c.RootDirectory, ".globstar", ".config.yml"))
 	if err != nil {
@@ -35,6 +38,57 @@ func (c *Cli) loadConfig() error {
 	c.Config = conf
 	return nil
 }
+
+func (c *Cli) GetChangedFiles() ([]string, error) {
+
+	cmd := exec.Command("git", "status", "--porcelain=v1", "-z")
+	
+	// Set working directory
+	cmd.Dir = c.RootDirectory
+	
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run git status in directory %s: %v", cmd.Dir, err)
+	}
+
+	var files []string
+	
+	// Parse the output
+	for _, line := range strings.Split(strings.TrimRight(out.String(), "\x00"), "\x00") {
+		if len(line) < 3 {
+			continue
+		}
+		
+		status := parseGitStatus(line[:2])
+		path := strings.TrimSpace(line[3:])
+
+		if status == "renamed" {
+			parts := strings.Split(path, " -> ")
+			if len(parts) == 2 {
+				path = parts[1]
+			}
+		}
+
+		if status == "untracked" || status == "deleted" || status == "unknown" {
+			continue
+		}
+		
+		if path != "" {
+			// Convert path to absolute path
+			absPath, err := filepath.Abs(filepath.Join(cmd.Dir, path))
+			if err != nil {
+				return nil, fmt.Errorf("failed to get absolute path for %s: %v", path, err)
+			}
+			
+			files = append(files, absPath)
+		}
+	}
+
+	return files, nil
+}
+
 
 func (c *Cli) Run() error {
 	err := c.loadConfig()
@@ -284,10 +338,21 @@ func (c *Cli) RunLints(
 		}
 	}
 
+	// git integration to track changed files.
+	changedFiles, err := c.GetChangedFiles()
+	if err != nil {
+		return fmt.Errorf("Failed to get changed files: %w", err)
+	}
+
 	result := lintResult{}
-	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			// skip this path
+			return nil
+		}
+
+		if !slices.Contains(changedFiles, path) {
+			// skip this path, if it's not changed/modified
 			return nil
 		}
 
@@ -373,4 +438,23 @@ func (c *Cli) RunLints(
 	}
 
 	return err
+}
+
+
+func parseGitStatus(code string) string {
+	code = strings.TrimSpace(code)
+	switch code {
+	case "M", "MM":
+		return "modified"
+	case "A":
+		return "added"
+	case "D":
+		return "deleted"
+	case "R":
+		return "renamed"
+	case "??":
+		return "untracked"
+	default:
+		return "unknown"
+	}
 }
