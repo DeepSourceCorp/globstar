@@ -1,0 +1,94 @@
+language: py
+name: tainted-pickle-deserialize
+message: Using `pickle` can lead to code execution vulneralibilites
+category: security
+
+pattern: |
+  (call
+    function: (attribute
+      object: (identifier) @picklname
+      attribute: (identifier) @method)
+    arguments: (argument_list
+      [(subscript
+        value: (identifier) @event
+        subscript: (_)*)
+
+        (string
+          (_)*
+          (interpolation
+            expression: (subscript
+              value: (identifier) @event
+              subscript: (_)*))
+          (_)*) 
+
+        (binary_operator
+          left: (string)
+          right: (subscript
+            value: (identifier) @event
+            subscript: (_)*))
+
+        (call
+          function: (attribute
+            object: (string)
+            attribute: (identifier) @format)
+          arguments: (argument_list
+            (subscript
+              value: (identifier) @event
+              subscript: (_)*)))
+      ])
+    (#match? @picklname "^(_pickle|cPickle|pickle|dill|shelve)$")
+    (#match? @method "^(load|loads|open)$")
+    (#eq? @event "event")) @tainted-pickle-deserialize
+
+  (call
+    function: (call
+      function: (identifier) @method
+      arguments: (argument_list
+      [
+        (call
+          function: (attribute
+            object: (string)
+            attribute: (identifier) @format)
+          arguments: (argument_list
+            (subscript
+              value: (identifier) @event
+              subscript: (_)*)))
+        
+        (subscript
+          value: (identifier) @event
+          subscript: (_))
+
+        (binary_operator
+          left: (string)
+          right: (subscript
+            value: (identifier) @event
+            subscript: (_)*))
+
+        (string
+          (_)*
+          (interpolation
+            expression: (subscript
+              value: (identifier) @event
+              subscript: (_)*))
+          (_)*)
+
+      ]))
+    arguments: (argument_list (_))
+    (#eq? @method "loads")
+    (#eq? @event "event")) @tainted-pickle-deserialize
+
+
+filters:
+  - pattern-inside: |
+      (function_definition
+        name: (identifier) @funcname
+        parameters: (parameters
+          (_)*
+          (identifier) @event
+          (_)*)
+        (#match? @funcname ".*handler.*")
+        (#eq? @event "event")
+      )
+
+description: |
+  Using `pickle` introduces a risk of code execution vulnerabilities. Serialized data can be altered to execute arbitrary code. Consider using a text-based format like JSON for safer serialization.
