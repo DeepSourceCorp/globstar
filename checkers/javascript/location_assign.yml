@@ -1,0 +1,75 @@
+# .globstar/location_assign.yml
+
+language: js 
+name: location_assign 
+message: Remove usage of URLSearchParams or document.getElementById inside location.assign()
+category: security
+# Capture name must be the same as the checker's `name` field.
+# Nested captures are allowed to have arbitrary names
+pattern: |
+  (call_expression
+      function: (member_expression
+        object: (identifier) @object
+        (#eq? @object "location")
+        property: (property_identifier) @property
+        (#eq? @property "assign")
+      )
+    arguments: (arguments
+    
+        [(member_expression
+        	object : (call_expression
+            	function : (member_expression
+                  object : (identifier) @dom_object
+                  (#eq? @dom_object "document")
+                  property: (property_identifier) @dom_method
+                  (#eq? @dom_method "getElementById")
+                )
+                arguments : (arguments
+                	
+                )
+            )
+                  ;;property: (property_identifier) @dom_method
+        )
+        (call_expression
+            function: (member_expression
+              object: (new_expression
+                constructor: (identifier) @constructor
+                (#eq? @constructor "URLSearchParams")
+                arguments: (arguments
+                	(member_expression
+                    	object : (member_expression
+                          object: (identifier) @win
+                          (#eq? @win "window")
+                          property: (property_identifier) @win_prop
+                          (#eq? @win_prop "location")
+                        )
+                    property: (property_identifier) @search_prop
+                    (#eq? @search_prop "search")
+                    )
+                 )
+                
+                )
+              property: (property_identifier) @search_method
+              (#eq? @search_method "get")
+              )
+        )]
+        
+    )
+  )  @location_assign
+
+filters:
+  # This will not flag any debugger statements
+  # nested inside catch blocks
+  - pattern-not-inside: (catch_clause)
+  # Only match debugger statements inside a function
+  # (or some other node that is inside a function)
+  # - pattern-inside:     (function_declaration)
+
+# files matching these patterns are excluded from analysis
+exclude:
+  - test/*
+  - build/*
+  - bin/*
+
+description: |
+  To identify location.assign() where the argument is user-controlled.If an attacker can inject JavaScript into url or html elements, they can execute arbitrary code and redirect to hackers website. 
