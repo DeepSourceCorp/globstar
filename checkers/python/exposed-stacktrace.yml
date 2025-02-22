@@ -1,0 +1,24 @@
+language: py
+name: exposed-stacktrace
+message: Detect exposed stack traces
+
+pattern: |
+  ((assignment
+      left: (identifier) @var
+      right: (call
+        function: (attribute
+          object: (identifier) @module
+          attribute: (identifier) @func)))
+    (return_statement
+      (call
+        function: (identifier) @resp
+        arguments: (argument_list (identifier) @stacktrace)))
+    (#eq? @module "traceback")
+    (#match? @func "format_(stack|exc|tb)")
+    (#match? @resp "(Json|Http)Response")
+    (#eq? @stacktrace @var)) @exposed-stacktrace
+
+description: |
+  Stack traces may expose sensitive information, including file paths,
+  folder structures, and internal logic. Instead of returning a stack
+  trace, use logging to monitor program behaviour safely.
