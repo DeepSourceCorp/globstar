@@ -9,8 +9,11 @@ category: security
 pattern: |
   (call_expression
       function: (member_expression
-        object: (identifier) @object
-        (#eq? @object "location")
+        object: [((identifier) @loc_obj (#eq? @loc_obj "location"))
+          		 (member_expression
+    			    object: (identifier) @win (#eq? @win "window")
+    				property: (property_identifier) @win_loc (#eq? @win_loc "location")
+  				)]
         property: (property_identifier) @property
         (#eq? @property "assign")
       )
@@ -18,7 +21,7 @@ pattern: |
     
         [(member_expression
         	object : (call_expression
-            	function : (member_expression
+            	function : (member_expression 
                   object : (identifier) @dom_object
                   (#eq? @dom_object "document")
                   property: (property_identifier) @dom_method
