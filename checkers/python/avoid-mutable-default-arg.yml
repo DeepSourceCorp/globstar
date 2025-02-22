@@ -1,0 +1,24 @@
+language: py
+name: avoid-mutable-default-arg
+message: "Avoid using mutable default arguments in function definitions. Use None as the default and initialize the mutable object inside the function."
+category: bug-risk
+severity: error
+
+pattern: |
+  (function_definition
+    parameters: (parameters
+      (default_parameter
+        name: (identifier) @param
+        value: (list | dict | set) @mutable)))
+  (#match? @mutable "^(\\[.*\\]|\\{.*\\}|set\\(.*\\))$") @avoid-mutable-default-arg
+
+description: |
+  Mutable default arguments (like [] or {}) are evaluated only once when the function is defined.
+  This means that the same object is used in all subsequent calls to the function, which can lead
+  to unexpected behavior. Instead, use None as the default value and assign a new list or dict inside the function.
+  
+  **Example (Bad):**
+  ```python
+  def append_item(item, my_list=[]):
+      my_list.append(item)
+      return my_list
