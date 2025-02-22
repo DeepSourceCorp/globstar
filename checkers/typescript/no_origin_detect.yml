@@ -1,0 +1,37 @@
+language: ts
+name: no_origin_detect
+message: Detected not validating if origin to websocket is correct or not
+category: security
+
+pattern: |
+  (call_expression
+      function: (member_expression
+          object: (identifier) @wss (#eq? @wss "wss")
+          property: (property_identifier) @on (#eq? @on "on")
+          
+      )         
+      arguments: (arguments
+          (string
+              (string_fragment) @event_name (#eq? @event_name "connection")
+          )
+          (arrow_function
+          	  parameters : (formal_parameters
+              	(required_parameter
+                	pattern : (identifier) @inputws (#eq? @inputws "ws") 
+                 ) 
+                 (required_parameter
+                	pattern : (identifier) @inputreq (#eq? @inputreq "req") 
+                 ) 
+               )
+    
+              body : (statement_block
+                  (_)* @lines
+                  (#not-match? @lines "if\\s*\\(\\s*origin\\s*!==") 
+              ) 
+          )
+       )       
+  ) @no_origin_detect
+
+description: |
+  WebSocket Connection without Origin Check can accept data from any website , always check for correct origin
+
