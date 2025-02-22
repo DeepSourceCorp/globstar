@@ -1,0 +1,26 @@
+language: ts
+name: bypass_assertion
+message: Found assertion being by passed, assign  directly to a typed varibale
+category: security
+
+pattern: |
+  (
+    (interface_declaration
+      name : (type_identifier) @interface_name
+    )
+    (_)*
+    (lexical_declaration
+      (variable_declarator 
+          value : (as_expression
+              (type_identifier) @inter_name (#e? @inter_name @interface_name)
+            
+            )
+        ) 
+
+    ) 
+  ) @bypass_assertion
+
+description: |
+  Found assertion being by passed, assign  directly to a typed varibale
+
+  
