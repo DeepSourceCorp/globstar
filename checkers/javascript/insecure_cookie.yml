@@ -1,11 +1,9 @@
-# .globstar/no_inner_html.yml
+# .globstar/insecure_cookie.yml
 
 language: js 
-name: insecure_cookie.yml 
+name: insecure_cookie
 message: Make httpOnly to true or secure to true or sameSite to Strict
 category: security
-# Capture name must be the same as the checker's `name` field.
-# Nested captures are allowed to have arbitrary names
 pattern: |
   
   (call_expression
@@ -27,20 +25,6 @@ pattern: |
     (#match? @insecure_key "httpOnly|secure|sameSite")
     (#eq? @insecure_value "false")
   ) @insecure_cookie
-
-filters:
-  # This will not flag any debugger statements
-  # nested inside catch blocks
-  - pattern-not-inside: (catch_clause)
-  # Only match debugger statements inside a function
-  # (or some other node that is inside a function)
-  # - pattern-inside:     (function_declaration)
-
-# files matching these patterns are excluded from analysis
-exclude:
-  - test/*
-  - build/*
-  - bin/*
 
 description: |
   To identify cookies sent insecurly and which can be accessed direclty. 
