@@ -12,12 +12,12 @@ pattern: |
               (#match? @components "createServer")
           )	
       )
-      source : (string) @package_name (#match? @package_name "http")
+      source : (string) @package_name (#eq? @package_name "http")
     )
     (lexical_declaration
         (variable_declarator
             value : (call_expression
-                function : (identifier) @used_comp_name (#match? @used_comp_name "createServer")		
+                function : (identifier) @used_comp_name (#eq? @used_comp_name "createServer")		
               )
           )
     )
