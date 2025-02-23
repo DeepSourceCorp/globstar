@@ -1,0 +1,105 @@
+language: ts
+name: unsanirized_input_send
+message: Detected unsanitized input being passed to send 
+category: security
+
+pattern: |
+  (
+  (import_statement
+    (import_clause
+        (identifier) @pack_name (#eq @pack_name "express"))
+  
+  )
+  (lexical_declaration
+    (variable_declarator
+        name : (identifier) @declar_name
+      )
+  )
+  (expression_statement
+    (call_expression
+        function : (member_expression
+            object : (identifier)  @invoke_name (#eq @invoke_name @declar_name)
+              property : (property_identifier) @prop (#eq @prop "use")
+              
+          )
+          (arguments
+          
+          [(
+            (arrow_function
+              parameters : (formal_parameters
+                    (required_parameter
+                        pattern : (identifier) @h
+                          type : (type_annotation
+                            (type_identifier) @type 
+                          )
+                        
+                  
+                      ) 
+                  )
+                  body : (_
+                    (lexical_declaration
+                        (variable_declarator
+                            name : (object_pattern
+                                (shorthand_property_identifier_pattern) @vars
+                              )
+                          )
+                            
+                        
+                      )
+                      [(if_statement
+                        consequence : (_
+                            (return_statement
+                                (call_expression
+                                      function : (member_expression
+                                        object : [(call_expression
+                                                )
+                                                (identifier)
+                                                  ]
+                                          property : (property_identifier) @se (#eq? @se "send")
+                                
+                                  )
+                                      arguments : (arguments
+                                      (template_string
+                                          (template_substitution
+                                              (identifier) @unsani (#match @unsani @vars)
+                                          )
+                                      ) 
+                                  )
+
+                                  
+                                  )
+                              ) 
+                          )
+                      ) 
+                      (return_statement
+                        (call_expression
+                            function : (member_expression
+                                object : (identifier
+                                    
+                                  ) @fgbf (#match @fgbf @h )
+                                  property :(_) @jsdhv (#eq? @jsdhv "send")
+                                  
+                              )
+                              arguments : (arguments
+                                (template_string
+                                    (template_substitution
+                                        (identifier) @unsano (#match @unsano @vars)
+                                    )
+                                  ) 
+                              )
+                          )
+                      ) 
+                      ]
+                  )
+            ) 
+          )
+          ]        
+          )
+      )
+  )
+
+  ) @unsanirized_input_send
+
+description: |
+  Unsanitized input from an HTTP parameter flows into send, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).
+
