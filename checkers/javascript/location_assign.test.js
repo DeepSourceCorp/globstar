@@ -1,3 +1,4 @@
+// Match
 // <expect-error>
 location.assign(document.getElementById("input").value);
 // <expect-error>
