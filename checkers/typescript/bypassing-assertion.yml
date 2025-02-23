@@ -12,7 +12,7 @@ pattern: |
     (lexical_declaration
       (variable_declarator 
           value : (as_expression
-              (type_identifier) @inter_name (#e? @inter_name @interface_name)
+              (type_identifier) @inter_name (#eq? @inter_name @interface_name)
             
             )
         ) 
