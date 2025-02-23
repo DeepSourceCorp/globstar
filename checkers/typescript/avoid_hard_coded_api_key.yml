@@ -1,0 +1,15 @@
+language: ts
+name: avoid_hard_coded_api_key
+message: Harcoded API keys found , Please use env varaibles to fetch secret data
+category: security
+
+pattern: |
+  (lexical_declaration
+  	(variable_declarator
+    	name : (identifier) @api_key (#match? @api_key "^(default|DEFAULT|)[aA][pP][iI][kK][eE][yY]$")
+    )
+  ) @avoid_hard_coded_api_key
+
+description: |
+  Hard Coded API keys when exposed can be used by hackers and can cause severe damage
+
