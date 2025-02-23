@@ -1,0 +1,28 @@
+language: ts
+name: avoid_using_http_server
+message: Detected usage of http server which is insecure Please use https
+category: security
+
+pattern: |
+  ( 
+    (import_statement
+    (import_clause
+        (named_imports
+            (import_specifier) @components
+              (#match? @components "createServer")
+          )	
+      )
+      source : (string) @package_name (#match? @package_name "http")
+    )
+    (lexical_declaration
+        (variable_declarator
+            value : (call_expression
+                function : (identifier) @used_comp_name (#match? @used_comp_name "createServer")		
+              )
+          )
+    )
+  ) @avoid_using_http_server
+
+description: |
+  Detected usage of http server which is insecure Please use https 
+
