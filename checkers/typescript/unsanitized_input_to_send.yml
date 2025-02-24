@@ -1,5 +1,5 @@
 language: ts
-name: unsanirized_input_send
+name: unsanitized_input_to_send
 message: Detected unsanitized input being passed to send 
 category: security
 
@@ -12,14 +12,14 @@ pattern: |
   )
   (lexical_declaration
     (variable_declarator
-        name : (identifier) @declar_name
+        name : (identifier) @express_declaration
       )
   )
   (expression_statement
     (call_expression
         function : (member_expression
-            object : (identifier)  @invoke_name (#eq @invoke_name @declar_name)
-              property : (property_identifier) @prop (#eq @prop "use")
+            object : (identifier)  @invoke_name (#eq @invoke_name @express_declaration)
+              property : (property_identifier) @property (#eq @property "use")
               
           )
           (arguments
@@ -28,7 +28,7 @@ pattern: |
             (arrow_function
               parameters : (formal_parameters
                     (required_parameter
-                        pattern : (identifier) @h
+                        pattern : (identifier) @var_name
                           type : (type_annotation
                             (type_identifier) @type 
                           )
@@ -55,13 +55,13 @@ pattern: |
                                                 )
                                                 (identifier)
                                                   ]
-                                          property : (property_identifier) @se (#eq? @se "send")
+                                          property : (property_identifier) @send_prop (#eq? @send_prop "send")
                                 
                                   )
                                       arguments : (arguments
                                       (template_string
                                           (template_substitution
-                                              (identifier) @unsani (#match @unsani @vars)
+                                              (identifier) @unsani_var_name(#match @unsani_var_name@vars)
                                           )
                                       ) 
                                   )
@@ -76,14 +76,14 @@ pattern: |
                             function : (member_expression
                                 object : (identifier
                                     
-                                  ) @fgbf (#match @fgbf @h )
-                                  property :(_) @jsdhv (#eq? @jsdhv "send")
+                                  ) @resp_var_name (#match @resp_var_name @var_name )
+                                  property :(_) @send_func (#eq? @send_func "send")
                                   
                               )
                               arguments : (arguments
                                 (template_string
                                     (template_substitution
-                                        (identifier) @unsano (#match @unsano @vars)
+                                        (identifier) @unsanitized_input (#match @unsanitized_input @vars)
                                     )
                                   ) 
                               )
@@ -98,7 +98,7 @@ pattern: |
       )
   )
 
-  ) @unsanirized_input_send
+  ) @unsanitized_input_to_send
 
 description: |
   Unsanitized input from an HTTP parameter flows into send, where it is used to render an HTML page returned to the user. This may result in a Cross-Site Scripting attack (XSS).
