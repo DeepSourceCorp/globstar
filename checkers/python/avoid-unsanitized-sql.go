@@ -42,8 +42,10 @@ func checkSQLInjection(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Nod
 	// If the query string is built unsafely, report an issue.
 	if isUnsafeString(firstArg, source) {
 		ana.Report(&analysis.Issue{
-			Message: "Direct use of unsafe string in SQL query",
-			Range:   node.Range(),
+			Message:  "Concatenated string in SQL query is an SQL injection threat!",
+			Category: analysis.CategorySecurity,
+			Severity: analysis.SeverityCritical,
+			Range:    node.Range(),
 		})
 		return
 	}
