@@ -272,6 +272,7 @@ func convertImportToPath(importStr string) string {
 
 func main() {
 	// Create a slice of analyzers. In this case, we include the SQLInjection analyzer.
+	fmt.Println("print if ever executed")
 	analyzers := []*analysis.Analyzer{
 		SQLInjection(),
 	}
