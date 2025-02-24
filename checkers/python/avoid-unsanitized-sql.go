@@ -2,7 +2,6 @@ package python
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -266,29 +265,4 @@ func getNthChild(node *sitter.Node, n int) *sitter.Node {
 // convertImportToPath converts a dotted module name to a file path (e.g. "a.b" -> "a/b.py").
 func convertImportToPath(importStr string) string {
 	return strings.ReplaceAll(importStr, ".", string(filepath.Separator)) + ".py"
-}
-
-//everything beyond this point is a test
-
-func main() {
-	// Create a slice of analyzers. In this case, we include the SQLInjection analyzer.
-	fmt.Println("print if ever executed")
-	analyzers := []*analysis.Analyzer{
-		SQLInjection(),
-	}
-
-	// Run the analyzers on the specified directory.
-	issues, err := analysis.RunAnalyzers("./afile.py", analyzers)
-	if err != nil {
-		fmt.Println("Error running analyzers:", err)
-		os.Exit(1)
-	}
-
-	// Optionally, report the issues in text format.
-	output, err := analysis.ReportIssues(issues, "text")
-	if err != nil {
-		fmt.Println("Error reporting issues:", err)
-		os.Exit(1)
-	}
-	fmt.Println(string(output))
 }
