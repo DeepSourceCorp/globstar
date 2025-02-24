@@ -9,28 +9,9 @@ import (
 	"globstar.dev/analysis"
 )
 
-// SQLInjection creates an analyzer that detects unsafe SQL query construction.
-func SQLInjection() *analysis.Analyzer {
-	return &analysis.Analyzer{
-		Name:        "sql-injection",
-		Description: "Detects unsafe SQL query construction",
-		Category:    analysis.CategorySecurity,
-		Severity:    analysis.SeverityCritical,
-		Language:    analysis.LangPy, // assuming LangPy is defined elsewhere
-		Run: func(pass *analysis.Pass) (interface{}, error) {
-			// Define an inner function that captures pass.
-			fn := func(n *sitter.Node) {
-				visitCall(pass, n)
-			}
-			analysis.Preorder(pass, fn)
-			return nil, nil
-		},
-	}
-}
-
-// visitCall checks if a call node is a SQL execution call and if its arguments are unsafe.
-func visitCall(pass *analysis.Pass, node *sitter.Node) {
-	source := pass.FileContext.Source
+// checkSQLInjection is the rule callback that inspects each call node.
+func checkSQLInjection(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
+	source := ana.FileContext.Source
 
 	// Only process call nodes.
 	if node.Type() != "call" {
@@ -60,18 +41,28 @@ func visitCall(pass *analysis.Pass, node *sitter.Node) {
 
 	// If the query string is built unsafely, report an issue.
 	if isUnsafeString(firstArg, source) {
-		pass.Report(pass, node, "Direct use of unsafe string in SQL query")
+		ana.Report(&analysis.Issue{
+			Message: "Direct use of unsafe string in SQL query",
+			Range:   node.Range(),
+		})
 		return
 	}
 
 	// If the argument is an identifier, trace its origin.
 	if firstArg.Type() == "identifier" {
 		varName := firstArg.Content(source)
-		traceVariableOrigin(pass, varName, node, make(map[string]bool), make(map[string]bool), source)
+		traceVariableOrigin(r, ana, varName, node, make(map[string]bool), make(map[string]bool), source)
 	}
 }
 
-// isSQLExecuteMethod returns true if the function node is one of the SQL execution methods.
+// SQLInjection registers the SQL injection rule.
+func SQLInjection() analysis.Rule {
+	var entry analysis.VisitFn = checkSQLInjection
+	return analysis.CreateRule("call", analysis.LangPy, &entry, nil)
+}
+
+// --- Helper Functions ---
+
 func isSQLExecuteMethod(node *sitter.Node, source []byte) bool {
 	var funcName string
 	switch node.Type() {
@@ -92,7 +83,6 @@ func isSQLExecuteMethod(node *sitter.Node, source []byte) bool {
 	return sqlMethods[funcName]
 }
 
-// isUnsafeString returns true if the node represents an unsafely built string (e.g. f-string interpolation or unsafe concatenation).
 func isUnsafeString(node *sitter.Node, source []byte) bool {
 	// Check for f-strings with interpolation.
 	if node.Type() == "fstring" {
@@ -115,8 +105,7 @@ func isUnsafeString(node *sitter.Node, source []byte) bool {
 	return false
 }
 
-// traceVariableOrigin recursively traces the origin of a variable through local assignments and cross‐file imports.
-func traceVariableOrigin(pass *analysis.Pass, varName string, originalNode *sitter.Node,
+func traceVariableOrigin(r analysis.Rule, ana *analysis.Analyzer, varName string, originalNode *sitter.Node,
 	visitedVars map[string]bool, visitedFiles map[string]bool, source []byte) {
 
 	if visitedVars[varName] {
@@ -124,19 +113,18 @@ func traceVariableOrigin(pass *analysis.Pass, varName string, originalNode *sitt
 	}
 	visitedVars[varName] = true
 
-	if traceLocalAssignments(pass, varName, originalNode, visitedVars, visitedFiles, source) {
+	if traceLocalAssignments(r, ana, varName, originalNode, visitedVars, visitedFiles, source) {
 		return
 	}
 
-	traceCrossFileImports(pass, varName, originalNode, visitedVars, visitedFiles, source)
+	traceCrossFileImports(r, ana, varName, originalNode, visitedVars, visitedFiles, source)
 }
 
-// traceLocalAssignments looks for local assignments to the variable and reports if it originates from an unsafe string.
-func traceLocalAssignments(pass *analysis.Pass, varName string, originalNode *sitter.Node,
+func traceLocalAssignments(r analysis.Rule, ana *analysis.Analyzer, varName string, originalNode *sitter.Node,
 	visitedVars map[string]bool, visitedFiles map[string]bool, source []byte) bool {
 
 	query := `(assignment left: (identifier) @var right: (_) @value)`
-	q, err := sitter.NewQuery([]byte(query), pass.Analyzer.Language.Parser())
+	q, err := sitter.NewQuery([]byte(query), ana.Language.Parser())
 	if err != nil {
 		return false
 	}
@@ -144,7 +132,7 @@ func traceLocalAssignments(pass *analysis.Pass, varName string, originalNode *si
 
 	cursor := sitter.NewQueryCursor()
 	defer cursor.Close()
-	cursor.Exec(q, pass.FileContext.Ast)
+	cursor.Exec(q, ana.FileContext.Ast)
 
 	for {
 		match, ok := cursor.NextMatch()
@@ -164,13 +152,16 @@ func traceLocalAssignments(pass *analysis.Pass, varName string, originalNode *si
 
 		if varNode != nil && varNode.Content(source) == varName {
 			if isUnsafeString(valueNode, source) {
-				pass.Report(pass, originalNode, fmt.Sprintf("Variable '%s' originates from an unsafe string", varName))
+				ana.Report(&analysis.Issue{
+					Message: fmt.Sprintf("Variable '%s' originates from an unsafe string", varName),
+					Range:   originalNode.Range(),
+				})
 				return true
 			}
 
 			if valueNode.Type() == "identifier" {
 				newVar := valueNode.Content(source)
-				traceVariableOrigin(pass, newVar, originalNode, visitedVars, visitedFiles, source)
+				traceVariableOrigin(r, ana, newVar, originalNode, visitedVars, visitedFiles, source)
 				return true
 			}
 		}
@@ -178,8 +169,7 @@ func traceLocalAssignments(pass *analysis.Pass, varName string, originalNode *si
 	return false
 }
 
-// traceCrossFileImports looks for import-from statements to trace the variable across files.
-func traceCrossFileImports(pass *analysis.Pass, varName string, originalNode *sitter.Node,
+func traceCrossFileImports(r analysis.Rule, ana *analysis.Analyzer, varName string, originalNode *sitter.Node,
 	visitedVars map[string]bool, visitedFiles map[string]bool, source []byte) {
 
 	query := `(
@@ -188,7 +178,7 @@ func traceCrossFileImports(pass *analysis.Pass, varName string, originalNode *si
 			name: (dotted_name) @imported_var
 		) @import
 	)`
-	q, err := sitter.NewQuery([]byte(query), pass.Analyzer.Language.Parser())
+	q, err := sitter.NewQuery([]byte(query), ana.Language.Parser())
 	if err != nil {
 		return
 	}
@@ -196,7 +186,7 @@ func traceCrossFileImports(pass *analysis.Pass, varName string, originalNode *si
 
 	cursor := sitter.NewQueryCursor()
 	defer cursor.Close()
-	cursor.Exec(q, pass.FileContext.Ast)
+	cursor.Exec(q, ana.FileContext.Ast)
 
 	for {
 		match, ok := cursor.NextMatch()
@@ -221,22 +211,22 @@ func traceCrossFileImports(pass *analysis.Pass, varName string, originalNode *si
 			}
 			visitedFiles[modulePath] = true
 
-			for _, file := range pass.Files {
+			for _, file := range ana.Files {
 				if strings.HasSuffix(file.FilePath, modulePath) {
-					newPass := &analysis.Pass{
-						Analyzer:    pass.Analyzer,
+					// Create a temporary analyzer context for the imported file.
+					tempAna := &analysis.Analyzer{
+						Language:    ana.Language,
 						FileContext: file,
-						Files:       pass.Files,
-						Report:      pass.Report,
+						Files:       ana.Files,
+						Report:      ana.Report, // Reuse the report function.
 					}
-					traceVariableOrigin(newPass, varName, originalNode, visitedVars, visitedFiles, file.Source)
+					traceVariableOrigin(r, tempAna, varName, originalNode, visitedVars, visitedFiles, file.Source)
 				}
 			}
 		}
 	}
 }
 
-// containsVariable returns true if the node (or any of its subnodes) is an identifier or attribute.
 func containsVariable(node *sitter.Node, source []byte) bool {
 	if node == nil {
 		return false
@@ -254,7 +244,6 @@ func containsVariable(node *sitter.Node, source []byte) bool {
 	}
 }
 
-// getNthChild returns the nth child of a node or nil if out of bounds.
 func getNthChild(node *sitter.Node, n int) *sitter.Node {
 	if n < int(node.ChildCount()) {
 		return node.Child(n)
@@ -262,7 +251,6 @@ func getNthChild(node *sitter.Node, n int) *sitter.Node {
 	return nil
 }
 
-// convertImportToPath converts a dotted module name to a file path (e.g. "a.b" -> "a/b.py").
 func convertImportToPath(importStr string) string {
 	return strings.ReplaceAll(importStr, ".", string(filepath.Separator)) + ".py"
 }
