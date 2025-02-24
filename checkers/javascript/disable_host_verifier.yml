@@ -1,0 +1,46 @@
+language: js
+name: disable_host_verifier
+message: The hostVerifier function in the ssh2 configuration is set to always return true, disabling host key verification.
+category: security
+
+pattern: |
+  (object
+    (pair
+      key: (property_identifier) @key (#eq? @key "hostVerifier")
+      value: (arrow_function
+        parameters: (formal_parameters)
+        body: (true) @ssh2_hostverifier
+      )
+    )
+  ) @disable_host_verifier
+
+description: |
+  The hostVerifier function in the ssh2 configuration is set to always return true, disabling host key verification.
+  This makes the SSH connection vulnerable to Man-in-the-Middle (MITM) attacks, allowing attackers to intercept sensitive data, inject malicious commands, or impersonate the target server.
+# Example:
+# Insecure Code (Vulnerable to MITM attacks)
+# const conn = new Client();
+# conn.connect({
+#   host: "example.com",
+#   port: 22,
+#   username: "user",
+#   password: "password",
+#   hostVerifier: () => true //Disables host key verification!
+# });
+
+# Secure Code (Proper Host Key Verification)
+# const crypto = require('crypto');
+# const trustedFingerprint = 'SHA256:your_known_fingerprint_here';
+
+# const conn = new Client();
+# conn.connect({
+#   host: "example.com",
+#   port: 22,
+#   username: "user",
+#   password: "password",
+#   hostVerifier: (key) => {
+#     const fingerprint = crypto.createHash('sha256').update(key).digest('base64');
+#     return fingerprint === trustedFingerprint.split('SHA256:')[1];
+#   }
+# });
+# This ensures the SSH connection is only established with a trusted server, preventing unauthorized access.
