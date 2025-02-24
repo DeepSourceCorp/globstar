@@ -1,0 +1,28 @@
+language: rust
+name: avoid_unwrap
+message: "Using unwrap() may cause panics if the Option is None or the Result is Err, consider handling errors with match or expect()"
+category: antipattern
+severity: warning
+
+pattern: |
+  (
+    (call_expression
+      function: (field_expression
+        value: (_) @variable
+        field: (field_identifier) @method_name
+        (#eq? @method_name "unwrap")
+      )
+      arguments: (arguments)
+    ) @avoid_unwrap
+  )
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/test_*.rs"
+  - "**/*_test.rs"
+
+description: |
+  The use of .unwrap() in Rust can lead to unexpected panics if the value is None (for Option) or Err (for Result).
+  This can lead to crashes in production and make debugging harder. Consider handling errors explicitly with match
+  or use expect() if a panic is acceptable.
