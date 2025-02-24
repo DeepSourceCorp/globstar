@@ -3,7 +3,7 @@
     <source media="(prefers-color-scheme: dark)" srcset="./docs/public/img/logo-wordmark-dark.svg">
     <img alt="Globstar" src="./docs/public/img/logo-wordmark.svg" height="64">
   </picture>
-  <p align="center">Fast, feature-rich, open-source static analysis toolkit for writing and running code quality and SAST checkers.</p>
+  <p align="center">Write SAST checkers with Globstar and run them in your CI with a single binary. It's fast, easy to write, and MIT-licensed.</p>
   <hr />
 </p>
 
@@ -79,7 +79,7 @@ description: |
   Remove the `debugger` statement before committing your code.
 ```
 
-A guide to writing tree-sitter queries can be found [here](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html), along with [this interactive playground](https://tree-sitter.github.io/tree-sitter/7-playground.html). Refer to the [Checker YAML Interface](/reference/checker-yaml) for a detailed explanation of the fields in a checker definition.
+A guide to writing tree-sitter queries can be found [here](https://tree-sitter.github.io/tree-sitter/using-parsers/queries/index.html), along with [this interactive playground](https://tree-sitter.github.io/tree-sitter/7-playground.html). Refer to the [Checker YAML Interface](https://globstar.dev/reference/checker-yaml) for a detailed explanation of the fields in a checker definition.
 
 ### Running in CI
 
