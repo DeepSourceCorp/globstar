@@ -1,0 +1,16 @@
+language: rs
+name: unsafe_functions
+message: Detected the usage of unsafe functions
+category: security
+
+pattern: |
+  (
+    (function_item 
+    (function_modifiers) @fun (#eq? @fun "unsafe")
+    )
+    (unsafe_block) @unsface
+  ) @unsafe_functions
+
+description: |
+  Detected the usage of unsafe functions ,if you use unsafe code incorrectly, problems can occur due to memory unsafety, such as null pointer dereferencing
+
