@@ -1,0 +1,34 @@
+language: js
+name: avoid_null_jwt_key
+message: Detected the usage of null key , Please provide a secret key (for HMAC) or a public key (for RSA/ECDSA).
+category: security
+
+pattern: |
+  (
+    (variable_declarator
+      name : (identifier) @var_name
+      value : (_
+          function : (identifier) @require (#eq @require @var_name)
+          arguments : (arguments
+              (string
+                  (string_fragment) @pack (#eq @pack "jsonwebtoken")
+                )
+            )
+        )
+
+    )
+    (call_expression
+      function : (member_expression
+          object : (identifier) @obj (#eq @obj @var_name)
+            property : (property_identifier) @prop (#eq @prop "verify")
+        )
+        arguments : (arguments
+          (_)
+            (null) @null
+        )
+    )
+  ) @avoid_null_jwt_key
+
+description: |
+  The JWT verification function if not specified a secret key or allowed algorithms, makes it vulnerable to the "none" algorithm attack. This allows attackers to forge unsigned JWTs and bypass authentication
+
