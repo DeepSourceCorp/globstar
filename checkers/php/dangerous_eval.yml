@@ -1,0 +1,78 @@
+language: php
+name: dangerous_eval
+message: "Avoid using eval() with dynamic inputs as it can lead to remote code execution (RCE) vulnerabilities"
+category: security
+severity: critical
+
+pattern: |
+  ;; Match direct eval calls with variable input
+  (expression_statement
+    (function_call_expression
+      function: (name) @function (#eq? @function "eval")
+      arguments: (arguments
+        (argument
+          (variable_name) @user_input
+        )
+      )
+    )
+  ) @dangerous_eval
+
+  ;; Match eval calls with string concatenation
+  (expression_statement
+    (function_call_expression
+      function: (name) @function (#eq? @function "eval")
+      arguments: (arguments
+        (argument
+          (binary_expression
+            left: [
+              (encapsed_string)
+              (binary_expression)
+            ]
+            right: [
+              (encapsed_string)
+              (variable_name) @user_input
+            ]
+          )
+        )
+      )
+    )
+  ) @dangerous_eval
+
+  ;; Match eval calls with interpolated strings containing variables
+  (expression_statement
+    (function_call_expression
+      function: (name) @function (#eq? @function "eval")
+      arguments: (arguments
+        (argument
+          (encapsed_string
+            (variable_name) @user_input
+          )
+        )
+      )
+    )
+  ) @dangerous_eval
+
+  ;; Match eval calls with superglobal input sources
+  (expression_statement
+    (function_call_expression
+      function: (name) @function (#eq? @function "eval")
+      arguments: (arguments
+        (argument
+          (subscript_expression
+            (variable_name (name) @superglobal)
+            (#match? @superglobal "^_(GET|POST|REQUEST|COOKIE|SERVER|ENV|FILES|SESSION)$")
+          )
+        )
+      )
+    )
+  ) @dangerous_eval
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/test_*.php"
+  - "**/*_test.php"
+
+description: |
+  The use of eval() in PHP without validating the input can lead to the execution
+  of arbitrary code, resulting in potential remote code execution (RCE) vulnerabilities.
