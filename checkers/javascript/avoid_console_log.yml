@@ -1,0 +1,26 @@
+language: js
+name: avoid_console_log
+message: Detected the usage of console.log use a logging library
+category: security
+
+pattern: |
+  (call_expression
+    function : (member_expression
+        object : (identifier) @obj (#eq @obj "console")
+          property : (property_identifier) @prop (#eq @prop "log")
+      )
+  ) @avoid_console_log
+
+description: |
+  Problems with console.log() in Production:
+  Security Risk: It may expose sensitive data in logs visible to users (e.g., via browser dev tools).
+  Performance Issues: Logging can slow down applications, especially in high-traffic environments.
+  Lack of Log Levels: console.log() doesn't support structured logging or log levels for filtering messages.
+  
+  Use a Logging Library
+    Instead of console.log(), use a structured logging library like:
+
+    winston (popular for Node.js)
+    pino (high-performance logger for Node.js)
+    loglevel (lightweight logging for the browser)
+
