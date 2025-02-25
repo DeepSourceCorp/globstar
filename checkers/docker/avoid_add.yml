@@ -1,6 +1,6 @@
 language: dockerfile
 name: avoid_add
-message: "Avoid using the 'ADD' instruction in Dockerfiles, prefer 'COPY' instead for copying files"
+message: "Avoid using the 'ADD' instruction, prefer 'COPY' instead for copying files"
 category: antipattern
 severity: warning
 
