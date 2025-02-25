@@ -152,7 +152,7 @@ func (c *Cli) BuildDependencyGraph() error {
 
         // Add dependencies to the graph
         for _, dep := range deps {
-            c.DependencyGraph.AddDependency(path, dep)
+            c.DependencyGraph.AddDependency(path, dep, c.RootDirectory)
         }
 
         return nil
@@ -442,12 +442,14 @@ func (c *Cli) RunLints(
 	}
 
 	for _, file := range changedFiles {
-		err := c.DependencyGraph.GetFileDependencies(file)	
+		fmt.Printf("Dependencies for file %s : ", file)
+		_, err := c.DependencyGraph.GetFileDependencies(file)	
+		fmt.Println()
 		if err != nil {
-			return err
+			fmt.Println(err)
+			continue
 		}
 	}	
-
 
 
 	result := lintResult{}
