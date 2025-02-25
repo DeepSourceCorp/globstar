@@ -1,0 +1,55 @@
+language: ruby
+name: ruby_eval_method
+message: "Avoid using 'eval' as it allows arbitrary code execution and is a security risk."
+category: security
+severity: critical
+pattern: >
+  (call
+  method: (identifier) @func
+  (#eq? @func "eval")) @ruby_eval_method
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**" 
+description: |
+  Issue:
+  The `eval` method is highly dangerous as it can execute arbitrary code, making it a major security vulnerability. 
+  Attackers can exploit `eval` to execute malicious commands, leading to Remote Code Execution (RCE).
+
+  Why is this a problem?
+  - Executes untrusted user input, leading to security breaches.
+  - Allows attackers to inject and execute malicious code.
+  - Hard to debug and maintain securely.
+
+  Remediation:
+  - Do not use `eval` to execute user input.
+  - Use case statements, whitelisting, or explicit parsing instead.
+  - If evaluating mathematical expressions, use safe alternatives like `send`, `public_send`, or `Kernel#binding`.
+
+  Example Fix:
+  ```ruby
+  params = { 'b' => '1 + 1' }
+
+  # Insecure: Using eval (Avoid this)
+  result = eval(params['b'])  # Security risk!
+
+  # Secure Alternative: Using explicit math parsing
+  def safe_eval(expression)
+    allowed_operations = %w[+ - * /]
+    tokens = expression.split
+
+    if tokens.size == 3 && allowed_operations.include?(tokens[1])
+      num1 = Integer(tokens[0]) rescue nil
+      num2 = Integer(tokens[2]) rescue nil
+
+      return num1.send(tokens[1], num2) if num1 && num2
+    end
+
+    raise "Unsafe operation detected!"
+  end
+
+  # Safe usage instead of eval
+  safe_result = safe_eval(params['b'])
+  puts "Safe Evaluated Result: #{safe_result}"
+  ```
