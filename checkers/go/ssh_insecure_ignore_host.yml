@@ -1,0 +1,65 @@
+language: go
+name: go_ssh_insecure_ignore_host
+message: "Avoid ignoring SSH host key verification to prevent insecure connections."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+  (short_var_declaration
+    right: (expression_list
+      (unary_expression
+        operand: (composite_literal
+          type: (qualified_type
+            package: (package_identifier) @ssh_pkg
+            (#eq? @ssh_pkg "ssh")
+            name: (type_identifier) @config_type)
+            (#eq? @config_type "ClientConfig")
+          body: (literal_value
+            (keyed_element
+              (literal_element 
+                (identifier) @callback_field)
+                (#eq? @callback_field "HostKeyCallback")
+              (literal_element
+                (call_expression
+                  function: (selector_expression
+                    operand: (identifier) @ssh_pkg2
+                    (#eq? @ssh_pkg2 "ssh")
+                    field: (field_identifier) @insecure_method
+                    (#eq? @insecure_method "InsecureIgnoreHostKey")
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+  ) @go_ssh_insecure_ignore_host
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The use of ssh.InsecureIgnoreHostKey() disables host key verification, creating a critical security risk.
+  Attackers could perform a man-in-the-middle (MITM) attack, intercepting sensitive data or executing unauthorized commands.
+  
+  Remediation:
+  Instead of using `ssh.InsecureIgnoreHostKey()`, verify host keys securely by providing a known host key callback, such as:
+
+  ```go
+  hostKeyCallback, err := ssh.FixedHostKey(<trusted_host_key>)
+  if err != nil {
+      log.Fatalf("Failed to parse host key: %v", err)
+  }
+  
+  config := &ssh.ClientConfig{
+      User: user,
+      Auth: []ssh.AuthMethod{
+          ssh.Password(password),
+      },
+      HostKeyCallback: hostKeyCallback,
+  }
