@@ -1,0 +1,54 @@
+language: go
+name: go_reflect_pkg
+message: "Reflection is slow and should be avoided unless absolutely necessary."
+category: security
+severity: warning
+pattern: >
+  [
+    ((import_spec
+  path: (interpreted_string_literal) @import_path)
+    (#eq? @import_path "\"reflect\"")) @go_reflect_pkg
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The reflect package enables runtime type introspection and manipulation, but it comes with 
+  significant drawbacks such as poor performance, complex code, and increased risk of runtime errors. 
+  Reflection should be used only when no better alternatives (like generics or type assertions) exist.
+
+  Why this is a problem:
+  - Reflection bypasses compile-time type checking, increasing the risk of runtime panics.
+  - It introduces performance overhead, slowing down the application.
+  - Reflect-based code is harder to read, maintain, and debug.
+
+  Remediation Steps:
+  1. Use type assertions for type-safe operations:  
+     ```go
+     func printType(val interface{}) {
+       if str, ok := val.(string); ok {
+         fmt.Println("Type is string:", str)
+       }
+     }
+     ```
+  2. Use type switches for handling multiple types:  
+     ```go
+     func printType(val interface{}) {
+       switch v := val.(type) {
+       case int:
+         fmt.Println("int:", v)
+       case string:
+         fmt.Println("string:", v)
+       default:
+         fmt.Println("unknown type")
+       }
+     }
+     ```
+  3. Leverage generics (Go 1.18+) to avoid reflection:  
+     ```go
+     func printValue[T any](val T) {
+       fmt.Printf("Value: %v, Type: %T\n", val, val)
+     }
+     ```
