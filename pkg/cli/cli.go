@@ -26,6 +26,8 @@ type Cli struct {
 	// Rules is a list of lints that are applied to the files in `RootDirectory`
 	Rules  []analysis.Rule
 	Config *config.Config
+	// DependencyGraph for the codebase
+	DependencyGraph *analysis.DependencyGraph
 }
 
 
@@ -39,6 +41,7 @@ func (c *Cli) loadConfig() error {
 	return nil
 }
 
+// GetChangedFiles returns the list of files that have been changed in the codebase
 func (c *Cli) GetChangedFiles() ([]string, error) {
 
 	cmd := exec.Command("git", "status", "--porcelain=v1", "-z")
@@ -87,6 +90,95 @@ func (c *Cli) GetChangedFiles() ([]string, error) {
 	}
 
 	return files, nil
+}
+// func (c *Cli) getModuleName() (string, error) {
+// 	goModPath := filepath.Join(c.RootDirectory, "go.mod") 
+
+// 	if _,err := os.Stat(goModPath); os.IsNotExist(err){
+// 		return "", fmt.Errorf("Mod file not found")
+// 	}
+
+
+// 	content, err := os.ReadFile(goModPath)
+// 	if err!= nil{
+// 		return "", err
+// 	}
+
+// 	lines := strings.Split(string(content), "\n")
+// 	for _, line := range lines{
+// 		line = strings.TrimSpace(line)
+// 		if strings.HasPrefix(line, "module ") {
+// 			return strings.TrimSpace(strings.TrimPrefix(line, "module")), nil
+// 		}
+// 	}
+
+// 	return "", fmt.Errorf("module name oculd not be found")
+// }
+
+func (c *Cli) BuildDependencyGraph() error {
+    c.DependencyGraph = analysis.NewDependencyGraph()
+    
+    // Walk through all files in the project to build the dependency graph
+    err := filepath.Walk(c.RootDirectory, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return nil // continue to the next file
+        }
+
+        if info.IsDir() {
+            if c.Config.ShouldExcludePath(path) {
+                return filepath.SkipDir
+            }
+            return nil
+        }
+
+        // Skip excluded paths
+        if c.Config.ShouldExcludePath(path) {
+            return nil
+        }
+
+        // Only process files with known languages
+        language := analysis.LanguageFromFilePath(path)
+        if language == analysis.LangUnknown {
+            return nil
+        }
+
+        // Extract dependencies for this file
+        deps, err := analysis.ExtractDependencies(path)
+        if err != nil {
+            // Log but continue
+            log.Debug().Err(err).Str("path", path).Msg("Failed to extract dependencies")
+            return nil
+        }
+
+        // Add dependencies to the graph
+        for _, dep := range deps {
+            c.DependencyGraph.AddDependency(path, dep)
+        }
+
+        return nil
+    })
+
+    return err
+}
+
+
+
+func (c *Cli) GetAffectedFiles() ([]string, error) {
+    changedFiles, err := c.GetChangedFiles()
+    if err != nil {
+        return nil, err
+    }
+
+    if c.DependencyGraph == nil {
+        if err := c.BuildDependencyGraph(); err != nil {
+            return nil, fmt.Errorf("failed to build dependency graph: %w", err)
+        }
+    }
+
+    // Get all affected files
+    affectedFiles := c.DependencyGraph.GetAffectedFiles(changedFiles)
+
+    return affectedFiles, nil
 }
 
 
@@ -337,12 +429,26 @@ func (c *Cli) RunLints(
 			}
 		}
 	}
+	err := c.BuildDependencyGraph()
+	// c.DependencyGraph.PrintGraph()
+	if err != nil{
+		return fmt.Errorf("could not buuild dep. graph: %v", err)
+	}
 
 	// git integration to track changed files.
 	changedFiles, err := c.GetChangedFiles()
 	if err != nil {
-		return fmt.Errorf("Failed to get changed files: %w", err)
+		return fmt.Errorf("Error building dependency graph: %v\n", err)
 	}
+
+	for _, file := range changedFiles {
+		err := c.DependencyGraph.GetFileDependencies(file)	
+		if err != nil {
+			return err
+		}
+	}	
+
+
 
 	result := lintResult{}
 	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
@@ -352,7 +458,7 @@ func (c *Cli) RunLints(
 		}
 
 		if !slices.Contains(changedFiles, path) {
-			// skip this path, if it's not changed/modified
+			// skip this path(file), if it's not changed/modified
 			return nil
 		}
 

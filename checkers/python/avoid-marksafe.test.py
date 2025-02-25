@@ -2,7 +2,7 @@ from django.utils.safestring import mark_safe
 from django.utils.html import format_html
 from django.http import HttpResponse
 from django.template import loader
-
+# this is a test
 def not_really_safe(request):
     template = loader.get_template('contents.html')
     # <expect-error>
