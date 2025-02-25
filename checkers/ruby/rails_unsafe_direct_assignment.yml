@@ -1,0 +1,34 @@
+language: ruby
+name: ruby_rails_unsafe_direct_assignment
+message: "Avoid using 'attr_accessible :all' to prevent mass assignment vulnerabilities."
+category: security
+severity: critical
+pattern: >
+  (
+    call
+      method: (identifier) @method
+      arguments: (argument_list
+        (simple_symbol) @symbol
+      )
+    (#eq? @method "attr_accessible")
+    (#match? @symbol "^:all$")
+  ) @ruby_rails_unsafe_direct_assignment
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Using `attr_accessible :all` allows mass assignment of all model attributes, which can lead to security vulnerabilities like privilege escalation and unauthorized data modification.  
+  Attackers may exploit this to modify sensitive fields (e.g., `admin`, `role`, `balance`) through crafted requests.
+
+  Remediation: 
+  Remove `attr_accessible :all` and use strong parameters to explicitly whitelist permitted attributes:
+
+  ```ruby
+  # Insecure (vulnerable to mass assignment)
+  attr_accessible :all
+
+  # Secure (with strong parameters)
+  params.require(:user).permit(:name, :email, :password)
+  ```
