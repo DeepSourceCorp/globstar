@@ -1,0 +1,48 @@
+language: go
+name: go_net_bind_all_interfaces
+message: "Avoid binding to all network interfaces to listen for incoming connections."
+category: security
+severity: warning
+pattern: >
+  (
+    (call_expression
+      function: (selector_expression
+        operand: (identifier) @_pkg
+        field: (field_identifier) @_func
+      )
+      arguments: (argument_list
+        (interpreted_string_literal) @protocol
+        (interpreted_string_literal) @address
+      )
+    )
+    (#eq? @_pkg "net")
+    (#eq? @_func "Listen")
+    (#match? @address "\"(0\\.0\\.0\\.0.*|:.*)\"")
+  )
+  @go_net_bind_all_interfaces
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Binding to all network interfaces (`0.0.0.0`) can expose your application to external threats, 
+  increasing the risk of unauthorized access and attacks. 
+
+  Instead, consider binding to a specific IP address or `localhost (127.0.0.1)` if external access is not required.
+
+  Example of Insecure Code:
+  ```go
+  ln, err := net.Listen("tcp", "0.0.0.0:8080")
+  if err != nil {
+      log.Fatal(err)
+  }
+  defer ln.Close()
+
+  Remediation:
+  ```go
+  ln, err := net.Listen("tcp", "127.0.0.1:8080") // Bind to localhost
+  if err != nil {
+      log.Fatal(err)
+  }
+  defer ln.Close()
