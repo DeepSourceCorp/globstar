@@ -1,0 +1,42 @@
+language: py
+name: jwt-python-none-alg
+message: Detected the usage of `none` in the algorithms parameter in JWT token
+category: security
+
+pattern: |
+  (call
+    function: (attribute
+      object: (identifier) @jwt
+      attribute: (identifier) @encode)
+    arguments: (argument_list
+      (_)*
+      (keyword_argument
+        name: (identifier) @algorithm
+        value: (string
+          (string_content) @none))
+      (_)*)
+    (#eq? @jwt "jwt")
+    (#eq? @encode "encode")
+    (#eq? @algorithm "algorithm")
+    (#eq? @none "none")) @jwt-python-none-alg
+
+  
+  (call
+    function: (attribute
+      object: (identifier) @jwt
+      attribute: (identifier) @decode)
+    arguments: (argument_list
+      (_)*
+      (keyword_argument
+        name: (identifier) @algorithms
+        value: (list
+          (string
+            (string_content) @none)))
+      (_)*)
+    (#eq? @jwt "jwt")
+    (#eq? @decode "decode")
+    (#eq? @algorithms "algorithms")
+    (#eq? @none "none")) @jwt-python-none-alg
+
+desciption: |
+  The JWT token uses the 'none' algorithm, which assumes its integrity is already verified. This allows attackers to forge tokens that get automatically verified. Avoid using 'none'; use a secure algorithm like 'HS256' instead.
