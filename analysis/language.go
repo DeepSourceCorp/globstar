@@ -244,19 +244,19 @@ func ParseFile(filePath string) (*ParseResult, error) {
 	return Parse(filePath, source, lang, grammar)
 }
 
-func CommentIdentifierFromPath(path string) string {
+func GetEscapedCommentIdentifierFromPath(path string) string {
 	lang := LanguageFromFilePath(path)
 	switch lang {
 	case LangJs, LangTs, LangTsx, LangJava, LangRust, LangCss, LangMarkdown, LangKotlin, LangCsharp, LangGo, LangGroovy, LangPhp, LangScala, LangSwift:
-		return "//"
+		return "\\/\\/"
 	case LangPy, LangLua, LangBash, LangRuby, LangYaml, LangDockerfile, LangElixir, LangHcl:
 		return "#"
 	case LangSql, LangElm:
 		return "--"
 	case LangHtml:
-		return "<!--"
+		return "<\\!--"
 	case LangOCaml:
-		return "(*"
+		return "\\(\\*"
 	default:
 		return ""
 	}

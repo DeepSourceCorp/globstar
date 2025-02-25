@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
 	sitter "github.com/smacker/go-tree-sitter"
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers/javascript"
@@ -74,27 +74,43 @@ func LoadGoRules() []*goAnalysis.Analyzer {
 	return analyzers
 }
 
-func RunAnalyzerTests(analyzerRegistry []Analyzer) {
+func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
+	passed := true
+	errors := []error{}
 	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("error getting current working directory: %v\n", err)
+		errors = append(errors, err)
+		return false, errors
 	}
+
 	for _, analyzerReg := range analyzerRegistry {
+		analyzerIssueMap := make(map[string]int)
+		for _, analyzer := range analyzerReg.Analyzers {
+			analyzerIssueMap[analyzer.Name] = 0
+		}
+
+		fmt.Printf("Running tests in %s for analyzers:\n", analyzerReg.TestDir)
 		testDir := filepath.Join(cwd, analyzerReg.TestDir)
 		expectedIssues, err := getExpectedIssuesInDir(testDir)
 		if err != nil {
-			fmt.Printf("error getting expected issues in dir %s: %v\n", testDir, err)
-			return
+			err = fmt.Errorf("error getting expected issues in dir %s: %v", testDir, err)
+			passed = false
+			errors = append(errors, err)
+			continue
 		}
 
 		raisedIssues, err := goAnalysis.RunAnalyzers(testDir, analyzerReg.Analyzers)
 		if err != nil {
-			fmt.Printf("error running tests on dir %s: %v\n", testDir, err)
-			return
+			err = fmt.Errorf("error running tests on dir %s: %v", testDir, err)
+			passed = false
+			errors = append(errors, err)
+			continue
 		}
 
 		raisedIssuesMap := make(map[string]map[int][]string)
 		for _, issue := range raisedIssues {
+			analyzerIssueMap[*issue.Id]++
+
 			if _, ok := raisedIssuesMap[issue.Filepath]; !ok {
 				raisedIssuesMap[issue.Filepath] = make(map[int][]string)
 			}
@@ -104,22 +120,119 @@ func RunAnalyzerTests(analyzerRegistry []Analyzer) {
 				raisedIssuesMap[issue.Filepath][line] = []string{}
 			}
 
-			raisedIssuesMap[issue.Filepath][line] = append(raisedIssuesMap[issue.Filepath][line], issue.Message)
+			raisedIssuesMap[issue.Filepath][line] = append(raisedIssuesMap[issue.Filepath][line], fmt.Sprintf("%s: %s", *issue.Id, issue.Message))
+		}
+
+		for analyzerId, issueCount := range analyzerIssueMap {
+			if issueCount == 0 {
+				fmt.Printf("  No tests found for analyzer %s\n", analyzerId)
+				passed = false
+			} else {
+				fmt.Printf("  Running tests for analyzer %s\n", analyzerId)
+			}
 		}
 
 		// verify issues raised are as expected from the test files
 		diff := verifyIssues(&expectedIssues, &raisedIssuesMap)
 		if diff != "" {
-			fmt.Printf("Issues raised in %s are not as expected:\n%s\n", testDir, diff)
-		} else {
-			fmt.Printf("All tests passed in %s\n", testDir)
+			fmt.Printf("Issues raised are not as expected:\n%s\n", diff)
+			passed = false
 		}
 	}
+
+	return passed, errors
 }
 
 func verifyIssues(expectedIssues, raisedIssues *map[string]map[int][]string) string {
-	// TODO: return a human readable string of the diff
-	return cmp.Diff(expectedIssues, raisedIssues)
+	var diffBuilder strings.Builder
+
+	// Compare files
+	for filePath, expectedFileIssues := range *expectedIssues {
+		if len(expectedFileIssues) == 0 {
+			continue
+		}
+
+		raisedFileIssues, exists := (*raisedIssues)[filePath]
+		if !exists {
+			diffBuilder.WriteString(fmt.Sprintf("\nFile: %s\n", filePath))
+			diffBuilder.WriteString("  Expected issues but found none\n")
+			continue
+		}
+
+		// Compare line numbers in each file
+		for line, expectedMessages := range expectedFileIssues {
+			raisedMessages, exists := raisedFileIssues[line]
+			if !exists {
+				diffBuilder.WriteString(fmt.Sprintf("\nFile: %s, Line: %d\n", filePath, line))
+				diffBuilder.WriteString("  Expected:\n")
+				for _, msg := range expectedMessages {
+					diffBuilder.WriteString(fmt.Sprintf("    - %s\n", msg))
+				}
+				diffBuilder.WriteString("  Got: no issues\n")
+				continue
+			}
+
+			// Compare messages at each line
+			if !messagesEqual(expectedMessages, raisedMessages) {
+				diffBuilder.WriteString(fmt.Sprintf("\nFile: %s, Line: %d\n", filePath, line))
+				diffBuilder.WriteString("  Expected:\n")
+				for _, msg := range expectedMessages {
+					diffBuilder.WriteString(fmt.Sprintf("    - %s\n", msg))
+				}
+				diffBuilder.WriteString("  Got:\n")
+				for _, msg := range raisedMessages {
+					diffBuilder.WriteString(fmt.Sprintf("    - %s\n", msg))
+				}
+			}
+		}
+
+		// Check for unexpected issues
+		for line, raisedMessages := range raisedFileIssues {
+			if _, exists := expectedFileIssues[line]; !exists {
+				diffBuilder.WriteString(fmt.Sprintf("\nFile: %s, Line: %d\n", filePath, line))
+				diffBuilder.WriteString("  Expected: no issues\n")
+				diffBuilder.WriteString("  Got:\n")
+				for _, msg := range raisedMessages {
+					diffBuilder.WriteString(fmt.Sprintf("    - %s\n", msg))
+				}
+			}
+		}
+	}
+
+	// Check for issues in unexpected files
+	for filePath, raisedFileIssues := range *raisedIssues {
+		if _, exists := (*expectedIssues)[filePath]; !exists {
+			diffBuilder.WriteString(fmt.Sprintf("\nUnexpected file with issues: %s\n", filePath))
+			for line, messages := range raisedFileIssues {
+				diffBuilder.WriteString(fmt.Sprintf("  Line %d:\n", line))
+				for _, msg := range messages {
+					diffBuilder.WriteString(fmt.Sprintf("    - %s\n", msg))
+				}
+			}
+		}
+	}
+
+	return diffBuilder.String()
+}
+
+// Helper function to compare two slices of messages
+func messagesEqual(expected, actual []string) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+	sort.Strings(expected)
+	sort.Strings(actual)
+	return slicesEqual(expected, actual)
+}
+
+// Helper function to compare two sorted slices
+func slicesEqual(a, b []string) bool {
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func getExpectedIssuesInDir(testDir string) (map[string]map[int][]string, error) {
@@ -163,10 +276,7 @@ func getExpectedIssuesInDir(testDir string) (map[string]map[int][]string, error)
 }
 
 func getExpectedIssuesInFile(file *goAnalysis.ParseResult, query *sitter.Query) map[int][]string {
-	commentIdentifier := goAnalysis.CommentIdentifierFromPath(file.FilePath)
-	commentIdentifier = strings.ReplaceAll(commentIdentifier, "(*", "\\(\\*")
-	commentIdentifier = strings.ReplaceAll(commentIdentifier, "//", "\\/\\/")
-	commentIdentifier = strings.ReplaceAll(commentIdentifier, "<!--", "<\\!--")
+	commentIdentifier := goAnalysis.GetEscapedCommentIdentifierFromPath(file.FilePath)
 
 	pattern := fmt.Sprintf(`^%s\s+<expect-error>\s+(?P<message>.+)$`, commentIdentifier)
 	pragmaRegexp := regexp.MustCompile(pattern)
@@ -198,7 +308,6 @@ func getExpectedIssuesInFile(file *goAnalysis.ParseResult, query *sitter.Query) 
 				// and the line number is 0-indexed
 				expectedLine = int(capture.Node.StartPoint().Row) + 2
 			}
-			// TODO match using regex, use groups to find the expected issue message as well
 			matches := pragmaRegexp.FindAllStringSubmatch(pragma, -1)
 			if matches == nil {
 				continue
