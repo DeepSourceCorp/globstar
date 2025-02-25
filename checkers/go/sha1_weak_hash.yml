@@ -1,0 +1,58 @@
+language: go
+name: go_sha1_weak_hash
+message: "Avoid using SHA-1 to hash sensitive data as it is cryptographically weak."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+    (short_var_declaration
+      left: (expression_list (identifier) @hasher_var)
+      right: (expression_list
+        (call_expression
+          function: (selector_expression
+            operand: (identifier) @hash_pkg 
+            field: (field_identifier) @new_func)
+             (#eq? @hash_pkg "sha1")
+     		 (#eq? @new_func "New"))))
+    
+    (expression_statement
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @write_var
+          field: (field_identifier) @write_method)
+          (#eq? @write_method "Write")))
+    
+    (short_var_declaration
+      right: (expression_list
+        (call_expression
+          function: (selector_expression
+            operand: (identifier) @sum_var
+            field: (field_identifier) @sum_method)
+            (#eq? @sum_method "Sum"))))
+    (#match-vars? @hasher_var @write_var @sum_var)
+  ) @go_sha1_weak_hash
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |  
+  SHA-1 is a cryptographically weak hashing algorithm and is vulnerable to collision attacks, making it unsuitable for hashing sensitive data.  
+  Attackers can exploit SHA-1 weaknesses to generate two different inputs with the same hash, potentially leading to security breaches.
+
+  Impact:  
+  - Potential for data integrity compromise.  
+  - Increased risk of forged signatures and tampered data.  
+  - Fails compliance with modern security standards (e.g., NIST, PCI-DSS).  
+
+  Remediation:  
+  - Replace SHA-1 with SHA-256 or SHA-512:  
+  - Use the `crypto/sha256` or `crypto/sha512` package to ensure stronger security.
+
+  Example (secure - SHA-256):
+  ```go
+  hasher := sha256.New()
+  hasher.Write([]byte("sensitive_data"))
+  hash := hasher.Sum(nil)
