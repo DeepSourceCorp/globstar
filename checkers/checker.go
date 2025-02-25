@@ -148,10 +148,6 @@ func verifyIssues(expectedIssues, raisedIssues *map[string]map[int][]string) str
 
 	// Compare files
 	for filePath, expectedFileIssues := range *expectedIssues {
-		if len(expectedFileIssues) == 0 {
-			continue
-		}
-
 		raisedFileIssues, exists := (*raisedIssues)[filePath]
 		if !exists {
 			diffBuilder.WriteString(fmt.Sprintf("\nFile: %s\n", filePath))
