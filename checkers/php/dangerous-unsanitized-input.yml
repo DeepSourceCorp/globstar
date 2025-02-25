@@ -1,0 +1,76 @@
+language: php
+name: unsanitized_input_handling
+message: "Possible XSS vulnerability detected. Ensure user input is properly validated and output is encoded."
+category: security
+severity: critical
+
+pattern: >
+  (
+    (echo_statement
+      (subscript_expression
+      	(variable_name) @user_input )
+      (#match? @user_input "^(\\$_GET|\\$_POST|\\$_REQUEST|\\$_COOKIE|\\$_SERVER)")
+    )) @vuln_echo
+
+  (
+    (print_intrinsic
+      (subscript_expression
+      	(variable_name) @user_input)
+      (#match? @user_input "^(\\$_GET|\\$_POST|\\$_REQUEST|\\$_COOKIE|\\$_SERVER)")
+    )) @vuln_print
+
+  (
+    (echo_statement
+      (binary_expression
+        right: (variable_name) @user_input
+        (#match? @user_input "^(\\$_GET|\\$_POST|\\$_REQUEST|\\$_COOKIE|\\$_SERVER)")
+      )
+    )) @vuln_html_attr
+
+  (
+    (echo_statement
+      (binary_expression
+        right: (variable_name) @user_input
+        (#match? @user_input "^(\\$_GET|\\$_POST|\\$_REQUEST|\\$_COOKIE|\\$_SERVER)")
+      )
+    )) @vuln_js_inject
+
+exclude:
+  - "**/vendor/**"
+  - "**/tests/**"
+
+description: |
+  description: |
+    Issue:
+      Outputting unsanitized user input without escaping special HTML characters can lead to Cross-Site Scripting (XSS), a critical security vulnerability. This occurs when user-controlled data is directly embedded into the page without proper encoding or sanitization.
+
+    Risk:
+      Directly printing $_GET, $_POST, $_COOKIE, or other user-controlled input without escaping allows attackers to inject malicious scripts. This can result in:
+        - Theft of sensitive user data, including session cookies and login credentials.
+        - Defacement or manipulation of the webpage.
+        - Execution of unauthorized actions on behalf of authenticated users (Session Hijacking).
+
+    Example Attack:
+      Consider the following insecure PHP code:
+
+      ```php
+      <?php echo $_GET['q']; ?>
+      ```
+
+      If accessed with a URL like `?q=<script>alert(1)</script>`, the injected script will execute in the victim's browser, potentially compromising security.
+
+    Security Measures:
+      To prevent XSS attacks, implement proper input sanitization and output encoding techniques:
+
+      1. Escape Output Properly:
+         - Use `htmlspecialchars($_GET['q'], ENT_QUOTES, 'UTF-8');` to escape HTML characters before rendering output.
+         - If the input is intended for use in JavaScript, use `json_encode($_GET['q']);`.
+
+      2. Input Validation:
+         - Restrict the accepted input format using validation functions like:
+           ```php
+           filter_input(INPUT_GET, 'q', FILTER_SANITIZE_STRING);
+           ```
+         - Use allowlists (whitelists) for expected values instead of relying on blacklists.
+
+    By following these best practices, applications can significantly reduce the risk of XSS vulnerabilities and ensure a secure web environment.
