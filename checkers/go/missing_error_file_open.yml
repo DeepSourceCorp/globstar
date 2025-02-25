@@ -1,0 +1,47 @@
+language: go
+name: go_missing_error_file_open
+message: "Failing to check errors returned by os.Open"
+category: best-practice
+severity: warning
+pattern: >
+  (
+    (short_var_declaration
+      left: (expression_list
+        (identifier) @file_var 
+        (identifier) @err_var)
+      right: (expression_list
+        (call_expression
+          function: (selector_expression
+            operand: (identifier) @os
+            field: (field_identifier) @open_func))
+    ) @body
+
+  (#eq? @os "os")
+  (#match? @open_func "^Open")
+  (#eq? @err_var "_")
+  )) @go_missing_error_file_open
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  In Go, functions like `os.Open` return two values: a file handle (`*os.File`) and an error. The error indicates whether the file was successfully opened, with common failure cases including the file not existing, insufficient permissions, or invalid file paths. 
+  Ignoring this error by assigning it to `_` can lead to serious issues.
+
+  Impact:
+  - Nil Pointer Dereferences: If the file fails to open, the returned `*os.File` will be `nil`. Attempting to use this `nil` file handle (e.g., calling `f.Read()`) will cause a runtime panic, crashing the program unexpectedly.
+  - Silent Failures: Without checking the error, the program may proceed with invalid assumptions, such as assuming the file was opened successfully, leading to incorrect behavior like processing empty data or skipping critical configuration.
+  - Security Risks: If the file contains security-critical data (e.g., a policy or credentials file), ignoring the error might allow the program to run with unsafe defaults, potentially exposing vulnerabilities.
+
+  Remediation:
+  ```go
+  f, err := os.Open("config.txt") 
+  if err != nil {   // Check the error
+    fmt.Println("Failed to open file")
+  }
+  data, _ := ioutil.ReadAll(f) 
+  fmt.Println(string(data))
+  
