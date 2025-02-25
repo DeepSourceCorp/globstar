@@ -1,0 +1,13 @@
+language: dockerfile
+name: avoid_add
+message: "Avoid using the 'ADD' instruction, prefer 'COPY' instead for copying files"
+category: antipattern
+severity: warning
+
+pattern: |
+  (add_instruction) @avoid_add
+
+description: |
+  The 'ADD' instruction in Dockerfiles should be avoided due to its unintended side effects,
+  such as automatic archive extraction and remote URL downloads, which can introduce security risks.
+  If you only need to copy files into the image, prefer the use of 'COPY'.
