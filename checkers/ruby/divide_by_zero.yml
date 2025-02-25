@@ -1,0 +1,69 @@
+language: ruby
+name: ruby_divide_by_zero
+message: "Avoid division by zero; it raises a ZeroDivisionError and can crash the application."
+category: error
+severity: error
+patterns: 
+  - > 
+    ((binary
+    left: (_)
+    right: (integer) @denominator) @binary
+    (#match? @binary "/")
+    (#eq? @denominator "0")) @ruby_divide_by_zero
+
+  - >
+    ((assignment
+      left: (identifier) @var_name
+      right: (integer) @zero_value)
+    (#eq? @zero_value "0")
+    (_)
+    (assignment
+      left: (identifier)
+      right: (binary
+        left: (identifier)
+        right: (identifier) @divisor) @binary)
+    (#eq? @var_name @divisor)
+    (#match? @binary "/")) @ruby_divide_by_zero
+
+  - >
+    ((assignment
+      left: (identifier) @var_name
+      right: (integer) @zero_value)
+    (#eq? @zero_value "0")
+    (_)
+    (call
+      method: (identifier)
+      arguments: (argument_list
+        (binary
+          left: (identifier)
+          right: (identifier) @divisor) @binary))
+    (#eq? @var_name @divisor)
+    (#match? @binary "/")) @ruby_divide_by_zero
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Division by zero is undefined in mathematics and raises a `ZeroDivisionError` in Ruby, 
+  potentially causing application crashes or unexpected behavior.
+
+  Why is this a problem?
+  - Raises an unhandled exception, leading to program termination.
+  - Can cause logic errors and disrupt application flow.
+  - Indicates a lack of input validation or defensive programming.
+
+  Remediation:
+  - Ensure the divisor is not zero before performing division.
+  - Use conditional checks or exception handling to prevent crashes.
+
+  Example Fix:
+  ```ruby
+  def safe_divide(a, b)
+    return "Division by zero is not allowed" if b.zero?
+    a / b
+  end
+
+  puts safe_divide(10, 2)  # => 5
+  puts safe_divide(10, 0)  # => "Division by zero is not allowed"
+  ```
