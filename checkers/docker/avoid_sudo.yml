@@ -1,6 +1,6 @@
 language: dockerfile
 name: avoid_sudo
-message: "Avoid using 'sudo' in RUN commands; Dockerfiles execute commands as root by default"
+message: "Avoid using 'sudo' in RUN commands as Docker executes commands as root by default"
 category: antipattern
 severity: warning
 
