@@ -1,0 +1,32 @@
+language: go
+name: go_insecure_cookie
+message: "Avoid using http.SetCookie to set cookies without the Secure flag to prevent insecure cookie handling."
+category: security
+severity: critical
+pattern: >
+  [
+    (call_expression
+      function: (selector_expression
+        operand: (identifier) @http
+        field: (field_identifier) @method
+        (#match? @http "^http$")
+        (#match? @method "^SetCookie$"))
+      arguments: (argument_list
+        (unary_expression
+          (composite_literal
+            (qualified_type
+              package: (package_identifier) @pkg
+              name: (type_identifier) @type
+              (#match? @pkg "^http$")
+              (#match? @type "^Cookie$"))
+            (literal_value) @cookie_body
+            (#not-match? @cookie_body ".*Secure.*true.*"))))) @go_insecure_cookie
+  ]
+exclude:  
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The Secure flag prevents cookies from being sent over an unencrypted connection. This helps
+  mitigate the risk. 
