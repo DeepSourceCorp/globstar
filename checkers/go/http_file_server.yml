@@ -1,0 +1,61 @@
+language: go
+name: go_http_file_server
+message: "Usage of http.FileServer can expose directory listings, allowing attackers to browse and access sensitive files."
+category: security
+severity: critical
+pattern: >
+  (
+    (
+  (call_expression
+    function: (selector_expression
+      operand: (identifier) @_pkg
+      field: (field_identifier) @_func
+    )
+    arguments: (argument_list
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @_dir_pkg
+          field: (field_identifier) @_dir_func
+        )
+      )
+    )
+  )
+  (#eq? @_pkg "http")
+  (#eq? @_func "FileServer")
+  (#eq? @_dir_pkg "http")
+  (#eq? @_dir_func "Dir"))
+  )@go_http_file_server
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |  
+   Issue:
+    The `http.FileServer` function serves files from the specified file system. If not properly configured, it **enables directory listing** by default, allowing attackers to:  
+    - Browse server directories  
+    - Access sensitive files (e.g., `.env`, backups, config files)  
+    - Exploit exposed files for further attacks  
+
+    Impact: 
+    Unauthorized file access can lead to:  
+    - Exposure of credentials, secrets, or configuration data  
+    - Discovery of backup files or deployment scripts  
+    - Increased attack surface for directory traversal or privilege escalation attacks  
+
+    Remediation:
+    - Disable directory listing by using `http.Dir` to specify a single directory or a custom file system.
+    - Restrict access to specific directories/files
+
+    Example:  
+    ```go
+    http.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir(".")))) // Vulnerable: exposes entire working directory
+
+    // Example of safe handler
+    mux := http.NewServeMux()
+    mux.HandleFunc("/safe", func(w http.ResponseWriter, r *http.Request) {
+      w.Write([]byte("This is a safe handler using http.NewServeMux."))
+    })
+    ```
+
