@@ -1,0 +1,48 @@
+language: go
+name: go_des_weak_crypto
+message: "Avoid using DES for cryptographic operations as it is cryptographically weak."
+category: security
+severity: critical
+pattern: >
+  [
+    (call_expression
+  function: (selector_expression
+    operand: (identifier) @pkg
+    field: (field_identifier) @func
+    (#eq? @pkg "des")
+    (#match? @func "^(NewTripleDESCipher|NewCipher)$"))) @go_des_weak_crypto
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  Data Encryption Standard (DES) and Triple DES (3DES) are considered cryptographically weak and insecure. 
+  DES has a short key length (56 bits), making it highly susceptible to brute-force attacks, 
+  while 3DES, though an improvement, has also been deprecated due to security vulnerabilities and slower performance.
+
+  Impact:
+  Using DES or 3DES can expose sensitive data to attackers, compromising confidentiality and data integrity.
+
+  Remediation:
+  - Do not use DES or 3DES: Remove usage of `des.NewCipher` or `des.NewTripleDESCipher`.  
+  - Use AES instead:** Replace with the `crypto/aes` package, which provides strong encryption with 128, 192, or 256-bit keys.  
+  - Ensure secure key management:** Use properly generated keys and avoid hardcoding sensitive data.
+
+  **Secure Example:**  
+  ```go
+  import (
+    "crypto/aes"
+  )
+
+  func use_aes() {
+    
+    key := []byte("example key 1234")
+    // Safe use of aes 
+    _, err := aes.NewCipher(key)
+    if err != nil {
+      panic(err)
+    }
+  }
