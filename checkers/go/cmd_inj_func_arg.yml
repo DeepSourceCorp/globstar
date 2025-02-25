@@ -1,0 +1,57 @@
+language: go
+name: go_cmd_inj_func_arg
+message: "Avoid using unsanitized user input in functions susceptible to command injection."
+category: security
+severity: critical
+pattern: >
+  (
+  function_declaration
+    parameters: (parameter_list
+      (parameter_declaration
+        name: (identifier) @param_name))
+    body: (block
+      (short_var_declaration
+        right: (expression_list
+          (unary_expression
+            operand: (composite_literal
+              type: (qualified_type
+                package: (package_identifier) @pkg
+                name: (type_identifier) @type)
+              body: (literal_value
+                (keyed_element
+                  (literal_element (identifier) @field)
+                  (literal_element (identifier) @value)))))))
+  (#eq? @param_name "userInput")
+  (#eq? @pkg "exec")
+  (#eq? @type "Cmd")
+  (#eq? @field "Path")
+  (#eq? @value @param_name)
+  )) @go_cmd_inj_func_arg
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+Description: |
+  Using unsanitized user input in command execution functions (such as those from the 'os/exec' package) can lead to command injection vulnerabilities, allowing attackers to execute arbitrary system commands. 
+  This can result in unauthorized access, data exfiltration, or system compromise.
+
+  Why it matters: 
+  Command injection is a critical security vulnerability that can lead to complete system control by an attacker if exploited.
+
+  Remediation:
+  - **Validate input:** Use strict whitelists to allow only expected values.  
+  - **Sanitize input:** Remove or escape potentially dangerous characters.  
+  - **Avoid direct usage:** Do not directly pass user input to command execution functions. Use safe alternatives like providing arguments as slices instead of concatenated strings.  
+
+  **secure example:**  
+  ```go
+  func runCommand(userInput string) {
+      cmdPath := sanitizeInput(userInput) // Sanitize input
+      cmd := &exec.Cmd{
+          Path: cmdPath, 
+          Args: []string{"foo", "bar"},
+      }
+      cmd.Run()
+  }
