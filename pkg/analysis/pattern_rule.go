@@ -67,6 +67,7 @@ type patternRuleImpl struct {
 	severity     config.Severity
 	pathFilter   *PathFilter
 	filters      []NodeFilter
+	analyzerDefs []AnalyzerDef
 }
 
 func (r *patternRuleImpl) Language() Language {
@@ -83,6 +84,10 @@ func (r *patternRuleImpl) OnMatch(
 	matchedNode *sitter.Node,
 	captures []sitter.QueryCapture,
 ) {
+	// Run analyzers first
+	if !ana.runAnalyzers(r.analyzerDefs, captures, matchedQuery) {
+		return
+	}
 
 	// replace all '@<capture-name>' with the corresponding capture value
 	message := r.issueMessage
@@ -151,11 +156,12 @@ type filterYAML struct {
 }
 
 type PatternRuleFile struct {
-	Language string          `yaml:"language"`
-	Code     string          `yaml:"name"`
-	Message  string          `yaml:"message"`
-	Category config.Category `yaml:"category"`
-	Severity config.Severity `yaml:"severity"`
+	Language  string          `yaml:"language"`
+	Code      string          `yaml:"name"`
+	Message   string          `yaml:"message"`
+	Category  config.Category `yaml:"category"`
+	Severity  config.Severity `yaml:"severity"`
+	Analyzers []AnalyzerDef   `yaml:"analyzers,omitempty"`
 	// Pattern is a single pattern in the form of:
 	// pattern: (some_pattern)
 	// in the YAML file
@@ -168,6 +174,12 @@ type PatternRuleFile struct {
 	Filters     []filterYAML `yaml:"filters,omitempty"`
 	Exclude     []string     `yaml:"exclude,omitempty"`
 	Include     []string     `yaml:"include,omitempty"`
+}
+
+type AnalyzerDef struct {
+	Name    string                 `yaml:"name"`
+	Capture string                 `yaml:"capture"`
+	Config  map[string]interface{} `yaml:"config,omitempty"`
 }
 
 // DecodeLanguage converts a stringified language name to its corresponding
@@ -349,6 +361,7 @@ func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 		issueId:      rule.Code,
 		pathFilter:   pathFilter,
 		filters:      filters,
+		analyzerDefs: rule.Analyzers,
 	}
 
 	return patternRule, nil

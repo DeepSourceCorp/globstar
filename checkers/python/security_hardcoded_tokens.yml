@@ -1,0 +1,32 @@
+language: python
+name: security_hardcoded_tokens
+message: "Potential hardcoded credential detected"
+category: security
+severity: warning
+
+pattern: |
+  ((call
+    function: (identifier) @func_name
+    arguments: (argument_list
+      (keyword_argument
+        name: (identifier) @arg_name
+        value: (string
+          (string_content) @token_val
+        )
+      )
+    )
+  )
+  (#match? @arg_name "^(token|secret|key|password)$")) @security_hardcoded_tokens
+
+analyzers:
+  - name: entropy
+    capture: "token_val"
+    config:
+      min: 3.5
+
+exclude:
+  - "test/**"
+  - "**/*_test.py"
+
+description: |
+  Hardcoded credentials pose a significant security risk. Use secure secret management systems instead of embedding secrets directly in code. 
