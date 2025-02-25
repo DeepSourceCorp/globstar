@@ -1,0 +1,75 @@
+language: go
+name: go_samesite_cookie
+message: "Avoid using SameSite=None attribute in cookies to prevent CSRF attacks."
+category: security
+severity: critical
+pattern: >
+    (
+      (
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @_pkg
+          (#eq? @_pkg "http")
+          field: (field_identifier) @_func
+          (#eq? @_func "SetCookie")
+        )
+        arguments: (argument_list
+          (unary_expression
+            operand: (composite_literal
+              type: (qualified_type
+                package: (package_identifier) @_cookie_pkg
+                (#eq? @_cookie_pkg "http")
+                name: (type_identifier) @_type
+                (#eq? @_type "Cookie")
+              )
+              body: (literal_value) @value
+              
+                (#not-match? @value "(.*SameSiteLaxMode|.*SameSiteStrictMode)")
+              )
+            )
+          )
+        )
+    )
+    )@go_samesite_cookie
+
+    
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Using the SameSite=None attribute in cookies can make your application vulnerable to 
+  Cross-Site Request Forgery (CSRF) attacks, potentially allowing attackers to perform unauthorized 
+  actions on behalf of authenticated users. 
+
+  Why this is a problem:
+  - Cookies with SameSite=None are sent with cross-origin requests, enabling CSRF attacks.
+  - Sensitive operations (e.g., financial transactions) can be triggered by malicious third-party sites.
+  - It exposes user data to potential data leakage through cross-site requests.
+
+  Remediation Steps:
+  1. Use SameSite=Lax (recommended for most scenarios):  
+     Allows safe navigation while mitigating CSRF risks.
+     ```go
+     http.SetCookie(w, &http.Cookie{
+       Name:     "session_id",
+       Value:    "secure_value",
+       SameSite: http.SameSiteLaxMode,
+     })
+     ```
+  2. Use SameSite=Strict (for maximum security):  
+     Restricts cookies to same-site requests only, ideal for sensitive applications.
+     ```go
+     http.SetCookie(w, &http.Cookie{
+       Name:     "session_id",
+       Value:    "secure_value",
+       SameSite: http.SameSiteStrictMode,
+     })
+     ```
+  3. Only use SameSite=None when absolutely necessary:  
+     If cross-origin requests are required, ensure `Secure: true` is set and use additional CSRF mitigations.
+
+
+  
