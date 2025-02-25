@@ -1,0 +1,33 @@
+language: go
+name: go_unsafe_pkg
+message: "Avoid using unsafe package to prevent unsafe operations."
+category: security
+severity: warning
+pattern: >
+  [
+    ((import_spec
+  path: (interpreted_string_literal) @import_path)
+    (#eq? @import_path "\"unsafe\"")) @go_unsafe_pkg
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The `unsafe` package allows low-level memory manipulation, which can bypass Go’s type safety and lead to unpredictable behavior, memory corruption, or security vulnerabilities.
+  Its use should be avoided unless absolutely necessary for performance-critical operations.
+
+  Remediation:
+  - Use standard Go libraries instead of `unsafe` wherever possible.
+  - If `unsafe` is required, ensure it is well-documented and reviewed for security implications.
+
+  Example (Unsafe Usage - Avoid):
+  ```go
+  import "unsafe"
+
+  func unsafePointerConversion() {
+      var x int = 42
+      ptr := unsafe.Pointer(&x)
+      _ = ptr
+  }
