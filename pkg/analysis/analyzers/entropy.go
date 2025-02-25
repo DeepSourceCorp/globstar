@@ -7,7 +7,7 @@ import (
 // EntropyAnalyzer checks if the entropy of the given content is at least the minimum entropy.
 // Returns true if the content passes the check, false otherwise.
 func EntropyAnalyzer(content string, config map[string]interface{}) bool {
-	minEntropy := 3.0 // default
+	minEntropy := 3.0
 	if val, ok := config["min"].(float64); ok {
 		minEntropy = val
 	}
