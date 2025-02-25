@@ -1,0 +1,41 @@
+language: ruby
+name: ruby_blowfish_weak_crypto
+message: "Avoid using Blowfish for cryptographic operations. It is considered weak and susceptible to attacks."
+category: security
+severity: critical
+pattern: >
+  (
+  call
+  receiver: (scope_resolution
+    scope: (constant) @crypto_namespace
+    name: (constant) @crypto_algo
+  )
+  (#eq? @crypto_namespace "Crypt")
+  (#eq? @crypto_algo "Blowfish")
+  ) @ruby_blowfish_weak_crypto
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The Blowfish encryption algorithm is outdated and considered cryptographically weak. It is vulnerable to 
+  brute-force attacks due to its small key size and slower performance compared to modern alternatives. 
+
+  Why is this an issue?
+  - Blowfish is not resistant to modern cryptanalysis.
+  - It lacks support for authenticated encryption, making it unsuitable for sensitive data.
+  - Faster and more secure algorithms like AES (Advanced Encryption Standard) are widely recommended.
+
+  Remediation:
+  - Replace Blowfish with AES using a well-maintained library such as `OpenSSL::Cipher` or `bcrypt` for password hashing.
+  
+  Example Fix:
+  ```ruby
+  require 'openssl'
+
+  cipher = OpenSSL::Cipher.new('aes-256-gcm')
+  cipher.encrypt
+  key = cipher.random_key
+  iv = cipher.random_iv
+  ```
