@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -9,6 +10,7 @@ import (
 type DependencyGraph struct {
     dependencies map[string][]string // file -> dependencies
     dependents   map[string][]string // file -> files that depend on it
+    moduleName string
 }
 
 func NewDependencyGraph() *DependencyGraph {
@@ -20,7 +22,7 @@ func NewDependencyGraph() *DependencyGraph {
     return dg
 }
 
-func IsInternalDependency(dependency string, rootDir string, language Language) bool {
+func (dg *DependencyGraph) IsInternalDependency(dependency string, rootDir string, language Language) bool {
     if filepath.IsAbs(dependency) {
         relPath, err := filepath.Rel(rootDir, dependency)
         if err != nil {
@@ -33,9 +35,25 @@ func IsInternalDependency(dependency string, rootDir string, language Language) 
     // Language-specific checks
     switch language {
     case LangGo:
-        // Check if it's a local Go module
-        // You might need to read the go.mod file to get the module name
-        modulePrefix := "globstar.dev/" // Replace with your module name
+        //extract the moduleName
+        var modulePrefix string
+        goMod := filepath.Join(rootDir, "go.mod")
+        content, err := os.ReadFile(goMod)
+        if err != nil {
+            return false
+        }
+        lines := strings.Split(string(content), "\n")
+        for _, line := range lines {
+            line = strings.TrimSpace(line)
+            if strings.HasPrefix(line, "module "){
+                modulePrefix = strings.TrimSpace(strings.TrimPrefix(line, "module"))
+                dg.moduleName = modulePrefix
+            }else{
+               continue 
+            }
+            
+        }
+
         return strings.HasPrefix(dependency, modulePrefix)
     case LangJs, LangTs:
         // For JS/TS, relative imports are internal
@@ -44,7 +62,6 @@ func IsInternalDependency(dependency string, rootDir string, language Language) 
         // For Python, check if it's a local module
         // This is a simplified check
         return !strings.Contains(dependency, ".")
-    // Add more language-specific checks as needed
     }
     
     return false
@@ -57,9 +74,45 @@ func (dg *DependencyGraph) AddDependency(file, dependency string, rootDir string
     if file == dependency {
         return
     }
-
-    if !IsInternalDependency(dependency, rootDir, LanguageFromFilePath(file)) {
+    language := LanguageFromFilePath(file)
+    if !dg.IsInternalDependency(dependency, rootDir, language) {
         return
+    }
+
+    if language == LangGo && !filepath.IsAbs(dependency) {
+        // Convert import path to directory path
+        relPath := strings.TrimPrefix(dependency, dg.moduleName)
+        // Remove leading slash if present
+        relPath = strings.TrimPrefix(relPath, "/")
+        packageDir := filepath.Join(rootDir, relPath)
+        
+        // Find all Go files in the package
+        goFiles, err := findGoFilesInPackage(packageDir)
+        if err == nil && len(goFiles) > 0 {
+            // Add each Go file as a dependency
+            for _, goFile := range goFiles {
+                if file == goFile {
+                    continue // Skip self-dependencies
+                }
+                
+                // Check if this dependency already exists
+                alreadyExists := false
+                for _, dep := range dg.dependencies[file] {
+                    if dep == goFile {
+                        alreadyExists = true
+                        break
+                    }
+                }
+                
+                if !alreadyExists {
+                    dg.dependencies[file] = append(dg.dependencies[file], goFile)
+                    dg.dependents[goFile] = append(dg.dependents[goFile], file)
+                }
+            }
+            return
+        }
+        // If we couldn't find Go files, fall back to using the package directory
+        dependency = packageDir
     }
 
     for _, dep := range dg.dependencies[file] {
@@ -68,8 +121,44 @@ func (dg *DependencyGraph) AddDependency(file, dependency string, rootDir string
         }
     }
 
+    // if LanguageFromFilePath(file) == LangGo{
+    //     relPath := strings.TrimPrefix(dependency, dg.moduleName)
+    //     fmt.Println(relPath)
+    //     dependency = filepath.Join(rootDir,relPath)
+    // }
+
     dg.dependencies[file] = append(dg.dependencies[file], dependency)
     dg.dependents[dependency] = append(dg.dependents[dependency], file)
+}
+
+func findGoFilesInPackage(packageDir string) ([]string, error) {
+    var goFiles []string
+    
+    entries, err := os.ReadDir(packageDir)
+    if err != nil {
+        return nil, err
+    }
+    
+    for _, entry := range entries {
+        // Skip directories and non-Go files
+        if entry.IsDir() {
+            continue
+        }
+        
+        name := entry.Name()
+        if !strings.HasSuffix(name, ".go") {
+            continue
+        }
+        
+        // Skip test files
+        if strings.HasSuffix(name, "_test.go") {
+            continue
+        }
+        
+        goFiles = append(goFiles, filepath.Join(packageDir, name))
+    }
+    
+    return goFiles, nil
 }
 
 // GetAffectedFiles returns all files affected by changes in the given files
@@ -105,7 +194,6 @@ func (dg *DependencyGraph) GetFileDependencies(path string) ([]string,error) {
     if !ok {
         return []string{}, fmt.Errorf("No dependencies for file: %v", path)
     }
-    fmt.Println(res)
     return res, nil
 }
 

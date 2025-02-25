@@ -91,29 +91,6 @@ func (c *Cli) GetChangedFiles() ([]string, error) {
 
 	return files, nil
 }
-// func (c *Cli) getModuleName() (string, error) {
-// 	goModPath := filepath.Join(c.RootDirectory, "go.mod") 
-
-// 	if _,err := os.Stat(goModPath); os.IsNotExist(err){
-// 		return "", fmt.Errorf("Mod file not found")
-// 	}
-
-
-// 	content, err := os.ReadFile(goModPath)
-// 	if err!= nil{
-// 		return "", err
-// 	}
-
-// 	lines := strings.Split(string(content), "\n")
-// 	for _, line := range lines{
-// 		line = strings.TrimSpace(line)
-// 		if strings.HasPrefix(line, "module ") {
-// 			return strings.TrimSpace(strings.TrimPrefix(line, "module")), nil
-// 		}
-// 	}
-
-// 	return "", fmt.Errorf("module name oculd not be found")
-// }
 
 func (c *Cli) BuildDependencyGraph() error {
     c.DependencyGraph = analysis.NewDependencyGraph()
@@ -163,23 +140,23 @@ func (c *Cli) BuildDependencyGraph() error {
 
 
 
-func (c *Cli) GetAffectedFiles() ([]string, error) {
-    changedFiles, err := c.GetChangedFiles()
-    if err != nil {
-        return nil, err
-    }
+// func (c *Cli) GetAffectedFiles() ([]string, error) {
+//     changedFiles, err := c.GetChangedFiles()
+//     if err != nil {
+//         return nil, err
+//     }
 
-    if c.DependencyGraph == nil {
-        if err := c.BuildDependencyGraph(); err != nil {
-            return nil, fmt.Errorf("failed to build dependency graph: %w", err)
-        }
-    }
+//     if c.DependencyGraph == nil {
+//         if err := c.BuildDependencyGraph(); err != nil {
+//             return nil, fmt.Errorf("failed to build dependency graph: %w", err)
+//         }
+//     }
 
-    // Get all affected files
-    affectedFiles := c.DependencyGraph.GetAffectedFiles(changedFiles)
+//     // Get all affected files
+//     affectedFiles := c.DependencyGraph.GetAffectedFiles(changedFiles)
 
-    return affectedFiles, nil
-}
+//     return affectedFiles, nil
+// }
 
 
 func (c *Cli) Run() error {
@@ -430,7 +407,6 @@ func (c *Cli) RunLints(
 		}
 	}
 	err := c.BuildDependencyGraph()
-	// c.DependencyGraph.PrintGraph()
 	if err != nil{
 		return fmt.Errorf("could not buuild dep. graph: %v", err)
 	}
@@ -441,15 +417,31 @@ func (c *Cli) RunLints(
 		return fmt.Errorf("Error building dependency graph: %v\n", err)
 	}
 
+	var analysisFiles []string
+
 	for _, file := range changedFiles {
+		analysisFiles = append(analysisFiles, file)
 		fmt.Printf("Dependencies for file %s : ", file)
-		_, err := c.DependencyGraph.GetFileDependencies(file)	
-		fmt.Println()
+		depFiles, err := c.DependencyGraph.GetFileDependencies(file)	
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
+		fmt.Println(depFiles)
+		analysisFiles = append(analysisFiles, depFiles...)
+		
 	}	
+
+	// Remove duplicates from analysisFiles
+	uniqueFiles := make(map[string]bool)
+	var uniqueAnalysisFiles []string
+	for _, file := range analysisFiles {
+		if !uniqueFiles[file] {
+			uniqueFiles[file] = true
+			uniqueAnalysisFiles = append(uniqueAnalysisFiles, file)
+		}
+	}
+	analysisFiles = uniqueAnalysisFiles
 
 
 	result := lintResult{}
@@ -459,7 +451,7 @@ func (c *Cli) RunLints(
 			return nil
 		}
 
-		if !slices.Contains(changedFiles, path) {
+		if !slices.Contains(analysisFiles, path) {
 			// skip this path(file), if it's not changed/modified
 			return nil
 		}
