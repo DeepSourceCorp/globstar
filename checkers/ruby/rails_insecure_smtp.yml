@@ -1,0 +1,93 @@
+language: ruby
+name: ruby_rails_insecure_smtp
+message: "Avoid using insecure SMTP settings with 'openssl_verify_mode' set to 'none' in Rails applications."
+category: security
+severity: critical
+patterns: 
+    - >
+      (
+        assignment
+        left: (call
+          receiver: (call
+            receiver: (identifier) @config
+            (#eq? @config "config")
+            method: (identifier) @mailer
+            (#eq? @mailer "action_mailer")
+          )
+          method: (identifier) @settings
+          (#eq? @settings "smtp_settings")
+          )
+          right: (hash
+            (
+              pair
+                key: (hash_key_symbol) @ssl_setting
+                value: (scope_resolution
+                  scope: (scope_resolution
+                    scope: (constant) @ssl_module
+                    name: (constant) @ssl_class)
+                  name: (constant) @verify_mode)
+              (#eq? @ssl_setting "openssl_verify_mode")
+              (#eq? @ssl_module "OpenSSL")
+              (#eq? @ssl_class "SSL")
+              (#eq? @verify_mode "VERIFY_NONE")
+            ))
+        )@ruby_rails_insecure_smtp
+    - >
+      (
+        assignment
+        left: (call
+          receiver: (call
+            receiver: (identifier) @config
+            (#eq? @config "config")
+            method: (identifier) @mailer
+            (#eq? @mailer "action_mailer")
+          )
+          method: (identifier) @settings
+          (#eq? @settings "smtp_settings")
+        )
+        right: (hash
+          (
+            pair
+              key: (hash_key_symbol) @ssl_setting
+              value: (string (string_content)  @value)
+              (#eq? @ssl_setting "openssl_verify_mode")
+              (#eq? @value "none")
+              
+          ))
+        )@ruby_rails_insecure_smtp
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  Configuring `openssl_verify_mode` as `VERIFY_NONE` or `"none"` in `smtp_settings` disables SSL/TLS verification,
+  making your SMTP communication vulnerable to MITM (Man-In-The-Middle) attacks.
+
+  Why is this a problem?
+  - No SSL verification: Attackers can intercept and modify SMTP communication.
+  - Exposure of sensitive emails: Unauthenticated connections increase risk.
+  - Non-compliance with security standards: TLS verification is mandatory in secure environments.
+
+  Remediation Steps:
+  - Set `openssl_verify_mode` to `OpenSSL::SSL::VERIFY_PEER` to enforce TLS verification.
+  - Ensure the SMTP server provides a valid SSL certificate.
+  - Use secure SMTP configurations with `enable_starttls_auto: true`.
+
+  Example Fix:
+  ```ruby
+  # Insecure: Disables SSL verification (AVOID THIS)
+  config.action_mailer.smtp_settings = {
+    address: "smtp.example.com",
+    port: 587,
+    openssl_verify_mode: OpenSSL::SSL::VERIFY_NONE
+  }
+
+  # Secure: Enables TLS verification
+  config.action_mailer.smtp_settings = {
+    address: "smtp.example.com",
+    port: 587,
+    openssl_verify_mode: OpenSSL::SSL::VERIFY_PEER,
+    enable_starttls_auto: true
+  } ```
