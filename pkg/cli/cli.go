@@ -122,6 +122,8 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						return err
 					}
 
+					checkers.RunAnalyzerTests(checkers.AnalyzerRegistry)
+
 					if !passed {
 						return fmt.Errorf("tests failed")
 					}
