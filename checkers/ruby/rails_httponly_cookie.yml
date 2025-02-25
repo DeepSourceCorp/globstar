@@ -1,0 +1,63 @@
+language: ruby
+name: ruby_rails_httponly_cookie
+message: "Ensure the 'httponly' flag is set to 'true' to prevent client-side scripts from accessing cookies."
+category: security
+severity: critical
+pattern: >
+  (
+    (
+      call
+      receiver: (call
+        receiver: (call
+          receiver: (constant) @rails
+          method: (identifier) @application
+        )
+        method: (identifier) @config
+      )
+      method: (identifier) @store_method
+      arguments: (argument_list
+        (simple_symbol) @store_type  ; Match :cookie_store
+        (pair
+          key: (hash_key_symbol) @http_key
+          value: (_) @http_value
+        )
+      )
+      (#eq? @rails "Rails")
+      (#eq? @application "application")
+      (#eq? @config "config")
+      (#eq? @store_method "session_store")
+      (#match? @http_key "httponly")
+      (#match? @http_value "false")
+    )
+  ) @ruby_rails_httponly_cookie
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  The 'httponly' flag prevents JavaScript from accessing cookies, mitigating XSS (Cross-Site Scripting) attacks.
+  When set to `false`, attackers can steal session cookies via malicious scripts.
+
+  Why is this a problem?
+  - Security Risk: JavaScript can read and exfiltrate session cookies.
+  - XSS Vulnerability: Attackers can inject scripts to steal sensitive data.
+  - Best Practice: Always set `httponly: true` for secure session management.
+
+  Remediation:
+  - Ensure `httponly: true` is explicitly set in session cookies.
+  - Use `secure: Rails.env.production?` to enforce HTTPS in production.
+  - Enable `SameSite=Strict` to mitigate CSRF risks.
+
+  Example Fix:
+  ```ruby
+  # Insecure: JavaScript can access cookies (AVOID THIS)
+  Rails.application.config.session_store :cookie_store, key: "_app_session",
+    httponly: false
+
+  # Secure Alternative: Prevent JavaScript access
+  Rails.application.config.session_store :cookie_store, key: "_app_session",
+    httponly: true, secure: Rails.env.production?
+  ```
+
