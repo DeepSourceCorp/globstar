@@ -1,6 +1,6 @@
 language: dockerfile
 name: avoid_latest
-message: "Avoid using the 'latest' tag in Dockerfiles, use a specific version to ensure reliability"
+message: "Avoid using the 'latest' tag, use a specific version instead"
 category: bug-risk
 severity: warning
 
