@@ -1,0 +1,51 @@
+language: go
+name: go_tls_insecure
+message: "Avoid disabling TLS certificate verification to prevent insecure connections."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+    (short_var_declaration
+      right: (expression_list
+        (unary_expression
+          operand: (composite_literal
+            type: (qualified_type
+              package: (package_identifier) @tls_pkg
+              name: (type_identifier) @config_type
+            )
+            body: (literal_value) @config.value
+            )
+          )
+        )
+      )
+      (#eq? @tls_pkg "tls")
+      (#eq? @config_type "Config")
+      (#match? @config.value ".*InsecureSkipVerify.*true.*")
+    ) @go_tls_insecure
+  ]
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+
+description: |
+  Setting `tls.Config.InsecureSkipVerify` to `true` disables TLS certificate verification, exposing connections to man-in-the-middle (MITM) attacks.
+  Attackers can intercept and modify sensitive data, leading to potential security breaches.
+
+  **Remediation:**
+  - Always verify TLS certificates to establish trust in secure communications.
+  - Instead of `InsecureSkipVerify: true`, use a properly configured `RootCAs` from a trusted certificate authority (CA).
+
+  **Secure Example:**
+  ```go
+  rootCAs, err := x509.SystemCertPool()
+  if err != nil {
+      log.Fatalf("Failed to load system CA certificates: %v", err)
+  }
+
+  config := &tls.Config{
+      RootCAs: rootCAs,
+  }
