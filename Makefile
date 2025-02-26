@@ -4,7 +4,11 @@ GOLANG_CROSS_VERSION  ?= v1.23
 SYSROOT_DIR     ?= sysroots
 SYSROOT_ARCHIVE ?= sysroots.tar.bz2
 
-CLI_BUILD_FLAGS := -X 'globstar.dev/pkg/cli.version=$$(git describe --tags 2>/dev/null || echo dev)'
+CLI_BUILD_FLAGS := -X 'globstar.dev/pkg/cli.version=$$(git describe --tags 2>/dev/null || echo dev)' \
+				   -X 'globstar.dev/pkg/cli.gitCommit=$$(git rev-parse --short HEAD)' \
+				   -X 'globstar.dev/pkg/cli.goVersion=$$(go version | awk '{print $$3}')' \
+				   -X 'globstar.dev/pkg/cli.goos=$$(go env GOOS)' \
+				   -X 'globstar.dev/pkg/cli.goarch=$$(go env GOARCH)'
 
 .PHONY: sysroot-pack
 sysroot-pack:

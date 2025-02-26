@@ -27,6 +27,7 @@ jobs:
         run: |-
           echo 'GITHUB_TOKEN=${{secrets.PAT_GITHUB}}' >> .release-env
           echo 'HOMEBREW_TOKEN=${{secrets.DS_BOT_PAT}}' >> .release-env
+          echo "GOVERSION=$(go version | awk '{print $3}')" >> .release-env
 
       - name: Publish Release
         run: make release

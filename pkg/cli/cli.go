@@ -52,7 +52,10 @@ func (c *Cli) Run() error {
 
 	cli.VersionPrinter = func(cmd *cli.Command) {
 		version := strings.TrimPrefix(cmd.Version, "v")
-		fmt.Println(version)
+		fmt.Printf("globstar %s %s/%s\n", version, goos, goarch)
+		fmt.Printf("commit %s\n", gitCommit)
+		fmt.Printf("built with %s\n", goVersion)
+		
 	}
 
 	cmd := &cli.Command{

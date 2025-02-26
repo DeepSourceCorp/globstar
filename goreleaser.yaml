@@ -16,6 +16,10 @@ builds:
       - amd64
     ldflags:
       - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.gitCommit={{ .ShortCommit }}'"
+      - "-X 'globstar.dev/pkg/cli.goVersion={{ .Env.GOVERSION }}'"
+      - "-X 'globstar.dev/pkg/cli.goos={{ .Os }}'"
+      - "-X 'globstar.dev/pkg/cli.goarch={{ .Arch }}'"
   # darwin-arm64
   - id: globstar-darwin-arm64
     main: ./cmd/globstar
@@ -30,6 +34,10 @@ builds:
       - arm64
     ldflags:
       - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.gitCommit={{ .ShortCommit }}'"
+      - "-X 'globstar.dev/pkg/cli.goVersion={{ .Env.GOVERSION }}'"
+      - "-X 'globstar.dev/pkg/cli.goos={{ .Os }}'"
+      - "-X 'globstar.dev/pkg/cli.goarch={{ .Arch }}'"
   # linux-amd64
   - id: globstar-linux-amd64
     main: ./cmd/globstar
@@ -44,6 +52,10 @@ builds:
       - amd64
     ldflags:
       - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.gitCommit={{ .ShortCommit }}'"
+      - "-X 'globstar.dev/pkg/cli.goVersion={{ .Env.GOVERSION }}'"
+      - "-X 'globstar.dev/pkg/cli.goos={{ .Os }}'"
+      - "-X 'globstar.dev/pkg/cli.goarch={{ .Arch }}'"
   # linux-arm64
   - id: globstar-linux-arm64
     main: ./cmd/globstar
@@ -58,6 +70,10 @@ builds:
       - arm64
     ldflags:
       - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.gitCommit={{ .ShortCommit }}'"
+      - "-X 'globstar.dev/pkg/cli.goVersion={{ .Env.GOVERSION }}'"
+      - "-X 'globstar.dev/pkg/cli.goos={{ .Os }}'"
+      - "-X 'globstar.dev/pkg/cli.goarch={{ .Arch }}'"
   # windows-amd64
   - id: globstar-windows-amd64
     main: ./cmd/globstar
@@ -73,6 +89,10 @@ builds:
     ldflags:
       - buildmode=exe
       - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.gitCommit={{ .ShortCommit }}'"
+      - "-X 'globstar.dev/pkg/cli.goVersion={{ .Env.GOVERSION }}'"
+      - "-X 'globstar.dev/pkg/cli.goos={{ .Os }}'"
+      - "-X 'globstar.dev/pkg/cli.goarch={{ .Arch }}'"
   # windows-arm64
   - id: globstar-windows-arm64
     main: ./cmd/globstar
@@ -88,6 +108,10 @@ builds:
     ldflags:
       - buildmode=exe
       - "-X 'globstar.dev/pkg/cli.version={{ .Version }}'"
+      - "-X 'globstar.dev/pkg/cli.gitCommit={{ .ShortCommit }}'"
+      - "-X 'globstar.dev/pkg/cli.goVersion={{ .Env.GOVERSION }}'"
+      - "-X 'globstar.dev/pkg/cli.goos={{ .Os }}'"
+      - "-X 'globstar.dev/pkg/cli.goarch={{ .Arch }}'"
 archives:
   - id: arch_rename
     builds:
