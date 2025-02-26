@@ -220,6 +220,10 @@ I need help writing a tree-sitter pattern for <PROGRAMMING_LANGUAGE> code. I wan
 
 <PASTE YOUR TEST FILE CONTENTS HERE>
 
+Use the Abstract Syntax Tree of the above pattern as reference:
+
+<PASTE THE AST OF THE TEST FILE CONTENTS>
+
 Please give me:
 1. The tree-sitter S-expression pattern that would match this code
 2. A brief explanation of how the pattern works
@@ -239,6 +243,25 @@ I need help writing a tree-sitter pattern for Python code. I want to detect dang
 
 eval(user_input)
 eval("2 + " + user_input)
+
+Use the Abstract Syntax Tree of the above pattern as reference:
+
+module [0, 0] - [2, 0]
+  expression_statement [0, 0] - [0, 16]
+    call [0, 0] - [0, 16]
+      function: identifier [0, 0] - [0, 4]
+      arguments: argument_list [0, 4] - [0, 16]
+        identifier [0, 5] - [0, 15]
+  expression_statement [1, 0] - [1, 25]
+    call [1, 0] - [1, 25]
+      function: identifier [1, 0] - [1, 4]
+      arguments: argument_list [1, 4] - [1, 25]
+        binary_operator [1, 5] - [1, 24]
+          left: string [1, 5] - [1, 11]
+            string_start [1, 5] - [1, 6]
+            string_content [1, 6] - [1, 10]
+            string_end [1, 10] - [1, 11]
+          right: identifier [1, 14] - [1, 24]
 
 Please give me:
 1. The tree-sitter S-expression pattern that would match this code
