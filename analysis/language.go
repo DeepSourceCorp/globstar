@@ -229,11 +229,13 @@ func Parse(filePath string, source []byte, language Language, grammar *sitter.La
 
 // ParseFile parses the file at the given path using the appropriate
 // tree-sitter grammar.
+var ErrUnsupportedLanguage = fmt.Errorf("unsupported language")
+
 func ParseFile(filePath string) (*ParseResult, error) {
 	lang := LanguageFromFilePath(filePath)
 	grammar := lang.Grammar()
 	if grammar == nil {
-		return nil, fmt.Errorf("unsupported file type: %s", filePath)
+		return nil, ErrUnsupportedLanguage
 	}
 
 	source, err := os.ReadFile(filePath)

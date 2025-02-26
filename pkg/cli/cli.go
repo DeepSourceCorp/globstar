@@ -250,6 +250,7 @@ func (lr *lintResult) GetExitStatus(conf *config.Config) int {
 }
 
 var defaultIgnoreDirs = []string{
+	"checkers",
 	"node_modules",
 	"vendor",
 	"dist",
