@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	goAnalysis "globstar.dev/analysis"
+	"globstar.dev/checkers/golang"
 	"globstar.dev/checkers/javascript"
 	"globstar.dev/pkg/analysis"
 )
@@ -51,5 +52,6 @@ func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
 func LoadGoRules() []*goAnalysis.Analyzer {
 	return []*goAnalysis.Analyzer{
 		&javascript.NoDoubleEq,
+		&golang.WeakScryptCost,
 	}
 }
