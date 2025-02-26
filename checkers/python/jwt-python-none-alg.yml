@@ -1,6 +1,6 @@
 language: py
 name: jwt-python-none-alg
-message: Detected the usage of `none` in the algorithms parameter in JWT token
+message: Do not use `none` algorithm for encoding/decoding JWT tokens
 category: security
 
 pattern: |
