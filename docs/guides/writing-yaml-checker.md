@@ -275,6 +275,8 @@ Some requirements:
 - Think about potential false positives
 ```
 
+You can use the [tree-sitter playground](https://tree-sitter.github.io/tree-sitter/7-playground.html) to generate AST for the pattern used in the prompt.
+
 ### Tips for using AI
 
 1. **Provide Multiple Examples**: Include both positive and negative examples in your prompt
