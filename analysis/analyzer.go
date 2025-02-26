@@ -1,8 +1,10 @@
 package analysis
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -69,8 +71,25 @@ func walkTree(node *sitter.Node, f func(*sitter.Node)) {
 func Preorder(pass *Pass, fn func(*sitter.Node)) {
 	// TODO: cache the traversal results to avoid running the traversal for each analyzer
 	for _, file := range pass.Files {
+		pass.FileContext = file
 		walkTree(file.Ast, fn)
 	}
+}
+
+var defaultIgnoreDirs = []string{
+	"checkers",
+	"node_modules",
+	"vendor",
+	"dist",
+	"build",
+	"out",
+	".git",
+	".svn",
+	"venv",
+	"__pycache__",
+	".idea",
+	".vitepress",
+	".globstar", // may contain test files
 }
 
 func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
@@ -87,11 +106,17 @@ func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 		}
 
 		if info.IsDir() {
+			if slices.Contains(defaultIgnoreDirs, info.Name()) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
 		file, err := ParseFile(path)
 		if err != nil {
+			if err != ErrUnsupportedLanguage {
+				fmt.Println(err)
+			}
 			return nil
 		}
 

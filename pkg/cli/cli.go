@@ -116,13 +116,21 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						dir = c.Config.RuleDir
 					}
 					analysisDir := filepath.Join(c.RootDirectory, dir)
-					passed, err := runTests(analysisDir)
+					yamlPassed, err := runTests(analysisDir)
 					if err != nil {
 						fmt.Fprintln(os.Stderr, err.Error())
 						return err
 					}
 
-					if !passed {
+					goPassed, errs := checkers.RunAnalyzerTests(checkers.AnalyzerRegistry)
+					if len(errs) > 0 {
+						for _, e := range errs {
+							fmt.Fprintln(os.Stderr, e.Error())
+						}
+						return fmt.Errorf("tests failed")
+					}
+
+					if !(yamlPassed && goPassed) {
 						return fmt.Errorf("tests failed")
 					}
 
@@ -242,6 +250,7 @@ func (lr *lintResult) GetExitStatus(conf *config.Config) int {
 }
 
 var defaultIgnoreDirs = []string{
+	"checkers",
 	"node_modules",
 	"vendor",
 	"dist",
