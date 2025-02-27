@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	sitter "github.com/smacker/go-tree-sitter"
+	"globstar.dev/pkg/analysis/analyzers"
 	"globstar.dev/pkg/config"
 )
 
@@ -301,4 +302,38 @@ func (ana *Analyzer) runPatternRules() {
 
 func (ana *Analyzer) Report(issue *Issue) {
 	ana.issuesRaised = append(ana.issuesRaised, issue)
+}
+
+func (ana *Analyzer) runAnalyzers(defs []AnalyzerDef, captures []sitter.QueryCapture, matchedQuery *sitter.Query) bool {
+	for _, def := range defs {
+		var content string
+		for _, capture := range captures {
+			if ana.ParseResult.Source == nil {
+				continue
+			}
+			if capture.Node.StartByte() >= uint32(len(ana.ParseResult.Source)) ||
+				capture.Node.EndByte() > uint32(len(ana.ParseResult.Source)) {
+				continue
+			}
+			captureName := matchedQuery.CaptureNameForId(capture.Index)
+			if captureName == def.Capture {
+				content = string(ana.ParseResult.Source[capture.Node.StartByte():capture.Node.EndByte()])
+				break
+			}
+		}
+
+		if content == "" {
+			return false
+		}
+
+		switch def.Name {
+		case "entropy":
+			if !analyzers.EntropyAnalyzer(content, def.Config) {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
