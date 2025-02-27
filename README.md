@@ -47,8 +47,6 @@ Once installed, you can run `globstar check` in any repository to run all the ch
 
 Create a new folder named `.globstar` in your repository's root. This is where you'll write all your custom checkers. Each checker is defined in a separate YAML file, with the filename being the checker's identifier and tree-sitter's S-expression query defining the pattern to match.
 
-For example, here's a checker that disallows the `debugger` statement in JavaScript files:
-
 For example, here's a checker that detects potentially dangerous use of the `eval()` function in Python:
 
 ```yml
