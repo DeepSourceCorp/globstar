@@ -24,6 +24,8 @@ type Cli struct {
 	// Rules is a list of lints that are applied to the files in `RootDirectory`
 	Rules  []analysis.Rule
 	Config *config.Config
+	// DependencyGraph for the codebase
+	DependencyGraph *analysis.DependencyGraph
 }
 
 func (c *Cli) loadConfig() error {
@@ -35,6 +37,55 @@ func (c *Cli) loadConfig() error {
 	c.Config = conf
 	return nil
 }
+
+
+
+func (c *Cli) BuildDependencyGraph() error {
+	c.DependencyGraph = analysis.NewDependencyGraph()
+
+	// Walk through all files in the project to build the dependency graph
+	err := filepath.Walk(c.RootDirectory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // continue to the next file
+		}
+
+		if info.IsDir() {
+			if c.Config.ShouldExcludePath(path) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Skip excluded paths
+		if c.Config.ShouldExcludePath(path) {
+			return nil
+		}
+
+		// Only process files with known languages
+		language := analysis.LanguageFromFilePath(path)
+		if language == analysis.LangUnknown {
+			return nil
+		}
+
+		// Extract dependencies for this file
+		deps, err := analysis.ExtractDependencies(path)
+		if err != nil {
+			// Log but continue
+			log.Debug().Err(err).Str("path", path).Msg("Failed to extract dependencies")
+			return nil
+		}
+
+		// Add dependencies to the graph
+		for _, dep := range deps {
+			c.DependencyGraph.AddDependency(path, dep, c.RootDirectory)
+		}
+
+		return nil
+	})
+
+	return err
+}
+
 
 func (c *Cli) Run() error {
 	err := c.loadConfig()
@@ -97,6 +148,15 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						return c.RunLints(patternRules, true)
 					}
 					return fmt.Errorf("invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s", checkers)
+				},
+			},
+			{
+				Name: "incremental-analysis",
+				Aliases: []string{"i"},
+				Usage: "Run Incremental analysis, which detects the changed file in the codebase, and analyzes it's dependencies along with the file.",
+				Flags: []cli.Flag{},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return c.RunIncrementalAnalysis(patternRules, true)	
 				},
 			},
 			{
@@ -264,9 +324,8 @@ var defaultIgnoreDirs = []string{
 	".globstar", // may contain test files
 }
 
-// RunLints goes over all the files in the project and runs the lints for every file encountered
-func (c *Cli) RunLints(
-	patternRules map[analysis.Language][]analysis.YmlRule, // map of language id -> yaml rules
+func (c *Cli) RunIncrementalAnalysis(
+	patternRules map[analysis.Language][]analysis.YmlRule,
 	runBuiltinRules bool,
 ) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -292,11 +351,52 @@ func (c *Cli) RunLints(
 			}
 		}
 	}
+	err := c.BuildDependencyGraph()
+	if err != nil {
+		return fmt.Errorf("could not buuild dep. graph: %v", err)
+	}
+
+	// git integration to track changed files.
+	changedFiles, err := c.GetChangedFiles()
+	if err != nil {
+		return fmt.Errorf("Error building dependency graph: %v\n", err)
+	}
+
+	var analysisFiles []string
+
+	for _, file := range changedFiles {
+		analysisFiles = append(analysisFiles, file)
+		fmt.Printf("Dependencies for file %s : ", file)
+		depFiles, err := c.DependencyGraph.GetFileDependencies(file)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		fmt.Println(depFiles)
+		analysisFiles = append(analysisFiles, depFiles...)
+
+	}
+
+	// Remove duplicates from analysisFiles
+	uniqueFiles := make(map[string]bool)
+	var uniqueAnalysisFiles []string
+	for _, file := range analysisFiles {
+		if !uniqueFiles[file] {
+			uniqueFiles[file] = true
+			uniqueAnalysisFiles = append(uniqueAnalysisFiles, file)
+		}
+	}
+	analysisFiles = uniqueAnalysisFiles
 
 	result := lintResult{}
-	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			// skip this path
+			return nil
+		}
+
+		if !slices.Contains(analysisFiles, path) {
+			// skip this path(file), if it's not changed/modified
 			return nil
 		}
 
@@ -383,3 +483,126 @@ func (c *Cli) RunLints(
 
 	return err
 }
+
+// RunLints goes over all the files in the project and runs the lints for every file encountered
+func (c *Cli) RunLints(
+	patternRules map[analysis.Language][]analysis.YmlRule, // map of language id -> yaml rules
+	runBuiltinRules bool,
+) error {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+
+	if patternRules == nil {
+		patternRules = make(map[analysis.Language][]analysis.YmlRule)
+	}
+
+	var goAnalyzers []*goAnalysis.Analyzer
+	if runBuiltinRules {
+		goAnalyzers = checkers.LoadGoRules()
+		builtInPatternRules, err := checkers.LoadYamlRules()
+		if err != nil {
+			return err
+		}
+
+		// merge the built-in rules with the custom rules
+		for lang, rules := range builtInPatternRules {
+			if _, ok := patternRules[lang]; ok {
+				patternRules[lang] = append(patternRules[lang], rules...)
+			} else {
+				patternRules[lang] = rules
+			}
+		}
+	}
+	
+
+	result := lintResult{}
+	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+		if err != nil {
+			// skip this path
+			return nil
+		}
+		
+
+		if d.IsDir() {
+			if c.Config.ShouldExcludePath(path) || slices.Contains(defaultIgnoreDirs, d.Name()) {
+				return filepath.SkipDir
+			}
+
+			return nil
+		}
+
+		if d.Mode()&fs.ModeSymlink != 0 {
+			// skip symlinks
+			return nil
+		}
+
+		if c.Config.ShouldExcludePath(path) {
+			return nil
+		}
+
+		language := analysis.LanguageFromFilePath(path)
+		if language == analysis.LangUnknown {
+			return nil
+		}
+
+		result.numFilesChecked++
+
+		// run linter
+		// the first arg is empty, since the format for inbuilt Go-based rules has changed
+		// TODO: factor it in later
+		issues, err := c.LintFile(map[analysis.Language][]analysis.Rule{}, patternRules, path)
+		if err != nil {
+			// parse error on a single file should not exit the entire analysis process
+			// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
+			// fmt.Fprintf(os.Stderr, "Error parsing file %s: %s\n", path, err)
+			return nil
+		}
+
+		for _, issue := range issues {
+			txt, _ := issue.AsText()
+			log.Error().Msg(string(txt))
+
+			result.issues = append(result.issues, issue)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers)
+	if err != nil {
+		return fmt.Errorf("failed to run Go-based analyzers: %w", err)
+	}
+
+	for _, issue := range goIssues {
+		txt, _ := issue.AsText()
+		log.Error().Msg(string(txt))
+
+		result.issues = append(result.issues, &analysis.Issue{
+			Filepath: issue.Filepath,
+			Message:  issue.Message,
+			Severity: config.Severity(issue.Severity),
+			Category: config.Category(issue.Category),
+			Node:     issue.Node,
+			Id:       issue.Id,
+		})
+	}
+
+	// FIXME: go based rules do not increment the numFilesChecked counter
+	if result.numFilesChecked > 0 {
+		log.Info().Msgf("Analyzed %d files and found %d issues.", result.numFilesChecked, len(result.issues))
+	} else {
+		log.Info().Msg("No files to analyze")
+	}
+
+	exitStatus := result.GetExitStatus(c.Config)
+	if exitStatus != 0 {
+		fmt.Fprintf(os.Stderr, "Found %d issues\n", len(result.issues))
+		return fmt.Errorf("found %d issues", len(result.issues))
+	}
+
+	return err
+}
+
