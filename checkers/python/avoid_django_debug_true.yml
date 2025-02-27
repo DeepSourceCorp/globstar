@@ -1,0 +1,17 @@
+language: py
+name: avoid_django_debug_true
+message: Detected setting the value of DEBUG = True
+category: security
+
+pattern: |
+  (
+  	(expression_statement
+    	(assignment
+        	left: (identifier) @var (#eq? @var "DEBUG")
+            right: (true)
+        )
+    ) 
+  )  @avoid_django_debug_true
+inculde: ["**/settings.py"]
+description: |
+  DEBUG = True cannot be used in production in django framework.
