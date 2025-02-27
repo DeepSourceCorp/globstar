@@ -1,0 +1,17 @@
+language: py
+name: ssl-wrap-socket-deprecated
+message: Do not use deprecated `ssl.wrap_socket()` which creates an insecure socket
+category: security
+
+pattern: >
+  (call
+    function: (attribute
+      object: (identifier) @ssl
+      attribute: (identifier) @wrapsocket)
+    arguments: (argument_list)
+    (#eq? @ssl "ssl")
+    (#eq? @wrapsocket "wrap_socket")) @ssl-wrap-socket-deprecated
+
+description: >
+  The `ssl.wrap_socket()` function is deprecated. It creates an insecure socket
+  without server name indication or hostname matching.
