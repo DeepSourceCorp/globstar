@@ -14,6 +14,7 @@ import (
 	"github.com/urfave/cli/v3"
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers"
+	"globstar.dev/checkers/discover"
 	"globstar.dev/pkg/analysis"
 	"globstar.dev/pkg/config"
 )
@@ -135,6 +136,32 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					}
 
 					fmt.Fprint(os.Stdout, "All tests passed")
+					return nil
+				},
+			},
+			{
+				Name:    "build",
+				Aliases: []string{"b"},
+				Usage:   "Build the custom Go rules in the .globstar directory",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					tempDir, err := os.MkdirTemp("", "build")
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err.Error())
+						return err
+					}
+					//defer os.RemoveAll(tempDir)
+					err = discover.GenerateAnalyzer(c.Config.RuleDir, tempDir)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err.Error())
+						return err
+					}
+
+					err = discover.BuildAnalyzer(tempDir, c.RootDirectory)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err.Error())
+						return err
+					}
+
 					return nil
 				},
 			},
