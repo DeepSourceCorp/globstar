@@ -46,6 +46,10 @@ func (c *Cli) loadConfig() error {
 }
 
 func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
+	if err := c.buildCustomGoRules(); err != nil {
+		return false, err
+	}
+
 	if _, err := os.Stat(filepath.Join(c.RootDirectory, "custom-analyzer")); err != nil {
 		if os.IsNotExist(err) {
 			return true, nil
@@ -72,6 +76,10 @@ func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
 
 	issues := []*goAnalysis.Issue{}
 	issuesAsText := []string{}
+
+	if err := c.buildCustomGoRules(); err != nil {
+		return issues, issuesAsText, err
+	}
 
 	if _, err := os.Stat(filepath.Join(c.RootDirectory, "custom-analyzer")); err != nil {
 		if os.IsNotExist(err) {
@@ -219,26 +227,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 				Aliases: []string{"b"},
 				Usage:   "Build the custom Go rules in the .globstar directory",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					tempDir, err := os.MkdirTemp("", "build")
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err.Error())
-						return err
-					}
-					defer os.RemoveAll(tempDir)
-
-					err = discover.GenerateAnalyzer(c.Config.RuleDir, tempDir)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err.Error())
-						return err
-					}
-
-					err = discover.BuildAnalyzer(tempDir, c.RootDirectory)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err.Error())
-						return err
-					}
-
-					return nil
+					return c.buildCustomGoRules()
 				},
 			},
 		},
@@ -250,6 +239,39 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 	}
 
 	return err
+}
+
+func (c *Cli) buildCustomGoRules() error {
+	if goRules, err := discover.DiscoverGoRules(c.Config.RuleDir); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	} else {
+		if len(goRules) == 0 {
+			fmt.Fprintln(os.Stderr, "No Go rules found in the directory")
+			return nil
+		}
+	}
+
+	tempDir, err := os.MkdirTemp("", "build")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
+	err = discover.GenerateAnalyzer(c.Config.RuleDir, tempDir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+
+	err = discover.BuildAnalyzer(tempDir, c.RootDirectory)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+
+	return nil
 }
 
 // LoadYamlRules reads all the custom rules from the `.globstar/` directory in the project root,

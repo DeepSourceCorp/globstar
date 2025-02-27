@@ -92,7 +92,7 @@ func messagesEqual(expected, actual []string) bool {
 // Helper function to compare two sorted slices
 func slicesEqual(a, b []string) bool {
 	for i := range a {
-		if a[i] != b[i] {
+		if a[i] != "" && a[i] != b[i] {
 			return false
 		}
 	}
@@ -142,7 +142,7 @@ func getExpectedIssuesInDir(testDir string) (map[string]map[int][]string, error)
 func getExpectedIssuesInFile(file *ParseResult, query *sitter.Query) map[int][]string {
 	commentIdentifier := GetEscapedCommentIdentifierFromPath(file.FilePath)
 
-	pattern := fmt.Sprintf(`^%s\s+<expect-error>\s+(?P<message>.+)$`, commentIdentifier)
+	pattern := fmt.Sprintf(`^%s\s+<expect-error>\s*(?P<message>.*)$`, commentIdentifier)
 	pragmaRegexp := regexp.MustCompile(pattern)
 
 	expectedIssues := map[int][]string{}
