@@ -12,7 +12,7 @@ pattern: |
         )
     ) 
   )  @avoid_django_debug_true
-inculde: ["**/settings.py"]
+include: ["**/settings.py"]
 description: |
   DEBUG = True cannot be used in production in django framework.
   
