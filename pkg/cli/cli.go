@@ -242,6 +242,15 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 }
 
 func (c *Cli) buildCustomGoRules() error {
+	// verify that the rule directory exists
+	if _, err := os.Stat(c.Config.RuleDir); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Rule directory %s does not exist\n", c.Config.RuleDir)
+			return nil
+		}
+		return nil
+	}
+
 	if goRules, err := discover.DiscoverGoRules(c.Config.RuleDir); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return err
