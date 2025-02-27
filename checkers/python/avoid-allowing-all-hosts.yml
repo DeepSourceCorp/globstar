@@ -1,16 +1,20 @@
 language: py
-name: avoid-debug-and-allowed-hosts
+name: avoid-allowing_all_hosts
 message: Detected setting the value of ALLOWED_HOSTS = ["*"]
 category: security
 
 pattern: |
-  (assignment_expression
-    left: (identifier) @var (#eq? @var "ALLOWED_HOSTS")
-    right: (array
-      (string) @host_list
-      (#match? @host_list "\\*")
-    )
-  ) @avoid-debug-and-allowed-hosts
+  (
+  	(expression_statement
+    	(assignment
+        	left: (identifier) @var (#eq? @var "ALLOWED_HOSTS")
+            right: (list
+              (string) @host_list
+              (#match? @host_list "\\*")
+            )
+        )
+    ) 
+  )  @avoid-allowing_all_hosts
 
 inculde: ["**/settings.py"]
 description: |
