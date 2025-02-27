@@ -1,5 +1,5 @@
 language: py
-name: avoid-allowing_all_hosts
+name: avoid_allowing_all_hosts
 message: Detected setting the value of ALLOWED_HOSTS = ["*"]
 category: security
 
@@ -14,7 +14,7 @@ pattern: |
             )
         )
     ) 
-  )  @avoid-allowing_all_hosts
+  )  @avoid_allowing_all_hosts
 
 inculde: ["**/settings.py"]
 description: |
