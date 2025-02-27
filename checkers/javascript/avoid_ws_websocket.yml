@@ -1,0 +1,31 @@
+language: js
+name: avoid_ws_websocket
+message: Detected the usage of insecure websocket , please create wss websocket
+category: security
+
+pattern: |
+  (new_expression
+    constructor : (identifier) @new_web_socket (#eq? @new_web_socket "WebSocketServer")
+      arguments : (arguments
+        (string
+        	(string_fragment) @ws (#match? @ws "^ws:")
+        )
+          
+      ) 
+      
+  ) @avoid_ws_websocket
+description: |
+  Insecure WebSocket Detected , Use Secure WebSocket (wss://)
+  Your code is using an insecure WebSocket (ws://), which transmits data unencrypted, making it vulnerable to man-in-the-middle (MITM) attacks and eavesdropping.
+  
+  Problem : 
+  - const socket = new WebSocket("ws://example.com");
+  - Data is sent in plain text over the network.
+  - Attackers can intercept, modify, or inject messages.
+  - Modern browsers may block ws:// connections on HTTPS websites due to security risks.
+  Solution: Use wss://
+  - To secure the WebSocket connection, switch to wss://, which encrypts the communication using TLS/SSL, just like HTTPS:
+  - const socket = new WebSocket("wss://example.com");
+  - Ensures end-to-end encryption.
+  - Protects against MITM attacks.
+  - Works seamlessly with HTTPS websites.
