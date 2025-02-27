@@ -15,3 +15,17 @@ pattern: |
 inculde: ["**/settings.py"]
 description: |
   DEBUG = True cannot be used in production in django framework.
+  
+  When DEBUG = True is enabled in Django, the framework provides detailed error messages, stack traces, and sensitive information about your application. While useful for development, this setting is dangerous in production because:
+
+  ❌ Risks of DEBUG = True in Production
+  - Sensitive Data Exposure
+
+    - Django displays full error traces and environment variables, which might include database credentials, API keys, or secret tokens.
+  - Security Vulnerabilities
+
+    - Debug mode allows detailed error pages that could help attackers find weaknesses in your application.
+    - It can expose internal file paths and configuration details.
+  - Performance Issues
+
+    - Debug mode can slow down your app by enabling extra logging and debugging tools that aren't needed in production.
