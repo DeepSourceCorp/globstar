@@ -5,35 +5,36 @@ category: security
 
 pattern: |
   (
-   (lexical_declaration
-    (variable_declarator
-      name : (identifier) @var_name
-      value : (_
-          function : (identifier) @require (#eq @require @var_name)
-          arguments : (arguments
-              (string
-                  (string_fragment) @pack (#eq @pack "jsonwebtoken")
-                )
-            )
-        )
-	  )
-    )
     (lexical_declaration
-    	(variable_declarator
-        	value :     (call_expression
-              function : (member_expression
-                  object : (identifier) @obj (#eq @obj @var_name)
-                    property : (property_identifier) @prop (#eq @prop "verify")
-                )
-                arguments : (arguments
-                  (_)
-                    (null) @null
-                )
-            )
-        )
-    )
-
-  ) @avoid_null_jwt_key
+      (variable_declarator
+        name : (identifier) @var_name
+        value : (_
+            function : (identifier) @require (#eq @require "require")
+            arguments : (arguments
+                (string
+                    (string_fragment) @pack (#eq @pack "jsonwebtoken")
+                  )
+              )
+          )
+      )
+      )
+      (lexical_declaration
+        (variable_declarator
+            value : (_
+                function : (member_expression
+                    object : (identifier) @obj (#eq @obj @var_name)
+                      property : (property_identifier) @prop (#eq @prop "verify")
+                      
+                  )
+                  arguments : (arguments
+                    (null) @null (#eq @null "null")
+                  )
+              )
+          )
+          
+      
+      )
+  )  @avoid_null_jwt_key
 
 description: |
   The JWT verification function if not specified a secret key or allowed algorithms, makes it vulnerable to the "none" algorithm attack. This allows attackers to forge unsigned JWTs and bypass authentication
