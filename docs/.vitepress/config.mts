@@ -148,6 +148,7 @@ export default defineConfig({
         text: 'Guides',
         items: [
           { text: 'Writing a checker in YAML', link: '/guides/writing-yaml-checker' },
+          { text: 'Writing a checker in Go', link: '/guides/writing-go-checker' },
           { text: 'Contributing built-in checkers', link: '/guides/contributing-built-in-checkers' },
         ]
       },
