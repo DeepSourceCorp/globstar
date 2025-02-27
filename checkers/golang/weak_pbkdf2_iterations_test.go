@@ -28,7 +28,7 @@ func testPbkdf2Iterations() {
 
 	// Valid examples (no errors)
 	// <no-error>
-	pbkdf2.Key([]byte("password"), makeRandomSalt(), 310000, 32, sha256.New)
+	pbkdf2.Key([]byte("password"), makeRandomSalt(), 600000, 32, sha256.New)
 }
 
 func makeRandomSalt() []byte {

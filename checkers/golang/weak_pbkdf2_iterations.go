@@ -10,7 +10,7 @@ import (
 var WeakPbkdf2Iterations analysis.Analyzer = analysis.Analyzer{
 	Name:        "weak-pbkdf2-iterations",
 	Language:    analysis.LangGo,
-	Description: "This rule checks for PBKDF2 usage with fewer than 310,000 iterations.",
+	Description: "This rule checks for PBKDF2 usage with fewer than 600,000 iterations.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
 	Run:         weakPbkdf2Iterations,
@@ -62,8 +62,8 @@ func weakPbkdf2Iterations(pass *analysis.Pass) (interface{}, error) {
 				return
 			}
 
-			if iterations < 310000 {
-				pass.Report(pass, node, "PBKDF2: Use at least 310,000 iterations for security (OWASP 2023 recommendation)")
+			if iterations < 600000 {
+				pass.Report(pass, node, "PBKDF2: Use at least 600,000 iterations for security (OWASP recommendation)")
 			}
 		}
 	})
