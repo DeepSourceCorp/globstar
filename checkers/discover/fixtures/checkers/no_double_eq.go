@@ -1,4 +1,4 @@
-package javascript
+package checkers
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"

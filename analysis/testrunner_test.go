@@ -1,10 +1,9 @@
-package checkers
+package analysis
 
 import (
 	"testing"
 
 	sitter "github.com/smacker/go-tree-sitter"
-	goAnalysis "globstar.dev/analysis"
 )
 
 func TestVerifyIssues(t *testing.T) {
@@ -124,7 +123,7 @@ func TestGetExpectedIssuesInFile(t *testing.T) {
 		name     string
 		content  string
 		want     map[int][]string
-		language goAnalysis.Language
+		language Language
 	}{
 		{
 			name: "javascript.js",
@@ -135,7 +134,7 @@ func TestGetExpectedIssuesInFile(t *testing.T) {
 			want: map[int][]string{
 				3: {"TEST001: Error message"},
 			},
-			language: goAnalysis.LangJs,
+			language: LangJs,
 		},
 		{
 			name: "multiple-errors.js",
@@ -149,13 +148,32 @@ func TestGetExpectedIssuesInFile(t *testing.T) {
 				3: {"TEST001: First error"},
 				5: {"TEST002: Second error"},
 			},
-			language: goAnalysis.LangJs,
+			language: LangJs,
+		},
+		{
+			name: "no-expect-error.js",
+			content: `function test() {
+	var x = 1 == 1;
+}`,
+			want:     map[int][]string{},
+			language: LangJs,
+		},
+		{
+			name: "expect-error-without-message.js",
+			content: `function test() {
+	// <expect-error>
+	var x = 1 == 1;
+}`,
+			want: map[int][]string{
+				3: {""},
+			},
+			language: LangJs,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			file, err := goAnalysis.Parse(tt.name, []byte(tt.content), tt.language, tt.language.Grammar())
+			file, err := Parse(tt.name, []byte(tt.content), tt.language, tt.language.Grammar())
 			if err != nil {
 				t.Fatalf("Failed to parse file: %v", err)
 			}

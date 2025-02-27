@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,8 +16,10 @@ import (
 	"github.com/urfave/cli/v3"
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers"
+	"globstar.dev/checkers/discover"
 	"globstar.dev/pkg/analysis"
 	"globstar.dev/pkg/config"
+	"globstar.dev/util"
 )
 
 type Cli struct {
@@ -32,8 +36,78 @@ func (c *Cli) loadConfig() error {
 		return err
 	}
 
+	if _, err := filepath.Rel(c.RootDirectory, conf.RuleDir); err != nil {
+		// if the rule directory is not an absolute path, make it so
+		conf.RuleDir = filepath.Join(c.RootDirectory, conf.RuleDir)
+	}
+
 	c.Config = conf
 	return nil
+}
+
+func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
+	if err := c.buildCustomGoRules(); err != nil {
+		return false, err
+	}
+
+	if _, err := os.Stat(filepath.Join(c.RootDirectory, "custom-analyzer")); err != nil {
+		if os.IsNotExist(err) {
+			return true, nil
+		}
+
+		return false, err
+	}
+
+	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", c.Config.RuleDir}, c.RootDirectory)
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			fmt.Fprintf(os.Stderr, "stderr: %s\n", stderr)
+			return false, nil
+		}
+		fmt.Fprintf(os.Stderr, "Error running custom Go-based tests: %s\n", err)
+		return false, err
+	}
+
+	fmt.Fprintln(os.Stderr, stderr)
+	return true, nil
+}
+
+func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
+
+	issues := []*goAnalysis.Issue{}
+	issuesAsText := []string{}
+
+	if err := c.buildCustomGoRules(); err != nil {
+		return issues, issuesAsText, err
+	}
+
+	if _, err := os.Stat(filepath.Join(c.RootDirectory, "custom-analyzer")); err != nil {
+		if os.IsNotExist(err) {
+			return issues, issuesAsText, nil
+		}
+
+		return issues, issuesAsText, err
+	}
+
+	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-path", c.Config.RuleDir}, c.RootDirectory)
+	if err != nil && err.(*exec.ExitError).ExitCode() != 1 {
+		return issues, issuesAsText, err
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(stderr))
+	for scanner.Scan() {
+		scannedIssue := []byte(scanner.Text())
+		issue, err := goAnalysis.IssueFromJson(scannedIssue)
+		if err != nil {
+			continue
+		}
+		issues = append(issues, issue)
+
+		txt, _ := goAnalysis.IssueAsTextFromJson(scannedIssue)
+		issuesAsText = append(issuesAsText, string(txt))
+	}
+
+	return issues, issuesAsText, nil
 }
 
 func (c *Cli) Run() error {
@@ -116,26 +190,44 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						dir = c.Config.RuleDir
 					}
 					analysisDir := filepath.Join(c.RootDirectory, dir)
-					yamlPassed, err := runTests(analysisDir)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err.Error())
-						return err
+					yamlPassed := true
+					if len(patternRules) != 0 {
+						yamlPassed, err = runTests(analysisDir)
+						if err != nil {
+							err = fmt.Errorf("error running YAML tests: %w", err)
+							fmt.Fprintln(os.Stderr, err.Error())
+						}
+					} else {
+						fmt.Fprintln(os.Stderr, "No YAML rules found")
 					}
 
 					goPassed, errs := checkers.RunAnalyzerTests(checkers.AnalyzerRegistry)
 					if len(errs) > 0 {
+						fmt.Fprintln(os.Stderr, "Errors running Go-based tests:")
 						for _, e := range errs {
 							fmt.Fprintln(os.Stderr, e.Error())
 						}
-						return fmt.Errorf("tests failed")
 					}
 
-					if !(yamlPassed && goPassed) {
+					customGoPassed, err := c.runCustomGoAnalyzerTests()
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err.Error())
+					}
+
+					if !(yamlPassed && goPassed && customGoPassed) {
 						return fmt.Errorf("tests failed")
 					}
 
 					fmt.Fprint(os.Stdout, "All tests passed")
 					return nil
+				},
+			},
+			{
+				Name:    "build",
+				Aliases: []string{"b"},
+				Usage:   "Build the custom Go rules in the .globstar directory",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					return c.buildCustomGoRules()
 				},
 			},
 		},
@@ -147,6 +239,48 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 	}
 
 	return err
+}
+
+func (c *Cli) buildCustomGoRules() error {
+	// verify that the rule directory exists
+	if _, err := os.Stat(c.Config.RuleDir); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Rule directory %s does not exist\n", c.Config.RuleDir)
+			return nil
+		}
+		return nil
+	}
+
+	if goRules, err := discover.DiscoverGoRules(c.Config.RuleDir); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	} else {
+		if len(goRules) == 0 {
+			fmt.Fprintln(os.Stderr, "No Go rules found in the directory")
+			return nil
+		}
+	}
+
+	tempDir, err := os.MkdirTemp("", "build")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
+	err = discover.GenerateAnalyzer(c.Config.RuleDir, tempDir)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+
+	err = discover.BuildAnalyzer(tempDir, c.RootDirectory)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+
+	return nil
 }
 
 // LoadYamlRules reads all the custom rules from the `.globstar/` directory in the project root,
@@ -261,7 +395,6 @@ var defaultIgnoreDirs = []string{
 	"venv",
 	"__pycache__",
 	".idea",
-	".globstar", // may contain test files
 }
 
 // RunLints goes over all the files in the project and runs the lints for every file encountered
@@ -352,6 +485,26 @@ func (c *Cli) RunLints(
 	goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers)
 	if err != nil {
 		return fmt.Errorf("failed to run Go-based analyzers: %w", err)
+	}
+
+	customGoIssues, textIssues, err := c.runCustomGoAnalyzers()
+	if err != nil {
+		return fmt.Errorf("failed to run custom Go-based analyzers: %w", err)
+	}
+
+	for _, txt := range textIssues {
+		log.Error().Msg(string(txt))
+	}
+
+	for _, issue := range customGoIssues {
+		result.issues = append(result.issues, &analysis.Issue{
+			Filepath: issue.Filepath,
+			Message:  issue.Message,
+			Severity: config.Severity(issue.Severity),
+			Category: config.Category(issue.Category),
+			Node:     issue.Node,
+			Id:       issue.Id,
+		})
 	}
 
 	for _, issue := range goIssues {
