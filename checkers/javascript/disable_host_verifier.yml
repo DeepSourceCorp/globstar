@@ -17,6 +17,8 @@ pattern: |
 description: |
   The hostVerifier function in the ssh2 configuration is set to always return true, disabling host key verification.
   This makes the SSH connection vulnerable to Man-in-the-Middle (MITM) attacks, allowing attackers to intercept sensitive data, inject malicious commands, or impersonate the target server.
+# https://github.com/mscdex/ssh2#client-methods
+# CWE-295: Improper Certificate Validation  
 # Example:
 # Insecure Code (Vulnerable to MITM attacks)
 # const conn = new Client();
