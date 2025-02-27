@@ -89,7 +89,6 @@ var defaultIgnoreDirs = []string{
 	"__pycache__",
 	".idea",
 	".vitepress",
-	".globstar", // may contain test files
 }
 
 func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {

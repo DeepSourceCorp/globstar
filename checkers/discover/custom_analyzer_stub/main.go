@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"globstar.dev/analysis"
 )
 
@@ -18,18 +16,22 @@ var (
 func main() {
 	flag.Parse()
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	if *test {
-		diff, passed, err := analysis.RunAnalyzerTests(*path, customRules)
+		fmt.Fprintf(os.Stderr, "Running tests in %s for analyzers\n", *path)
+		diff, log, passed, err := analysis.RunAnalyzerTests(*path, customRules)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+			fmt.Fprintf(os.Stderr, "Error running tests: %s", err.Error())
 			os.Exit(1)
 		}
+
+		fmt.Fprintln(os.Stderr, log)
 
 		if !passed {
 			fmt.Fprintln(os.Stderr, "Tests failed")
 			fmt.Fprintf(os.Stderr, "Diff: %s\n", diff)
 			os.Exit(1)
+		} else {
+			fmt.Fprintln(os.Stderr, "Tests passed")
 		}
 		os.Exit(0)
 	} else {
@@ -40,8 +42,8 @@ func main() {
 		}
 
 		for _, issue := range issues {
-			txt, _ := issue.AsText()
-			log.Error().Msg(string(txt))
+			txt, _ := issue.AsJson()
+			fmt.Fprintln(os.Stderr, string(txt))
 		}
 
 		if len(issues) > 0 {

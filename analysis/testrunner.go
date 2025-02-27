@@ -200,18 +200,20 @@ func getExpectedIssuesInFile(file *ParseResult, query *sitter.Query) map[int][]s
 	return expectedIssues
 }
 
-func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, bool, error) {
+func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, string, bool, error) {
+	log := strings.Builder{}
+
 	passed := true
 	expectedIssues, err := getExpectedIssuesInDir(testDir)
 	if err != nil {
 		err = fmt.Errorf("error getting expected issues in dir %s: %v", testDir, err)
-		return "", false, err
+		return "", "", false, err
 	}
 
 	raisedIssues, err := RunAnalyzers(testDir, analyzers)
 	if err != nil {
 		err = fmt.Errorf("error running tests on dir %s: %v", testDir, err)
-		return "", false, err
+		return "", "", false, err
 	}
 
 	analyzerIssueMap := make(map[string]int)
@@ -237,10 +239,10 @@ func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, bool, erro
 
 	for analyzerId, issueCount := range analyzerIssueMap {
 		if issueCount == 0 {
-			fmt.Printf("  No tests found for analyzer %s\n", analyzerId)
+			log.Write([]byte(fmt.Sprintf("  No tests found for analyzer %s\n", analyzerId)))
 			passed = false
 		} else {
-			fmt.Printf("  Running tests for analyzer %s\n", analyzerId)
+			log.Write([]byte(fmt.Sprintf("  Running tests for analyzer %s\n", analyzerId)))
 		}
 	}
 
@@ -250,5 +252,5 @@ func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, bool, erro
 		passed = false
 	}
 
-	return diff, passed, nil
+	return diff, log.String(), passed, nil
 }

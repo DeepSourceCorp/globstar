@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/rs/zerolog v1.33.0
-	globstar.dev v0.2.0
+	globstar.dev v0.2.1-0.20250227152839-45812df1926e
 )
 
 require (
@@ -13,3 +13,5 @@ require (
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 )
+
+replace globstar.dev => /Users/sourya/deepsource/globstar

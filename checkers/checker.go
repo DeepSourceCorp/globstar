@@ -57,7 +57,7 @@ type Analyzer struct {
 var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{&javascript.NoDoubleEq},
+		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq},
 	},
 }
 
@@ -84,10 +84,12 @@ func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
 		fmt.Printf("Running tests in %s for analyzers:\n", analyzerReg.TestDir)
 		testDir := filepath.Join(cwd, analyzerReg.TestDir)
 
-		diff, isPassed, err := goAnalysis.RunAnalyzerTests(testDir, analyzerReg.Analyzers)
+		diff, log, isPassed, err := goAnalysis.RunAnalyzerTests(testDir, analyzerReg.Analyzers)
 		if err != nil {
 			errors = append(errors, err)
 		}
+
+		fmt.Println(log)
 
 		if !isPassed {
 			fmt.Printf("Issues raised are not as expected:\n%s\n", diff)
