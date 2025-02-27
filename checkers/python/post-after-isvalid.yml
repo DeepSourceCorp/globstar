@@ -1,6 +1,6 @@
 language: py
 name: post-after-isvalid
-message: Detected request.POST after an is_valid() check
+message: After form.is_valid(), use form.cleaned_data[] instead of request.POST[] or request.POST.get() to ensure data is sanitized.
 category: security
 
 pattern: |
