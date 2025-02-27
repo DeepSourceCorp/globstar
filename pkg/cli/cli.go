@@ -46,6 +46,14 @@ func (c *Cli) loadConfig() error {
 }
 
 func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
+	if _, err := os.Stat(filepath.Join(c.RootDirectory, "custom-analyzer")); err != nil {
+		if os.IsNotExist(err) {
+			return true, nil
+		}
+
+		return false, err
+	}
+
 	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", c.Config.RuleDir}, c.RootDirectory)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
@@ -61,8 +69,18 @@ func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
 }
 
 func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
+
 	issues := []*goAnalysis.Issue{}
 	issuesAsText := []string{}
+
+	if _, err := os.Stat(filepath.Join(c.RootDirectory, "custom-analyzer")); err != nil {
+		if os.IsNotExist(err) {
+			return issues, issuesAsText, nil
+		}
+
+		return issues, issuesAsText, err
+	}
+
 	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-path", c.Config.RuleDir}, c.RootDirectory)
 	if err != nil && err.(*exec.ExitError).ExitCode() != 1 {
 		return issues, issuesAsText, err
