@@ -15,7 +15,7 @@ import (
 //go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
-func ymlRuleFinder(rulesMap map[analysis.Language][]analysis.YmlRule) func(path string, d fs.DirEntry, err error) error {
+func findYamlCheckers(checkersMap map[analysis.Language][]analysis.YamlChecker) func(path string, d fs.DirEntry, err error) error {
 	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -36,27 +36,27 @@ func ymlRuleFinder(rulesMap map[analysis.Language][]analysis.YmlRule) func(path 
 			return nil
 		}
 
-		patternRule, err := analysis.ReadFromBytes(fileContent)
+		patternChecker, err := analysis.ReadFromBytes(fileContent)
 		if err != nil {
-			return fmt.Errorf("invalid rule '%s': %s", d.Name(), err.Error())
+			return fmt.Errorf("invalid checker '%s': %s", d.Name(), err.Error())
 		}
 
-		lang := patternRule.Language()
-		rulesMap[lang] = append(rulesMap[lang], patternRule)
+		lang := patternChecker.Language()
+		checkersMap[lang] = append(checkersMap[lang], patternChecker)
 		return nil
 	}
 }
 
-func LoadBuiltinYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
-	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
-	err := fs.WalkDir(builtinCheckers, ".", ymlRuleFinder(rulesMap))
-	return rulesMap, err
+func LoadBuiltinYamlCheckers() (map[analysis.Language][]analysis.YamlChecker, error) {
+	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+	err := fs.WalkDir(builtinCheckers, ".", findYamlCheckers(checkersMap))
+	return checkersMap, err
 }
 
-func LoadCustomYamlRules(dir string) (map[analysis.Language][]analysis.YmlRule, error) {
-	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
-	err := fs.WalkDir(os.DirFS(dir), ".", ymlRuleFinder(rulesMap))
-	return rulesMap, err
+func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.YamlChecker, error) {
+	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap))
+	return checkersMap, err
 }
 
 type Analyzer struct {
@@ -71,7 +71,7 @@ var AnalyzerRegistry = []Analyzer{
 	},
 }
 
-func LoadGoRules() []*goAnalysis.Analyzer {
+func LoadGoCheckers() []*goAnalysis.Analyzer {
 	analyzers := []*goAnalysis.Analyzer{}
 
 	for _, analyzer := range AnalyzerRegistry {

@@ -15,30 +15,30 @@ import (
 	"globstar.dev/customanalyzer/checkers"
 )
 
-var customRules []*analysis.Analyzer = []*analysis.Analyzer{%s}`
+var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{%s}`
 
-func generateAnalyzerRegistry(goRules []string) string {
-	if len(goRules) == 0 {
+func generateAnalyzerRegistry(goCheckers []string) string {
+	if len(goCheckers) == 0 {
 		return fmt.Sprintf(analyzersGo, "")
 	}
-	customRules := "\n"
-	for _, rule := range goRules {
-		customRules += fmt.Sprintf("\t%s,\n", rule)
+	customCheckers := "\n"
+	for _, checker := range goCheckers {
+		customCheckers += fmt.Sprintf("\t%s,\n", checker)
 	}
 
-	return fmt.Sprintf(analyzersGo, customRules)
+	return fmt.Sprintf(analyzersGo, customCheckers)
 }
 
 // Generate the complete buildable analyzer from the .globstar directory
-func GenerateAnalyzer(ruleDir, dest string) error {
-	// Discover the custom rules from the rule directory
-	goRules, err := DiscoverGoRules(ruleDir)
+func GenerateAnalyzer(checkerDir, dest string) error {
+	// Discover the custom checkers from the checker directory
+	goCheckers, err := DiscoverGoCheckers(checkerDir)
 	if err != nil {
-		return fmt.Errorf("error discovering custom rules: %v", err)
+		return fmt.Errorf("error discovering custom checkers: %v", err)
 	}
 
-	if len(goRules) == 0 {
-		return fmt.Errorf("no custom Go rules found in the directory: %s", ruleDir)
+	if len(goCheckers) == 0 {
+		return fmt.Errorf("no custom Go checkers found in the directory: %s", checkerDir)
 	}
 
 	// Copy the custom analyzer stub files to the destination directory
@@ -48,19 +48,19 @@ func GenerateAnalyzer(ruleDir, dest string) error {
 	}
 
 	// Generate the custom analyzer registry
-	analyzersGo := generateAnalyzerRegistry(goRules)
+	analyzersGo := generateAnalyzerRegistry(goCheckers)
 	// write the custom analyzer registry to the destination directory (the directory is assumed to be created, since we copied the stub files)
 	err = os.WriteFile(filepath.Join(dest, "analyzers.go"), []byte(analyzersGo), 0644)
 	if err != nil {
 		return fmt.Errorf("error writing custom analyzer registry: %v", err)
 	}
 
-	// copy the custom rules to dest/checkers directory
-	err = Copy(ruleDir, filepath.Join(dest, "checkers"), func(path string) bool {
+	// copy the custom checkers to dest/checkers directory
+	err = Copy(checkerDir, filepath.Join(dest, "checkers"), func(path string) bool {
 		return strings.HasSuffix(path, ".go")
 	})
 	if err != nil {
-		return fmt.Errorf("error copying custom rules: %v", err)
+		return fmt.Errorf("error copying custom checkers: %v", err)
 	}
 
 	return nil

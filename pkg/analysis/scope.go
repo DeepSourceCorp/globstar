@@ -8,7 +8,7 @@ import sitter "github.com/smacker/go-tree-sitter"
 
 // Reference represents a variable reference inside a source file
 // Cross-file references like those in Golang and C++ (macros/extern) are NOT supported,
-// so this shouldn't be used for rules like "unused-variable", but is safe to use for rules like
+// so this shouldn't be used for checkers like "unused-variable", but is safe to use for checkers like
 // "unused-import"
 type Reference struct {
 	// IsWriteRef determines if this reference is a write reference.
@@ -43,7 +43,7 @@ type Variable struct {
 
 // ScopeBuilder is an interface that has to be implemented
 // once for every supported language.
-// Languages that don't implement a `ScopeBuilder` can still have lints, just
+// Languages that don't implement a `ScopeBuilder` can still have checkers, just
 // not any that require scope resolution.
 type ScopeBuilder interface {
 	GetLanguage() Language

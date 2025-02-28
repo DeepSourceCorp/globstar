@@ -25,9 +25,9 @@ import (
 type Cli struct {
 	// RootDirectory is the target directory to analyze
 	RootDirectory string
-	// Rules is a list of lints that are applied to the files in `RootDirectory`
-	Rules  []analysis.Rule
-	Config *config.Config
+	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
+	Checkers []analysis.Checker
+	Config   *config.Config
 }
 
 func (c *Cli) loadConfig() error {
@@ -41,7 +41,7 @@ func (c *Cli) loadConfig() error {
 }
 
 func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
-	if err := c.buildCustomGoRules(); err != nil {
+	if err := c.buildCustomGoCheckers(); err != nil {
 		return false, err
 	}
 
@@ -53,7 +53,7 @@ func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
 		return false, err
 	}
 
-	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", filepath.Join(c.RootDirectory, c.Config.RuleDir)}, c.RootDirectory)
+	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", filepath.Join(c.RootDirectory, c.Config.CheckerDir)}, c.RootDirectory)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
 			fmt.Fprintln(os.Stderr, stderr)
@@ -72,7 +72,7 @@ func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
 	issues := []*goAnalysis.Issue{}
 	issuesAsText := []string{}
 
-	if err := c.buildCustomGoRules(); err != nil {
+	if err := c.buildCustomGoCheckers(); err != nil {
 		return issues, issuesAsText, err
 	}
 
@@ -84,7 +84,7 @@ func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
 		return issues, issuesAsText, err
 	}
 
-	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-path", filepath.Join(c.RootDirectory, c.Config.RuleDir)}, c.RootDirectory)
+	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-path", filepath.Join(c.RootDirectory, c.Config.CheckerDir)}, c.RootDirectory)
 	if err != nil && err.(*exec.ExitError).ExitCode() != 1 {
 		return issues, issuesAsText, err
 	}
@@ -152,11 +152,11 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 
 					checkers := cmd.String("checkers")
 					if checkers == "local" {
-						return c.RunLints(false, true)
+						return c.RunCheckers(false, true)
 					} else if checkers == "builtin" {
-						return c.RunLints(true, false)
+						return c.RunCheckers(true, false)
 					} else if checkers == "all" || checkers == "" {
-						return c.RunLints(true, true)
+						return c.RunCheckers(true, true)
 					}
 					return fmt.Errorf("invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s", checkers)
 				},
@@ -175,7 +175,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					dir := cmd.String("directory")
 					if dir == "" {
-						dir = c.Config.RuleDir
+						dir = c.Config.CheckerDir
 					}
 					analysisDir := filepath.Join(c.RootDirectory, dir)
 					yamlPassed := true
@@ -213,9 +213,9 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 			{
 				Name:    "build",
 				Aliases: []string{"b"},
-				Usage:   "Build the custom Go rules in the .globstar directory",
+				Usage:   "Build the custom Go checkers in the .globstar directory",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return c.buildCustomGoRules()
+					return c.buildCustomGoCheckers()
 				},
 			},
 		},
@@ -229,22 +229,22 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 	return err
 }
 
-func (c *Cli) buildCustomGoRules() error {
-	// verify that the rule directory exists
-	if _, err := os.Stat(c.Config.RuleDir); err != nil {
+func (c *Cli) buildCustomGoCheckers() error {
+	// verify that the checker directory exists
+	if _, err := os.Stat(c.Config.CheckerDir); err != nil {
 		if os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "Rule directory %s does not exist\n", c.Config.RuleDir)
+			fmt.Fprintf(os.Stderr, "Checker directory %s does not exist\n", c.Config.CheckerDir)
 			return nil
 		}
 		return nil
 	}
 
-	if goRules, err := discover.DiscoverGoRules(c.Config.RuleDir); err != nil {
+	if goCheckers, err := discover.DiscoverGoCheckers(c.Config.CheckerDir); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return err
 	} else {
-		if len(goRules) == 0 {
-			fmt.Fprintln(os.Stderr, "No Go rules found in the directory")
+		if len(goCheckers) == 0 {
+			fmt.Fprintln(os.Stderr, "No Go checkers found in the directory")
 			return nil
 		}
 	}
@@ -256,7 +256,7 @@ func (c *Cli) buildCustomGoRules() error {
 	}
 	defer os.RemoveAll(tempDir)
 
-	err = discover.GenerateAnalyzer(c.Config.RuleDir, tempDir)
+	err = discover.GenerateAnalyzer(c.Config.CheckerDir, tempDir)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return err
@@ -271,37 +271,37 @@ func (c *Cli) buildCustomGoRules() error {
 	return nil
 }
 
-func (c *Cli) LintFile(
-	rulesMap map[analysis.Language][]analysis.Rule,
-	patternRules map[analysis.Language][]analysis.YmlRule,
+func (c *Cli) CheckFile(
+	checkersMap map[analysis.Language][]analysis.Checker,
+	patternCheckers map[analysis.Language][]analysis.YamlChecker,
 	path string,
 ) ([]*analysis.Issue, error) {
 	lang := analysis.LanguageFromFilePath(path)
-	rules := rulesMap[lang]
-	if rules == nil && patternRules == nil {
-		// no rules are registered for this language
+	checkers := checkersMap[lang]
+	if checkers == nil && patternCheckers == nil {
+		// no checkers are registered for this language
 		return nil, nil
 	}
 
-	analyzer, err := analysis.FromFile(path, rules)
+	analyzer, err := analysis.FromFile(path, checkers)
 	if err != nil {
 		return nil, err
 	}
 	analyzer.WorkDir = c.RootDirectory
 
-	if patternRules != nil {
-		analyzer.YmlRules = patternRules[lang]
+	if patternCheckers != nil {
+		analyzer.YamlCheckers = patternCheckers[lang]
 	}
 
 	return analyzer.Analyze(), nil
 }
 
-type lintResult struct {
+type checkResult struct {
 	issues          []*analysis.Issue
 	numFilesChecked int
 }
 
-func (lr *lintResult) GetExitStatus(conf *config.Config) int {
+func (lr *checkResult) GetExitStatus(conf *config.Config) int {
 	for _, issue := range lr.issues {
 		for _, failCategory := range conf.FailWhen.CategoryIn {
 			if issue.Category == failCategory {
@@ -333,47 +333,47 @@ var defaultIgnoreDirs = []string{
 	".idea",
 }
 
-// RunLints goes over all the files in the project and runs the lints for every file encountered
-func (c *Cli) RunLints(runBuiltinRules, runCustomRules bool) error {
+// RunCheckers goes over all the files in the project and runs the checks for every file encountered
+func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	patternRules := make(map[analysis.Language][]analysis.YmlRule)
+	patternCheckers := make(map[analysis.Language][]analysis.YamlChecker)
 
 	var goAnalyzers []*goAnalysis.Analyzer
-	if runBuiltinRules {
-		goAnalyzers = checkers.LoadGoRules()
-		builtInPatternRules, err := checkers.LoadBuiltinYamlRules()
+	if runBuiltinCheckers {
+		goAnalyzers = checkers.LoadGoCheckers()
+		builtInPatternCheckers, err := checkers.LoadBuiltinYamlCheckers()
 		if err != nil {
 			return err
 		}
 
-		// merge the built-in rules with the custom rules
-		for lang, rules := range builtInPatternRules {
-			if _, ok := patternRules[lang]; ok {
-				patternRules[lang] = append(patternRules[lang], rules...)
+		// merge the built-in checkers with the custom checkers
+		for lang, checkers := range builtInPatternCheckers {
+			if _, ok := patternCheckers[lang]; ok {
+				patternCheckers[lang] = append(patternCheckers[lang], checkers...)
 			} else {
-				patternRules[lang] = rules
+				patternCheckers[lang] = checkers
 			}
 		}
 	}
 
-	if runCustomRules {
-		customYmlRules, err := checkers.LoadCustomYamlRules(c.Config.RuleDir)
+	if runCustomCheckers {
+		customYamlCheckers, err := checkers.LoadCustomYamlCheckers(c.Config.CheckerDir)
 		if err != nil {
 			return err
 		}
 
-		// merge customYmlRules into ymlRules
-		for lang, rules := range customYmlRules {
-			if _, ok := patternRules[lang]; ok {
-				patternRules[lang] = append(patternRules[lang], rules...)
+		// merge customYamlCheckers into yamlCheckers
+		for lang, checkers := range customYamlCheckers {
+			if _, ok := patternCheckers[lang]; ok {
+				patternCheckers[lang] = append(patternCheckers[lang], checkers...)
 			} else {
-				patternRules[lang] = rules
+				patternCheckers[lang] = checkers
 			}
 		}
 	}
 
-	result := lintResult{}
+	result := checkResult{}
 	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			// skip this path
@@ -404,10 +404,10 @@ func (c *Cli) RunLints(runBuiltinRules, runCustomRules bool) error {
 
 		result.numFilesChecked++
 
-		// run linter
-		// the first arg is empty, since the format for inbuilt Go-based rules has changed
+		// run checker
+		// the first arg is empty, since the format for inbuilt Go-based checkers has changed
 		// TODO: factor it in later
-		issues, err := c.LintFile(map[analysis.Language][]analysis.Rule{}, patternRules, path)
+		issues, err := c.CheckFile(map[analysis.Language][]analysis.Checker{}, patternCheckers, path)
 		if err != nil {
 			// parse error on a single file should not exit the entire analysis process
 			// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
@@ -449,7 +449,7 @@ func (c *Cli) RunLints(runBuiltinRules, runCustomRules bool) error {
 		}
 	}
 
-	if runCustomRules {
+	if runCustomCheckers {
 		customGoIssues, textIssues, err := c.runCustomGoAnalyzers()
 		if err != nil {
 			return fmt.Errorf("failed to run custom Go-based analyzers: %w", err)
@@ -471,7 +471,7 @@ func (c *Cli) RunLints(runBuiltinRules, runCustomRules bool) error {
 		}
 	}
 
-	// FIXME: go based rules do not increment the numFilesChecked counter
+	// FIXME: go based checkers do not increment the numFilesChecked counter
 	if result.numFilesChecked > 0 {
 		log.Info().Msgf("Analyzed %d files and found %d issues.", result.numFilesChecked, len(result.issues))
 	} else {

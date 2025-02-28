@@ -7,12 +7,12 @@ import (
 	"go/token"
 )
 
-func DiscoverGoRules(dir string) ([]string, error) {
-	goRules := []string{}
+func DiscoverGoCheckers(dir string) ([]string, error) {
+	goCheckers := []string{}
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, dir, nil, parser.AllErrors&parser.SkipObjectResolution)
 	if err != nil {
-		return goRules, err
+		return goCheckers, err
 	}
 
 	for _, pkg := range pkgs {
@@ -74,7 +74,7 @@ func DiscoverGoRules(dir string) ([]string, error) {
 							continue
 						}
 
-						goRules = append(goRules, fmt.Sprintf("%s.%s", pkg.Name, valueSpec.Names[0].Name))
+						goCheckers = append(goCheckers, fmt.Sprintf("%s.%s", pkg.Name, valueSpec.Names[0].Name))
 					}
 				default:
 					continue
@@ -83,5 +83,5 @@ func DiscoverGoRules(dir string) ([]string, error) {
 		}
 	}
 
-	return goRules, nil
+	return goCheckers, nil
 }
