@@ -1,0 +1,21 @@
+language: py
+name: weak-ssl-version
+message: Insecure SSL version detected which is deprecated due to weak encryption
+category: security
+
+patterns: 
+  - >
+    (attribute
+      object: (identifier) @ssl
+      attribute: (identifier) @version
+      (#eq? @ssl "ssl")
+      (#match? @version "^(PROTOCOL_SSLv2|PROTOCOL_SSLv3|PROTOCOL_TLSv1|PROTOCOL_TLSv1_1)$")) @weak-ssl-version
+  - >
+    (attribute
+      object: (identifier) @ssl
+      attribute: (identifier) @version
+      (#eq? @ssl "SSL")
+      (#match? @version "^(SSLv2_METHOD|SSLv23_METHOD|SSLv3_METHOD|TLSv1_METHOD|TLSv1_1_METHOD)$")) @weak-ssl-version
+
+description: >
+  An outdated and insecure SSL version was detected. TLS 1.0, TLS 1.1, and all SSL versions are considered weak encryption standards and have been deprecated due to known vulnerabilities. To ensure secure communication, it is recommended to use 'ssl.PROTOCOL_TLSv1_2' or a higher version, which provides stronger encryption and better protection against attacks.
