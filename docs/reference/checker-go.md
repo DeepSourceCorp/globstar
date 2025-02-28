@@ -136,7 +136,7 @@ Tree-sitter nodes provide several methods for examining and navigating the AST. 
 | `node.Content(source)` | Gets the text content of the node from the source |
 | `node.Range()` | Gets the range (start and end position) of the node in the source |
 
-For a complete reference of all available methods, see the [go-tree-sitter documentation](https://github.com/smacker/go-tree-sitter), which is used by Globstar for AST operations. Understanding how to traverse and inspect the AST is crucial for writing effective checkers.
+For a complete reference of all available methods, see the [go-tree-sitter documentation](https://pkg.go.dev/github.com/smacker/go-tree-sitter), which is used by Globstar for AST operations. Understanding how to traverse and inspect the AST is crucial for writing effective checkers.
 
 ### Reporting Issues
 
