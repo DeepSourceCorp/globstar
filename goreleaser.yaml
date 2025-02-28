@@ -133,4 +133,4 @@ brews:
     license: "MIT License"
     install: |
       bin.install "globstar"
-    skip_upload: auto
+    skip_upload: false
