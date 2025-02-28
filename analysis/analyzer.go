@@ -88,7 +88,7 @@ var defaultIgnoreDirs = []string{
 	".vitepress",
 }
 
-func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
+func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bool) ([]*Issue, error) {
 	raisedIssues := []*Issue{}
 	langAnalyzerMap := make(map[Language][]*Analyzer)
 	for _, analyzer := range analyzers {
@@ -105,6 +105,10 @@ func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 			if slices.Contains(defaultIgnoreDirs, info.Name()) {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+
+		if fileFilter != nil && !fileFilter(path) {
 			return nil
 		}
 

@@ -56,7 +56,7 @@ func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
 	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", filepath.Join(c.RootDirectory, c.Config.RuleDir)}, c.RootDirectory)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			fmt.Fprintf(os.Stderr, "stderr: %s\n", stderr)
+			fmt.Fprintln(os.Stderr, stderr)
 			return false, nil
 		}
 		fmt.Fprintf(os.Stderr, "Error running custom Go-based tests: %s\n", err)
@@ -430,7 +430,7 @@ func (c *Cli) RunLints(runBuiltinRules, runCustomRules bool) error {
 	}
 
 	if len(goAnalyzers) > 0 {
-		goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers)
+		goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers, nil)
 		if err != nil {
 			return fmt.Errorf("failed to run Go-based analyzers: %w", err)
 		}

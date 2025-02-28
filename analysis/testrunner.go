@@ -100,7 +100,7 @@ func slicesEqual(a, b []string) bool {
 	return true
 }
 
-func getExpectedIssuesInDir(testDir string) (map[string]map[int][]string, error) {
+func getExpectedIssuesInDir(testDir string, fileFilter func(string) bool) (map[string]map[int][]string, error) {
 	// map of test file path to map of line number to issue message
 	// {"file.test.ext": {1: {"issue1 message"}, {"issue2 message"}}}
 	expectedIssues := make(map[string]map[int][]string)
@@ -114,6 +114,10 @@ func getExpectedIssuesInDir(testDir string) (map[string]map[int][]string, error)
 		}
 
 		if !strings.HasSuffix(path, fmt.Sprintf(".test%s", filepath.Ext(path))) {
+			return nil
+		}
+
+		if fileFilter != nil && !fileFilter(path) {
 			return nil
 		}
 
@@ -204,14 +208,30 @@ func getExpectedIssuesInFile(file *ParseResult, query *sitter.Query) map[int][]s
 func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, string, bool, error) {
 	log := strings.Builder{}
 
+	// if there's a test file in the testDir for which there's no analyzer,
+	// it's most likely a YAML rule test, so skip it
+	likelyTestFiles := []string{}
+	for _, analyzer := range analyzers {
+		likelyTestFiles = append(likelyTestFiles, fmt.Sprintf("%s.test%s", analyzer.Name, GetExtFromLanguage(analyzer.Language)))
+	}
+
+	fileFilter := func(path string) bool {
+		for _, likelyTestFile := range likelyTestFiles {
+			if strings.HasSuffix(path, likelyTestFile) {
+				return true
+			}
+		}
+		return false
+	}
+
 	passed := true
-	expectedIssues, err := getExpectedIssuesInDir(testDir)
+	expectedIssues, err := getExpectedIssuesInDir(testDir, fileFilter)
 	if err != nil {
 		err = fmt.Errorf("error getting expected issues in dir %s: %v", testDir, err)
 		return "", "", false, err
 	}
 
-	raisedIssues, err := RunAnalyzers(testDir, analyzers)
+	raisedIssues, err := RunAnalyzers(testDir, analyzers, fileFilter)
 	if err != nil {
 		err = fmt.Errorf("error running tests on dir %s: %v", testDir, err)
 		return "", "", false, err

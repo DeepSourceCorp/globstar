@@ -35,7 +35,7 @@ func main() {
 		}
 		os.Exit(0)
 	} else {
-		issues, err := analysis.RunAnalyzers(*path, customRules)
+		issues, err := analysis.RunAnalyzers(*path, customRules, nil)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
