@@ -1,6 +1,6 @@
 language: py
 name: weak-ssl-version
-message: An insecure version of SSL has been detected which is deprectated due to weak encryption
+message: Insecure SSL version detected which is deprecated due to weak encryption
 category: security
 
 patterns: 
