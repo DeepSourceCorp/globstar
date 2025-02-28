@@ -48,7 +48,7 @@ type ParseResult struct {
 	Language Language
 	// ScopeTree represents the scope hierarchy of the file.
 	// Can be nil if scope support for this language has not been implemented yet.
-	// ScopeTree *ScopeTree
+	ScopeTree *ScopeTree
 }
 
 type Language int
@@ -214,14 +214,14 @@ func Parse(filePath string, source []byte, language Language, grammar *sitter.La
 		return nil, fmt.Errorf("failed to parse %s", filePath)
 	}
 
-	// scopeTree := MakeScopeTree(language, ast, source)
+	scopeTree := MakeScopeTree(language, ast, source)
 	parseResult := &ParseResult{
 		Ast:        ast,
 		Source:     source,
 		FilePath:   filePath,
 		TsLanguage: grammar,
 		Language:   language,
-		// ScopeTree:  scopeTree,
+		ScopeTree:  scopeTree,
 	}
 
 	return parseResult, nil
@@ -259,6 +259,63 @@ func GetEscapedCommentIdentifierFromPath(path string) string {
 		return "<\\!--"
 	case LangOCaml:
 		return "\\(\\*"
+	default:
+		return ""
+	}
+}
+
+func GetExtFromLanguage(lang Language) string {
+	switch lang {
+	case LangPy:
+		return ".py"
+	case LangJs:
+		return ".js"
+	case LangTs:
+		return ".ts"
+	case LangTsx:
+		return ".tsx"
+	case LangJava:
+		return ".java"
+	case LangRuby:
+		return ".rb"
+	case LangRust:
+		return ".rs"
+	case LangYaml:
+		return ".yaml"
+	case LangCss:
+		return ".css"
+	case LangDockerfile:
+		return ".Dockerfile"
+	case LangSql:
+		return ".sql"
+	case LangKotlin:
+		return ".kt"
+	case LangOCaml:
+		return ".ml"
+	case LangLua:
+		return ".lua"
+	case LangBash:
+		return ".sh"
+	case LangCsharp:
+		return ".cs"
+	case LangElixir:
+		return ".ex"
+	case LangElm:
+		return ".elm"
+	case LangGo:
+		return ".go"
+	case LangGroovy:
+		return ".groovy"
+	case LangHcl:
+		return ".tf"
+	case LangHtml:
+		return ".html"
+	case LangPhp:
+		return ".php"
+	case LangScala:
+		return ".scala"
+	case LangSwift:
+		return ".swift"
 	default:
 		return ""
 	}

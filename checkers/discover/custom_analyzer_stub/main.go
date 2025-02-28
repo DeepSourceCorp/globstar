@@ -18,7 +18,7 @@ func main() {
 
 	if *test {
 		fmt.Fprintf(os.Stderr, "Running tests in %s for analyzers\n", *path)
-		diff, log, passed, err := analysis.RunAnalyzerTests(*path, customRules)
+		diff, log, passed, err := analysis.RunAnalyzerTests(*path, customCheckers)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error running tests: %s", err.Error())
 			os.Exit(1)
@@ -35,7 +35,7 @@ func main() {
 		}
 		os.Exit(0)
 	} else {
-		issues, err := analysis.RunAnalyzers(*path, customRules)
+		issues, err := analysis.RunAnalyzers(*path, customCheckers, nil)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)

@@ -8,7 +8,7 @@ import (
 var NoDoubleEq *analysis.Analyzer = &analysis.Analyzer{
 	Name:        "no-double-eq",
 	Language:    analysis.LangJs,
-	Description: "This rule checks for the usage of '==' in JavaScript code. It reports an issue if '==' is used for comparison. It suggests using '===' instead.",
+	Description: "This checker checks for the usage of '==' in JavaScript code. It reports an issue if '==' is used for comparison. It suggests using '===' instead.",
 	Category:    analysis.CategoryBugRisk,
 	Severity:    analysis.SeverityWarning,
 	Run:         noDoubleEq,

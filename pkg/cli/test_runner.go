@@ -22,12 +22,12 @@ func runTests(dir string) (bool, error) {
 }
 
 type testCase struct {
-	ymlRulePath string
-	testFile    string
+	yamlCheckerPath string
+	testFile        string
 }
 
 func findTestCases(dir string) ([]testCase, error) {
-	var pairs []testCase // List of rule file/test file pairs
+	var pairs []testCase // List of checker file/test file pairs
 
 	err := filepath.Walk(dir, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
@@ -49,21 +49,21 @@ func findTestCases(dir string) ([]testCase, error) {
 			return nil
 		}
 
-		patternRule, err := analysis.ReadFromFile(path)
+		patternChecker, err := analysis.ReadFromFile(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid rule '%s': %s\n", d.Name(), err.Error())
+			fmt.Fprintf(os.Stderr, "invalid checker '%s': %s\n", d.Name(), err.Error())
 			return nil
 		}
 
-		testFile := strings.TrimSuffix(path, fileExt) + ".test" + analysis.GetExtFromLanguage(patternRule.Language())
+		testFile := strings.TrimSuffix(path, fileExt) + ".test" + analysis.GetExtFromLanguage(patternChecker.Language())
 
 		if _, err := os.Stat(testFile); os.IsNotExist(err) {
 			testFile = ""
 		}
 
 		pairs = append(pairs, testCase{
-			ymlRulePath: path,
-			testFile:    testFile,
+			yamlCheckerPath: path,
+			testFile:        testFile,
 		})
 
 		return nil
@@ -85,24 +85,24 @@ func runTestCases(dir string) (passed bool, err error) {
 	passed = true
 	for _, tc := range testCases {
 		if tc.testFile == "" {
-			fmt.Fprintf(os.Stderr, "No test cases found for test: %s\n", filepath.Base(tc.ymlRulePath))
+			fmt.Fprintf(os.Stderr, "No test cases found for test: %s\n", filepath.Base(tc.yamlCheckerPath))
 			continue
 		}
 
-		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(tc.ymlRulePath))
-		// Read and parse the rule definition
-		rule, err := analysis.ReadFromFile(tc.ymlRulePath)
+		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(tc.yamlCheckerPath))
+		// Read and parse the checker definition
+		checker, err := analysis.ReadFromFile(tc.yamlCheckerPath)
 		if err != nil {
 			return false, err
 		}
 
 		// Parse the test file
-		analyzer, err := analysis.FromFile(tc.testFile, []analysis.Rule{})
+		analyzer, err := analysis.FromFile(tc.testFile, []analysis.Checker{})
 		if err != nil {
 			return false, err
 		}
 		analyzer.WorkDir = dir
-		analyzer.YmlRules = append(analyzer.YmlRules, rule)
+		analyzer.YamlCheckers = append(analyzer.YamlCheckers, checker)
 		issues := analyzer.Analyze()
 
 		want, err := findExpectedLines(tc.testFile)
@@ -135,7 +135,7 @@ func runTestCases(dir string) (passed bool, err error) {
 		for i := range want {
 			if want[i] != got[i] {
 				message := fmt.Sprintf(
-					"(%s): expected lint on line %d, but next occurrence is on line %d\n",
+					"(%s): expected issue on line %d, but next occurrence is on line %d\n",
 					testName,
 					want,
 					got,

@@ -23,11 +23,11 @@ import (
 // This is the key that we will use.
 const filterPatternKey = "__filter__key__"
 
-// A YmlRule is a rule that matches a tree-sitter query pattern
+// A YamlChecker is a checker that matches a tree-sitter query pattern
 // and reports an issue when the pattern is found.
-// Unlike regular issues, PatternRules are not associated with a specific node type, rather
+// Unlike regular issues, PatternCheckers are not associated with a specific node type, rather
 // they are invoked for *every* node that matches the pattern.
-type YmlRule interface {
+type YamlChecker interface {
 	Name() string
 	Patterns() []*sitter.Query
 	Language() Language
@@ -43,22 +43,22 @@ type YmlRule interface {
 	NodeFilters() []NodeFilter
 }
 
-// NodeFilter is a filter that can be applied to a PatternRule to restrict
-// the the nodes that the rule is applied to.
-// The rule is only applied to nodes that have a parent matching (or not matching) the query.
+// NodeFilter is a filter that can be applied to a PatternChecker to restrict
+// the the nodes that the checker is applied to.
+// The checker is only applied to nodes that have a parent matching (or not matching) the query.
 type NodeFilter struct {
 	query       *sitter.Query
 	shouldMatch bool
 }
 
-// PathFilter is a glob that can be applied to a PatternRule to restrict
-// the files that the rule is applied to.
+// PathFilter is a glob that can be applied to a PatternChecker to restrict
+// the files that the checker is applied to.
 type PathFilter struct {
 	ExcludeGlobs []glob.Glob
 	IncludeGlobs []glob.Glob
 }
 
-type patternRuleImpl struct {
+type patternCheckerImpl struct {
 	language     Language
 	patterns     []*sitter.Query
 	issueMessage string
@@ -69,15 +69,15 @@ type patternRuleImpl struct {
 	filters      []NodeFilter
 }
 
-func (r *patternRuleImpl) Language() Language {
+func (r *patternCheckerImpl) Language() Language {
 	return r.language
 }
 
-func (r *patternRuleImpl) Patterns() []*sitter.Query {
+func (r *patternCheckerImpl) Patterns() []*sitter.Query {
 	return r.patterns
 }
 
-func (r *patternRuleImpl) OnMatch(
+func (r *patternCheckerImpl) OnMatch(
 	ana *Analyzer,
 	matchedQuery *sitter.Query,
 	matchedNode *sitter.Node,
@@ -109,34 +109,34 @@ func (r *patternRuleImpl) OnMatch(
 	})
 }
 
-func (r *patternRuleImpl) Name() string {
+func (r *patternCheckerImpl) Name() string {
 	return r.issueId
 }
 
-func (r *patternRuleImpl) PathFilter() *PathFilter {
+func (r *patternCheckerImpl) PathFilter() *PathFilter {
 	return r.pathFilter
 }
 
-func (r *patternRuleImpl) NodeFilters() []NodeFilter {
+func (r *patternCheckerImpl) NodeFilters() []NodeFilter {
 	return r.filters
 }
 
-func (r *patternRuleImpl) Category() config.Category {
+func (r *patternCheckerImpl) Category() config.Category {
 	return r.category
 }
 
-func (r *patternRuleImpl) Severity() config.Severity {
+func (r *patternCheckerImpl) Severity() config.Severity {
 	return r.severity
 }
 
-func CreatePatternRule(
+func CreatePatternChecker(
 	patterns []*sitter.Query,
 	language Language,
 	issueMessage string,
 	issueId string,
 	pathFilter *PathFilter,
-) YmlRule {
-	return &patternRuleImpl{
+) YamlChecker {
+	return &patternCheckerImpl{
 		language:     language,
 		patterns:     patterns,
 		issueMessage: issueMessage,
@@ -150,7 +150,7 @@ type filterYAML struct {
 	PatternNotInside string `yaml:"pattern-not-inside,omitempty"`
 }
 
-type PatternRuleFile struct {
+type PatternCheckerFile struct {
 	Language string          `yaml:"language"`
 	Code     string          `yaml:"name"`
 	Message  string          `yaml:"message"`
@@ -232,8 +232,8 @@ func DecodeLanguage(language string) Language {
 	}
 }
 
-// ReadFromFile reads a pattern rule definition from a YAML config file.
-func ReadFromFile(filePath string) (YmlRule, error) {
+// ReadFromFile reads a pattern checker definition from a YAML config file.
+func ReadFromFile(filePath string) (YamlChecker, error) {
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -242,35 +242,35 @@ func ReadFromFile(filePath string) (YmlRule, error) {
 	return ReadFromBytes(fileContent)
 }
 
-// ReadFromBytes reads a pattern rule definition from bytes array
-func ReadFromBytes(fileContent []byte) (YmlRule, error) {
-	var rule PatternRuleFile
-	if err := yaml.Unmarshal(fileContent, &rule); err != nil {
+// ReadFromBytes reads a pattern checker definition from bytes array
+func ReadFromBytes(fileContent []byte) (YamlChecker, error) {
+	var checker PatternCheckerFile
+	if err := yaml.Unmarshal(fileContent, &checker); err != nil {
 		return nil, err
 	}
 
-	lang := DecodeLanguage(rule.Language)
+	lang := DecodeLanguage(checker.Language)
 	if lang == LangUnknown {
-		return nil, fmt.Errorf("unknown language code: '%s'", rule.Language)
+		return nil, fmt.Errorf("unknown language code: '%s'", checker.Language)
 	}
 
-	if rule.Code == "" {
-		return nil, fmt.Errorf("no name provided in rule definition")
+	if checker.Code == "" {
+		return nil, fmt.Errorf("no name provided in checker definition")
 	}
 
-	if rule.Message == "" {
-		return nil, fmt.Errorf("no message provided in rule '%s'", rule.Code)
+	if checker.Message == "" {
+		return nil, fmt.Errorf("no message provided in checker '%s'", checker.Code)
 	}
 
 	var patterns []*sitter.Query
-	if rule.Pattern != "" {
-		pattern, err := sitter.NewQuery([]byte(rule.Pattern), lang.Grammar())
+	if checker.Pattern != "" {
+		pattern, err := sitter.NewQuery([]byte(checker.Pattern), lang.Grammar())
 		if err != nil {
 			return nil, err
 		}
 		patterns = append(patterns, pattern)
-	} else if len(rule.Patterns) > 0 {
-		for _, patternStr := range rule.Patterns {
+	} else if len(checker.Patterns) > 0 {
+		for _, patternStr := range checker.Patterns {
 			pattern, err := sitter.NewQuery([]byte(patternStr), lang.Grammar())
 			if err != nil {
 				return nil, err
@@ -278,22 +278,22 @@ func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 			patterns = append(patterns, pattern)
 		}
 	} else {
-		return nil, fmt.Errorf("no pattern provided in rule '%s'", rule.Code)
+		return nil, fmt.Errorf("no pattern provided in checker '%s'", checker.Code)
 	}
 
-	if rule.Pattern != "" && len(rule.Patterns) > 0 {
-		return nil, fmt.Errorf("only one of 'pattern' or 'patterns' can be provided in a rule definition")
+	if checker.Pattern != "" && len(checker.Patterns) > 0 {
+		return nil, fmt.Errorf("only one of 'pattern' or 'patterns' can be provided in a checker definition")
 	}
 
 	// include and exclude patterns
 	var pathFilter *PathFilter
-	if rule.Exclude != nil || rule.Include != nil {
+	if checker.Exclude != nil || checker.Include != nil {
 		pathFilter = &PathFilter{
-			ExcludeGlobs: make([]glob.Glob, 0, len(rule.Exclude)),
-			IncludeGlobs: make([]glob.Glob, 0, len(rule.Include)),
+			ExcludeGlobs: make([]glob.Glob, 0, len(checker.Exclude)),
+			IncludeGlobs: make([]glob.Glob, 0, len(checker.Include)),
 		}
 
-		for _, exclude := range rule.Exclude {
+		for _, exclude := range checker.Exclude {
 			g, err := glob.Compile(exclude)
 			if err != nil {
 				return nil, err
@@ -301,7 +301,7 @@ func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 			pathFilter.ExcludeGlobs = append(pathFilter.ExcludeGlobs, g)
 		}
 
-		for _, include := range rule.Include {
+		for _, include := range checker.Include {
 			g, err := glob.Compile(include)
 			if err != nil {
 				return nil, err
@@ -312,8 +312,8 @@ func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 
 	// node filters
 	var filters []NodeFilter
-	if rule.Filters != nil {
-		for _, filter := range rule.Filters {
+	if checker.Filters != nil {
+		for _, filter := range checker.Filters {
 			if filter.PatternInside != "" {
 				queryStr := filter.PatternInside + " @" + filterPatternKey
 				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
@@ -342,14 +342,14 @@ func ReadFromBytes(fileContent []byte) (YmlRule, error) {
 		}
 	}
 
-	patternRule := &patternRuleImpl{
+	patternChecker := &patternCheckerImpl{
 		language:     lang,
 		patterns:     patterns,
-		issueMessage: rule.Message,
-		issueId:      rule.Code,
+		issueMessage: checker.Message,
+		issueId:      checker.Code,
 		pathFilter:   pathFilter,
 		filters:      filters,
 	}
 
-	return patternRule, nil
+	return patternChecker, nil
 }
