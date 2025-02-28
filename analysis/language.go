@@ -48,7 +48,7 @@ type ParseResult struct {
 	Language Language
 	// ScopeTree represents the scope hierarchy of the file.
 	// Can be nil if scope support for this language has not been implemented yet.
-	// ScopeTree *ScopeTree
+	ScopeTree *ScopeTree
 }
 
 type Language int
@@ -214,14 +214,14 @@ func Parse(filePath string, source []byte, language Language, grammar *sitter.La
 		return nil, fmt.Errorf("failed to parse %s", filePath)
 	}
 
-	// scopeTree := MakeScopeTree(language, ast, source)
+	scopeTree := MakeScopeTree(language, ast, source)
 	parseResult := &ParseResult{
 		Ast:        ast,
 		Source:     source,
 		FilePath:   filePath,
 		TsLanguage: grammar,
 		Language:   language,
-		// ScopeTree:  scopeTree,
+		ScopeTree:  scopeTree,
 	}
 
 	return parseResult, nil
