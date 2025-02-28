@@ -70,10 +70,7 @@ func walkTree(node *sitter.Node, f func(*sitter.Node)) {
 
 func Preorder(pass *Pass, fn func(*sitter.Node)) {
 	// TODO: cache the traversal results to avoid running the traversal for each analyzer
-	for _, file := range pass.Files {
-		pass.FileContext = file
-		walkTree(file.Ast, fn)
-	}
+	walkTree(pass.FileContext.Ast, fn)
 }
 
 var defaultIgnoreDirs = []string{

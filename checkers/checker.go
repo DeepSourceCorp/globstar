@@ -15,9 +15,8 @@ import (
 //go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
-func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
-	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
-	err := fs.WalkDir(builtinCheckers, ".", func(path string, d fs.DirEntry, err error) error {
+func ymlRuleFinder(rulesMap map[analysis.Language][]analysis.YmlRule) func(path string, d fs.DirEntry, err error) error {
+	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -45,7 +44,18 @@ func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
 		lang := patternRule.Language()
 		rulesMap[lang] = append(rulesMap[lang], patternRule)
 		return nil
-	})
+	}
+}
+
+func LoadBuiltinYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
+	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
+	err := fs.WalkDir(builtinCheckers, ".", ymlRuleFinder(rulesMap))
+	return rulesMap, err
+}
+
+func LoadCustomYamlRules(dir string) (map[analysis.Language][]analysis.YmlRule, error) {
+	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
+	err := fs.WalkDir(os.DirFS(dir), ".", ymlRuleFinder(rulesMap))
 	return rulesMap, err
 }
 

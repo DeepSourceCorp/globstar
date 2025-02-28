@@ -92,6 +92,7 @@ func messagesEqual(expected, actual []string) bool {
 // Helper function to compare two sorted slices
 func slicesEqual(a, b []string) bool {
 	for i := range a {
+		// if message is empty, don't match
 		if a[i] != "" && a[i] != b[i] {
 			return false
 		}

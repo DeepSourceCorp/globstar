@@ -302,3 +302,11 @@ func (ana *Analyzer) runPatternRules() {
 func (ana *Analyzer) Report(issue *Issue) {
 	ana.issuesRaised = append(ana.issuesRaised, issue)
 }
+
+func RunYmlRules(path string, analyzers []*Analyzer) ([]*Issue, error) {
+	issues := []*Issue{}
+	for _, analyzer := range analyzers {
+		issues = append(issues, analyzer.Analyze()...)
+	}
+	return issues, nil
+}

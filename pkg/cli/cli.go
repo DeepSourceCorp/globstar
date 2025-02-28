@@ -36,11 +36,6 @@ func (c *Cli) loadConfig() error {
 		return err
 	}
 
-	if _, err := filepath.Rel(c.RootDirectory, conf.RuleDir); err != nil {
-		// if the rule directory is not an absolute path, make it so
-		conf.RuleDir = filepath.Join(c.RootDirectory, conf.RuleDir)
-	}
-
 	c.Config = conf
 	return nil
 }
@@ -58,7 +53,7 @@ func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
 		return false, err
 	}
 
-	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", c.Config.RuleDir}, c.RootDirectory)
+	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-test", "-path", filepath.Join(c.RootDirectory, c.Config.RuleDir)}, c.RootDirectory)
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
 			fmt.Fprintf(os.Stderr, "stderr: %s\n", stderr)
@@ -89,7 +84,7 @@ func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
 		return issues, issuesAsText, err
 	}
 
-	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-path", c.Config.RuleDir}, c.RootDirectory)
+	_, stderr, err := util.RunCmd("./custom-analyzer", []string{"-path", filepath.Join(c.RootDirectory, c.Config.RuleDir)}, c.RootDirectory)
 	if err != nil && err.(*exec.ExitError).ExitCode() != 1 {
 		return issues, issuesAsText, err
 	}
@@ -112,13 +107,6 @@ func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
 
 func (c *Cli) Run() error {
 	err := c.loadConfig()
-	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
-		return err
-	}
-
-	// read all yaml rules in the .globstar directory
-	patternRules, err := c.LoadYamlRules(c.Config.RuleDir)
 	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		return err
@@ -164,11 +152,11 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 
 					checkers := cmd.String("checkers")
 					if checkers == "local" {
-						return c.RunLints(patternRules, false)
+						return c.RunLints(false, true)
 					} else if checkers == "builtin" {
-						return c.RunLints(nil, true)
+						return c.RunLints(true, false)
 					} else if checkers == "all" || checkers == "" {
-						return c.RunLints(patternRules, true)
+						return c.RunLints(true, true)
 					}
 					return fmt.Errorf("invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s", checkers)
 				},
@@ -191,30 +179,30 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					}
 					analysisDir := filepath.Join(c.RootDirectory, dir)
 					yamlPassed := true
-					if len(patternRules) != 0 {
-						yamlPassed, err = runTests(analysisDir)
-						if err != nil {
-							err = fmt.Errorf("error running YAML tests: %w", err)
-							fmt.Fprintln(os.Stderr, err.Error())
-						}
-					} else {
-						fmt.Fprintln(os.Stderr, "No YAML rules found")
-					}
-
-					goPassed, errs := checkers.RunAnalyzerTests(checkers.AnalyzerRegistry)
-					if len(errs) > 0 {
-						fmt.Fprintln(os.Stderr, "Errors running Go-based tests:")
-						for _, e := range errs {
-							fmt.Fprintln(os.Stderr, e.Error())
-						}
-					}
-
-					customGoPassed, err := c.runCustomGoAnalyzerTests()
+					yamlPassed, err = runTests(analysisDir)
 					if err != nil {
+						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())
 					}
 
-					if !(yamlPassed && goPassed && customGoPassed) {
+					goPassed := true
+					if dir == "checkers" {
+						var errs []error
+						goPassed, errs = checkers.RunAnalyzerTests(checkers.AnalyzerRegistry)
+						if len(errs) > 0 {
+							fmt.Fprintln(os.Stderr, "Errors running Go-based tests:")
+							for _, e := range errs {
+								fmt.Fprintln(os.Stderr, e.Error())
+							}
+						}
+					} else {
+						goPassed, err = c.runCustomGoAnalyzerTests()
+						if err != nil {
+							fmt.Fprintln(os.Stderr, err.Error())
+						}
+					}
+
+					if !(yamlPassed && goPassed) {
 						return fmt.Errorf("tests failed")
 					}
 
@@ -283,58 +271,6 @@ func (c *Cli) buildCustomGoRules() error {
 	return nil
 }
 
-// LoadYamlRules reads all the custom rules from the `.globstar/` directory in the project root,
-// or from checkers/ dir for built-in rules
-func (c *Cli) LoadYamlRules(ruleDir string) (map[analysis.Language][]analysis.YmlRule, error) {
-	analysisDir := filepath.Join(c.RootDirectory, ruleDir)
-
-	stat, err := os.Stat(analysisDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-
-		return nil, err
-	}
-
-	if !stat.IsDir() {
-		return nil, nil
-	}
-
-	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
-	err = filepath.Walk(analysisDir, func(path string, d fs.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-
-		if d.IsDir() && d.Name() != ruleDir {
-			return fs.SkipDir
-		}
-
-		if d.Mode()&fs.ModeSymlink != 0 {
-			// skip symlinks
-			return nil
-		}
-
-		fileExt := filepath.Ext(path)
-		isYamlFile := fileExt == ".yaml" || fileExt == ".yml"
-		if !isYamlFile {
-			return nil
-		}
-
-		patternRule, err := analysis.ReadFromFile(path)
-		if err != nil {
-			return fmt.Errorf("invalid rule '%s': %s", d.Name(), err.Error())
-		}
-
-		lang := patternRule.Language()
-		rulesMap[lang] = append(rulesMap[lang], patternRule)
-		return nil
-	})
-
-	return rulesMap, err
-}
-
 func (c *Cli) LintFile(
 	rulesMap map[analysis.Language][]analysis.Rule,
 	patternRules map[analysis.Language][]analysis.YmlRule,
@@ -398,26 +334,37 @@ var defaultIgnoreDirs = []string{
 }
 
 // RunLints goes over all the files in the project and runs the lints for every file encountered
-func (c *Cli) RunLints(
-	patternRules map[analysis.Language][]analysis.YmlRule, // map of language id -> yaml rules
-	runBuiltinRules bool,
-) error {
+func (c *Cli) RunLints(runBuiltinRules, runCustomRules bool) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	if patternRules == nil {
-		patternRules = make(map[analysis.Language][]analysis.YmlRule)
-	}
+	patternRules := make(map[analysis.Language][]analysis.YmlRule)
 
 	var goAnalyzers []*goAnalysis.Analyzer
 	if runBuiltinRules {
 		goAnalyzers = checkers.LoadGoRules()
-		builtInPatternRules, err := checkers.LoadYamlRules()
+		builtInPatternRules, err := checkers.LoadBuiltinYamlRules()
 		if err != nil {
 			return err
 		}
 
 		// merge the built-in rules with the custom rules
 		for lang, rules := range builtInPatternRules {
+			if _, ok := patternRules[lang]; ok {
+				patternRules[lang] = append(patternRules[lang], rules...)
+			} else {
+				patternRules[lang] = rules
+			}
+		}
+	}
+
+	if runCustomRules {
+		customYmlRules, err := checkers.LoadCustomYamlRules(c.Config.RuleDir)
+		if err != nil {
+			return err
+		}
+
+		// merge customYmlRules into ymlRules
+		for lang, rules := range customYmlRules {
 			if _, ok := patternRules[lang]; ok {
 				patternRules[lang] = append(patternRules[lang], rules...)
 			} else {
@@ -482,43 +429,46 @@ func (c *Cli) RunLints(
 		return err
 	}
 
-	goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers)
-	if err != nil {
-		return fmt.Errorf("failed to run Go-based analyzers: %w", err)
+	if len(goAnalyzers) > 0 {
+		goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers)
+		if err != nil {
+			return fmt.Errorf("failed to run Go-based analyzers: %w", err)
+		}
+		for _, issue := range goIssues {
+			txt, _ := issue.AsText()
+			log.Error().Msg(string(txt))
+
+			result.issues = append(result.issues, &analysis.Issue{
+				Filepath: issue.Filepath,
+				Message:  issue.Message,
+				Severity: config.Severity(issue.Severity),
+				Category: config.Category(issue.Category),
+				Node:     issue.Node,
+				Id:       issue.Id,
+			})
+		}
 	}
 
-	customGoIssues, textIssues, err := c.runCustomGoAnalyzers()
-	if err != nil {
-		return fmt.Errorf("failed to run custom Go-based analyzers: %w", err)
-	}
+	if runCustomRules {
+		customGoIssues, textIssues, err := c.runCustomGoAnalyzers()
+		if err != nil {
+			return fmt.Errorf("failed to run custom Go-based analyzers: %w", err)
+		}
 
-	for _, txt := range textIssues {
-		log.Error().Msg(string(txt))
-	}
+		for _, txt := range textIssues {
+			log.Error().Msg(string(txt))
+		}
 
-	for _, issue := range customGoIssues {
-		result.issues = append(result.issues, &analysis.Issue{
-			Filepath: issue.Filepath,
-			Message:  issue.Message,
-			Severity: config.Severity(issue.Severity),
-			Category: config.Category(issue.Category),
-			Node:     issue.Node,
-			Id:       issue.Id,
-		})
-	}
-
-	for _, issue := range goIssues {
-		txt, _ := issue.AsText()
-		log.Error().Msg(string(txt))
-
-		result.issues = append(result.issues, &analysis.Issue{
-			Filepath: issue.Filepath,
-			Message:  issue.Message,
-			Severity: config.Severity(issue.Severity),
-			Category: config.Category(issue.Category),
-			Node:     issue.Node,
-			Id:       issue.Id,
-		})
+		for _, issue := range customGoIssues {
+			result.issues = append(result.issues, &analysis.Issue{
+				Filepath: issue.Filepath,
+				Message:  issue.Message,
+				Severity: config.Severity(issue.Severity),
+				Category: config.Category(issue.Category),
+				Node:     issue.Node,
+				Id:       issue.Id,
+			})
+		}
 	}
 
 	// FIXME: go based rules do not increment the numFilesChecked counter

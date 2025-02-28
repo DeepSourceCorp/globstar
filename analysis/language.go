@@ -263,3 +263,60 @@ func GetEscapedCommentIdentifierFromPath(path string) string {
 		return ""
 	}
 }
+
+func GetExtFromLanguage(lang Language) string {
+	switch lang {
+	case LangPy:
+		return ".py"
+	case LangJs:
+		return ".js"
+	case LangTs:
+		return ".ts"
+	case LangTsx:
+		return ".tsx"
+	case LangJava:
+		return ".java"
+	case LangRuby:
+		return ".rb"
+	case LangRust:
+		return ".rs"
+	case LangYaml:
+		return ".yaml"
+	case LangCss:
+		return ".css"
+	case LangDockerfile:
+		return ".Dockerfile"
+	case LangSql:
+		return ".sql"
+	case LangKotlin:
+		return ".kt"
+	case LangOCaml:
+		return ".ml"
+	case LangLua:
+		return ".lua"
+	case LangBash:
+		return ".sh"
+	case LangCsharp:
+		return ".cs"
+	case LangElixir:
+		return ".ex"
+	case LangElm:
+		return ".elm"
+	case LangGo:
+		return ".go"
+	case LangGroovy:
+		return ".groovy"
+	case LangHcl:
+		return ".tf"
+	case LangHtml:
+		return ".html"
+	case LangPhp:
+		return ".php"
+	case LangScala:
+		return ".scala"
+	case LangSwift:
+		return ".swift"
+	default:
+		return ""
+	}
+}
