@@ -116,3 +116,21 @@ release:
   github:
     owner: DeepSourceCorp
     name: globstar
+
+brews:
+  - repository:
+      owner: DeepSourceCorp
+      name: homebrew-globstar
+      branch: globstar-release-{{ .Version }}
+      token: "{{ .Env.HOMEBREW_TOKEN }}"
+    ids:
+      - arch_rename
+    commit_author:
+      name: deepsourcebot
+      email: bot@deepsource.io
+    homepage: "https://globstar.dev"
+    description: "Globstar is a fast, feature-rich, and open-source static analysis toolkit for writing and running code checkers. Based on tree-sitter."
+    license: "MIT License"
+    install: |
+      bin.install "globstar"
+    skip_upload: auto
