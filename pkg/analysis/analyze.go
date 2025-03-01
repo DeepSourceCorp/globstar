@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/pkg/config"
@@ -262,6 +263,43 @@ func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bo
 	return true
 }
 
+// utility function to check if a node or its line has a skipcq comment
+// TODO: Support ignoring only specific checkers by adding
+// their namespace to the comment
+func HasSkiqCQComment(source []byte, node *sitter.Node) bool {
+	startPoint := node.StartPoint()
+	lineNumber := int(startPoint.Row)
+
+	lines := strings.Split(string(source), "\n")
+	if lineNumber >= len(lines) {
+		return false
+	}
+
+	nodeLine := lines[lineNumber]
+
+	// check for inline skipcq comment
+	if strings.Contains(nodeLine, "// skipcq") ||
+		strings.Contains(nodeLine, "# skipcq") ||
+		strings.Contains(nodeLine, "/* skipcq */") {
+
+		return true
+	}
+
+	// check for skipcq comment on previous line
+	if lineNumber > 0 {
+		previousLine := strings.TrimSpace(lines[lineNumber-1])
+
+		if strings.Contains(previousLine, "// skipcq") ||
+			strings.Contains(previousLine, "# skipcq") ||
+			strings.Contains(previousLine, "/* skipcq */") {
+
+			return true
+		}
+	}
+
+	return false
+}
+
 func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()
@@ -278,7 +316,7 @@ func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Quer
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
 			// TODO: explain why captureName == checker.Name()
-			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) {
+			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) && !HasSkiqCQComment(ana.ParseResult.Source, capture.Node) {
 				checker.OnMatch(ana, query, capture.Node, m.Captures)
 			}
 		}
