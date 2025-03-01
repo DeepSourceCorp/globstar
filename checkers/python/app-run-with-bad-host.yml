@@ -1,6 +1,6 @@
 language: py
 name: app-run-with-bad-host
-message: Running flask app with host `0.0.0.0` can expose the server publicly
+message: Running Flask with host 0.0.0.0 allows connections from any network interface, posing a security risk.
 category: security
 severity: warning
 
