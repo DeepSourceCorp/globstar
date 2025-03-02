@@ -178,11 +178,18 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						dir = c.Config.CheckerDir
 					}
 					analysisDir := filepath.Join(c.RootDirectory, dir)
-					yamlPassed := true
-					yamlPassed, err = runTests(analysisDir)
+
+					// Track test failures but continue running all tests
+					var testsFailed bool
+
+					yamlPassed, err := runTests(analysisDir)
 					if err != nil {
 						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())
+						// Don't return immediately, continue with other tests
+					}
+					if !yamlPassed {
+						testsFailed = true
 					}
 
 					goPassed := true
@@ -193,17 +200,22 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 							fmt.Fprintln(os.Stderr, "Errors running Go-based tests:")
 							for _, e := range errs {
 								fmt.Fprintln(os.Stderr, e.Error())
+								testsFailed = true
 							}
 						}
 					} else {
 						goPassed, err = c.runCustomGoAnalyzerTests()
 						if err != nil {
 							fmt.Fprintln(os.Stderr, err.Error())
+							testsFailed = true
 						}
 					}
+					if !goPassed {
+						testsFailed = true
+					}
 
-					if !(yamlPassed && goPassed) {
-						return fmt.Errorf("tests failed")
+					if testsFailed {
+						return fmt.Errorf("one or more tests failed")
 					}
 
 					fmt.Fprint(os.Stdout, "All tests passed")
