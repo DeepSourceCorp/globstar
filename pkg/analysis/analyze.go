@@ -264,9 +264,9 @@ func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bo
 }
 
 // utility function to check if a node or its line has a skipcq comment
-// TODO: Support ignoring only specific checkers by adding
-// their namespace to the comment
-func HasSkiqCQComment(source []byte, node *sitter.Node) bool {
+// Format for the skipcq directive:
+// `// skipcq: <language>:<checker_name>`
+func HasSkipCQComment(source []byte, node *sitter.Node, checker YamlChecker) bool {
 	startPoint := node.StartPoint()
 	lineNumber := int(startPoint.Row)
 
@@ -278,10 +278,15 @@ func HasSkiqCQComment(source []byte, node *sitter.Node) bool {
 	nodeLine := lines[lineNumber]
 
 	// check for inline skipcq comment
-	if strings.Contains(nodeLine, "// skipcq") ||
-		strings.Contains(nodeLine, "# skipcq") ||
-		strings.Contains(nodeLine, "/* skipcq */") {
+	if strings.Contains(nodeLine, "// skipcq") && !strings.Contains(nodeLine, "// skipcq:") ||
+		strings.Contains(nodeLine, "# skipcq") && !strings.Contains(nodeLine, "# skipcq:") ||
+		strings.Contains(nodeLine, "/* skipcq") && !strings.Contains(nodeLine, "/* skipcq:") {
 
+		return true
+	}
+
+	// check for specific checker
+	if containsSkipForChecker(nodeLine, checker) {
 		return true
 	}
 
@@ -289,15 +294,68 @@ func HasSkiqCQComment(source []byte, node *sitter.Node) bool {
 	if lineNumber > 0 {
 		previousLine := strings.TrimSpace(lines[lineNumber-1])
 
-		if strings.Contains(previousLine, "// skipcq") ||
-			strings.Contains(previousLine, "# skipcq") ||
-			strings.Contains(previousLine, "/* skipcq */") {
+		if strings.Contains(previousLine, "// skipcq") && !strings.Contains(previousLine, "// skipcq:") ||
+			strings.Contains(previousLine, "# skipcq") && !strings.Contains(previousLine, "# skipcq:") ||
+			strings.Contains(previousLine, "/* skipcq") && !strings.Contains(previousLine, "/* skipcq:") {
 
+			return true
+		}
+
+		if containsSkipForChecker(previousLine, checker) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// checks if a line contains skipcq directive for a specific checker
+func containsSkipForChecker(line string, checker YamlChecker) bool {
+	// extract the name of the checker
+	checkerName := checker.Name()
+	checkerLang := checker.Language()
+
+	// TODO: There must be a more sophisticated way to get the language name
+	languageExtension := GetExtFromLanguage(checkerLang)
+	// remove leading dot
+	if len(languageExtension) > 0 && languageExtension[0] == '.' {
+		languageExtension = languageExtension[1:]
+	}
+
+	fullCheckerID := languageExtension + ":" + checkerName
+
+	var directive string
+	var found bool
+
+	commentFormats := []struct {
+		prefix string
+	}{
+		{"// skipcq:"},
+		{"# skipcq:"},
+		{"/* skipcq:"},
+	}
+
+	for _, format := range commentFormats {
+		if idx := strings.Index(line, format.prefix); idx != -1 {
+			directive = line[idx+len(format.prefix):]
+
+			// remove unwanted whitespace
+			directive = strings.TrimSpace(directive)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return false
+	}
+
+	if directive == fullCheckerID {
+		return true
+	}
+
+	return false
+
 }
 
 func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
@@ -316,7 +374,7 @@ func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Quer
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
 			// TODO: explain why captureName == checker.Name()
-			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) && !HasSkiqCQComment(ana.ParseResult.Source, capture.Node) {
+			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) && !HasSkipCQComment(ana.ParseResult.Source, capture.Node, checker) {
 				checker.OnMatch(ana, query, capture.Node, m.Captures)
 			}
 		}
