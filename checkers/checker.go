@@ -67,7 +67,7 @@ type Analyzer struct {
 var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq},
+		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq, javascript.SQLInjection},
 	},
 }
 
