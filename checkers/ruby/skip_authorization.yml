@@ -1,0 +1,38 @@
+language: ruby
+name: ruby_skip_authorization
+message: "Avoid skipping authorization checks to prevent unauthorized access."
+category: security
+severity: critical
+pattern: >
+  (
+    (identifier) @skip_auth
+    (#match? @skip_auth "^skip_authorization_check.*")
+  ) @ruby_skip_authorization
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Skipping authorization checks using `skip_authorization_check` can expose your application to unauthorized access, allowing users to perform actions or view data they should not have access to.  
+  This practice bypasses critical security layers, increasing the risk of privilege escalation and data leakage.
+
+  Remediation:  
+    Remove `skip_authorization_check` and implement proper authorization mechanisms. Use libraries like [CanCanCan](https://github.com/CanCanCommunity/cancancan) or [Pundit](https://github.com/varvet/pundit) to enforce authorization policies:
+
+  ruby
+    class PostsController < ApplicationController
+  # Safe Ensure authorization checks are performed for all actions.
+  before_action :authenticate_user!      # Ensures only logged-in users can access.
+  load_and_authorize_resource           # CanCanCan method to load resource and check permissions.
+
+  def index
+    # @posts is automatically loaded and authorized by load_and_authorize_resource.
+    render json: @posts
+  end
+
+  def show
+    render json: @post
+  end
+  end
+
