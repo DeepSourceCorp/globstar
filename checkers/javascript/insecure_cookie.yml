@@ -2,7 +2,7 @@
 
 language: js 
 name: insecure_cookie
-message: Make httpOnly to true or secure to true or sameSite to Strict
+message: "Insecure cookie configuration detected. Set 'httpOnly' to true, 'secure' to true, and 'sameSite' to 'Strict' to enhance security."
 category: security
 pattern: |
   
