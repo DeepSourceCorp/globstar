@@ -1,0 +1,62 @@
+language: ruby
+name: ruby_rails_samesite_cookie
+message: "Avoid using SameSite=None attribute in cookies to prevent CSRF attacks."
+category: security
+severity: critical
+patterns: 
+  - >
+    (
+      call
+      receiver: (call
+        receiver: (call
+          receiver: (constant) @rails
+          method: (identifier) @application
+        )
+        method: (identifier) @config
+      )
+      method: (identifier) @store_method
+      arguments: (argument_list
+        (simple_symbol) @store_type
+        (
+        pair
+          key: (hash_key_symbol) @setting_key
+          value: (simple_symbol) @setting_value
+        (#eq? @setting_key "same_site")
+        (#eq? @setting_value ":none")
+      ))
+    ) @ruby_rails_samesite_cookie
+  - >
+    (
+      call
+      receiver: (call
+        receiver: (call
+          receiver: (constant) @rails
+          method: (identifier) @application
+        )
+        method: (identifier) @config
+      )
+      method: (identifier) @store_method
+      arguments: (argument_list
+        (simple_symbol) @store_type
+        ) @args
+        (#not-match? @args "same_site")
+    ) @ruby_rails_samesite_cookie
+
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Using SameSite=None in session cookies allows them to be sent with cross-site requests. This can increase the risk of Cross-Site Request Forgery (CSRF) attacks, 
+  where an attacker tricks a user into making unwanted actions on a trusted site.
+  Risks of SameSite=None:
+    - Allows cookies to be sent in cross-origin requests, making them vulnerable to CSRF.
+    - Attackers can exploit this to impersonate users on another domain.
+    - This setting should only be used when Secure is explicitly enabled (for HTTPS).
+  Remediation:
+    Use SameSite=Strict or SameSite=Lax to prevent CSRF.
+  Example Fix:
+    ```ruby
+    Rails.application.config.session_store :cookie_store, key: "_myapp_session", same_site: :strict, httponly: true, secure: Rails.env.production?
+    ```
