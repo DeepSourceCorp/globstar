@@ -1,12 +1,12 @@
 language: ts
 name: no_origin_detect
-message: Not validating origin inside websocket connection
+message: Missing Origin Validation in WebSocket Connection , Please validate with allowed origins
 category: security
 
 pattern: |
   (call_expression
       function: (member_expression
-          object: (identifier) @wss (#eq? @wss "wss")
+          object: (identifier) @wss (#match? @wss "^(wss|ws)$")
           property: (property_identifier) @on (#eq? @on "on")
           
       )         
@@ -33,5 +33,5 @@ pattern: |
   ) @no_origin_detect
 
 description: |
-  WebSocket Connection without Origin Check can accept data from any website , always check for correct origin
+  The WebSocket connection handler does not validate the request's Origin, allowing connections from untrusted sources. This can lead to Cross-Site WebSocket Hijacking (CSWSH), where malicious websites initiate unauthorized WebSocket connections to your server
 
