@@ -1,6 +1,6 @@
 language: js
 name: avoid_ws_websocket
-message: Detected the usage of insecure websocket , please create wss websocket
+message: Use secure WebSocket (wss://) instead of insecure ws:// protocol
 category: security
 
 pattern: |
@@ -8,24 +8,32 @@ pattern: |
     constructor : (identifier) @new_web_socket (#eq? @new_web_socket "WebSocketServer")
       arguments : (arguments
         (string
-        	(string_fragment) @ws (#match? @ws "^ws:")
+        	(string_fragment) @ws (#match? @ws "^ws:\/\/(?!(localhost|(\d{1,3}\.){3}\d{1,3}))")
         )
           
       ) 
       
   ) @avoid_ws_websocket
 description: |
-  Insecure WebSocket Detected , Use Secure WebSocket (wss://)
-  Your code is using an insecure WebSocket (ws://), which transmits data unencrypted, making it vulnerable to man-in-the-middle (MITM) attacks and eavesdropping.
-  
-  Problem : 
-  - const socket = new WebSocket("ws://example.com");
-  - Data is sent in plain text over the network.
-  - Attackers can intercept, modify, or inject messages.
-  - Modern browsers may block ws:// connections on HTTPS websites due to security risks.
-  Solution: Use wss://
-  - To secure the WebSocket connection, switch to wss://, which encrypts the communication using TLS/SSL, just like HTTPS:
-  - const socket = new WebSocket("wss://example.com");
-  - Ensures end-to-end encryption.
-  - Protects against MITM attacks.
-  - Works seamlessly with HTTPS websites.
+  Your code is using an insecure WebSocket connection (ws://). This poses several security risks:
+  - Unencrypted data transmission
+  - Vulnerability to man-in-the-middle attacks
+  - Risk of data interception
+  - Potential browser blocking on HTTPS sites
+
+  ***Example of Insecure Code:***
+  `const socket = new WebSocket("ws://example.com");`
+
+  ***Security risks:***
+  - Data is transmitted in plaintext
+  - Attackers can intercept and modify messages
+  - Modern browsers may block insecure WebSocket connections
+
+  ***Fixed code:***
+  ` const socket = new WebSocket("wss://example.com");`
+
+  ***Benefits over the insecure code:***
+  - TLS/SSL encryption for all communications
+  - Protection against man-in-the-middle attacks
+  - Compatible with HTTPS websites
+  - Better browser security compliance
