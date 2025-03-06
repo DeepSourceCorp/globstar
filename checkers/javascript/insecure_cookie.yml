@@ -27,4 +27,10 @@ pattern: |
   ) @insecure_cookie
 
 description: |
-  To identify cookies sent insecurly and which can be accessed direclty. 
+  This pattern detects instances where the res.cookie() function is used with insecure configurations in JavaScript (e.g., Express.js). It specifically identifies cases where httpOnly, secure, or sameSite options are set to false or omitted.
+
+  - ***httpOnly:*** false → Makes cookies accessible via JavaScript, increasing the risk of XSS (Cross-Site Scripting) attacks.
+  - ***secure:*** false → Allows cookies to be sent over insecure HTTP connections, making them vulnerable to interception (MITM attacks).
+  - ***sameSite:*** false → Weakens CSRF (Cross-Site Request Forgery) protections by allowing cookies to be sent with cross-site requests.
+  - ***Recommendation:***
+    - Ensure that cookies are configured securely by setting httpOnly: true, secure: true, and sameSite: 'Strict' wherever applicable.
