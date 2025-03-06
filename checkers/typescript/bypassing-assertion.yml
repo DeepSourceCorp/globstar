@@ -21,6 +21,27 @@ pattern: |
   ) @bypass_assertion
 
 description: |
-  Found assertion being by passed, assign  directly to a typed varibale
+  Asserting an Object with Extra Properties (Unsafe Assertions)
+  - Incorrect way :  ❌ Incorrect: Type assertion ignores extra properties
+                  ```ts
+                  const person = { name: "Alice", age: 30, extra: true } as Person;
+                  ```
+  - Correct way : ```ts
+                const person : Person = { name: "Alice", age: 30, extra: true };
+                ```
+  Using Type Assertions to Bypass Type Checking
+  - ❌ Incorrect: Forcing a type assertion with as when it's wrong
+    - ```ts
+      let value: unknown = "Hello";
+      let num = value as number; // ❌ TypeScript allows, but it's incorrect at runtime
+      console.log(num * 2); // ❌ Runtime error
+      ```
+  - ✅ Fix: Use proper type checking
+    -```ts
+      let value: unknown = "Hello";
 
-  
+      if (typeof value === "number") {
+          let num: number = value; // ✅ Now TypeScript ensures it's correct
+      }
+      ```
+
