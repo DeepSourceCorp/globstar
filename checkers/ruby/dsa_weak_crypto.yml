@@ -1,0 +1,53 @@
+language: ruby
+name: ruby_dsa_weak_crypto
+message: "Avoid using DSA for cryptographic operations; it is outdated and insecure."
+category: security
+severity: critical
+pattern: >
+  (scope_resolution
+  scope: (scope_resolution
+    scope: (constant) @openssl (#eq? @openssl "OpenSSL")
+    name: (constant) @pkey (#eq? @pkey "PKey"))
+  name: (constant) @dsa (#eq? @dsa "DSA")) @ruby_dsa_weak_crypto
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  DSA (Digital Signature Algorithm) is considered weak due to its reliance on small key sizes and vulnerability 
+  to attacks, especially when poor random number generation is used. It is no longer recommended for cryptographic 
+  operations.
+
+  Why is this a problem?
+  - DSA with small key sizes (1024-bit) is vulnerable to brute-force attacks.
+  - Poor randomness in DSA signatures can lead to private key leaks.
+  - Modern security standards recommend stronger alternatives.
+
+  Remediation:
+  - Instead of DSA, use BCrypt for securely hashing passwords.
+  - If encryption is needed, use AES-256-GCM.
+
+  Example Fix:
+  ```ruby
+  require 'bcrypt'
+
+  # Weak DSA (Avoid)
+  require 'openssl'
+  dsa = OpenSSL::PKey::DSA.new(1024)  # Weak & insecure
+
+  # Secure BCrypt Alternative (for password hashing)
+  password = "SecurePassword123"
+  hashed_password = BCrypt::Password.create(password)
+  puts "BCrypt Hash: #{hashed_password}"
+
+  # Secure AES Alternative (for encryption)
+  require 'openssl'
+  cipher = OpenSSL::Cipher.new('aes-256-gcm')
+  cipher.encrypt
+  key = cipher.random_key
+  iv = cipher.random_iv
+  encrypted = cipher.update("Sensitive Data") + cipher.final
+  puts "AES Encrypted Data: #{encrypted}"
+  ```
