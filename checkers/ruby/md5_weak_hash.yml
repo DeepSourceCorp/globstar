@@ -1,0 +1,51 @@
+language: ruby
+name: ruby_md5_weak_hash
+message: "Avoid using MD5 for hashing as it is cryptographically weak and vulnerable to attacks."
+category: security
+severity: critical
+pattern: >
+  [
+    (scope_resolution
+      scope: (constant) @digest (#eq? @digest "Digest")
+      name: (constant) @md5 (#eq? @md5 "MD5")
+    )
+    @ruby_md5_weak_hash
+  ]
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  MD5 is an outdated and insecure hashing algorithm that is vulnerable to collision and preimage attacks. 
+  It is unsuitable for hashing passwords or securing sensitive data.
+
+  Why is this a problem?
+  - Collisions: Attackers can generate two different inputs that produce the same hash.
+  - Fast Computation: MD5 is extremely fast, making brute-force attacks feasible.
+  - Cryptographic Breaks: MD5 has been broken since 2004 and is not considered secure.
+
+  Remediation:
+  - Do not use MD5 for security-sensitive operations.
+  - Use SHA-256 or SHA-512 for general-purpose hashing.
+  - Use BCrypt, Argon2, or PBKDF2 for password hashing.
+
+  Example Fix:
+  ```ruby
+  require 'digest'
+  require 'bcrypt'
+
+  # Insecure: Using MD5 (Avoid this)
+  password = "SecurePassword123"
+  hashed_password_md5 = Digest::MD5.hexdigest(password)
+
+  # Secure Alternative: Using SHA-256
+  hashed_password_sha256 = Digest::SHA256.hexdigest(password)
+
+  # Secure Alternative for Password Hashing: BCrypt
+  hashed_password_bcrypt = BCrypt::Password.create(password)
+
+  puts "SHA-256 Hash: #{hashed_password_sha256}"
+  puts "BCrypt Hash: #{hashed_password_bcrypt}"
+  ```
