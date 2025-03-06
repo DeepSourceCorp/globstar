@@ -1,16 +1,33 @@
 language: ts
 name: avoid_using_any_type
-message: Detected the usage of type "any" better to use "unknown" type
+message: The use of the any type has been detected. It is recommended to use the unknown type instead, as it provides better type safety by requiring explicit type checks before usage
 category: security
 
 pattern: |
   (variable_declarator
     type: (_
-        (predefined_type) @any_type (#eq @any_type "any")
+        (predefined_type) @any_type (#eq? @any_type "any")
       )
     
   ) @avoid_using_any_type
 
 description: |
-  In TypeScript, "any" allows a variable to hold any value without type checking, essentially disabling type safety, while "unknown" represents a value of unknown type but forces you to explicitly check and narrow its type before using it, promoting type safety; essentially, "any" is very flexible but less safe, while "unknown" is more restrictive but safer when dealing with uncertain data types
+  In TypeScript, using `any` allows a variable to hold any value without type checking, effectively disabling type safety. In contrast, `unknown` represents a value of an uncertain type but requires explicit type checks before usage, promoting safer and more maintainable code.
+  Using any can lead to unexpected runtime errors, while unknown ensures that values are properly validated before use.
+  
+  ***Bad Pattern (Using any):***
+  ```ts
+  let data: any;  
+  data = "Hello";  
+  console.log(data.toFixed(2)); // Runtime error: toFixed is not a function  
+  ```
 
+  ***Good Pattern (Using unknown with Type Checking):***
+  ```ts
+  let data: unknown;  
+  data = "Hello";  
+  if (typeof data === "number") {  
+    console.log(data.toFixed(2)); // Safe usage  
+  }  
+  ```
+  By using `unknown`, you enforce proper type validation, reducing potential runtime issues and improving code reliability.
