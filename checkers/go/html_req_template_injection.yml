@@ -1,0 +1,116 @@
+language: go
+name: html_req_template_injection
+message: "Rendering user-controlled data using html/template without proper sanitization may lead to template injection. Sanitize user inputs or use context-aware encoding before rendering."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+  (short_var_declaration 
+    left: (expression_list (identifier) @input_var)
+    right: (expression_list 
+      (call_expression
+      	function: (_) @source_expr
+      	(#match? @source_expr "(r.Cookie|r.URL.Query\\(\\).Get|r.FormValue)")
+      )
+    )
+  )
+
+  (short_var_declaration
+    left: (expression_list
+      (identifier) @data.var
+    )
+    right: (expression_list
+      (composite_literal
+        type: (map_type) @map.type
+        body: (literal_value
+          (keyed_element
+            (literal_element
+              (interpreted_string_literal) @map.key
+            )
+            (literal_element
+              (identifier) @map.value
+              (#eq? @map.value @input_var)
+            )
+          )
+        )
+      )
+    )
+  )
+
+  (assignment_statement
+    left: (expression_list
+      (identifier) @exec.error
+    )
+    right: (expression_list
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @template.instance
+          field: (field_identifier) @exec.method
+          (#eq? @exec.method "Execute")
+        )
+        arguments: (argument_list
+          (_)
+          (_) @template.data
+          (#eq? @template.data @data.var)
+        )
+      )
+    )) @template.execution) @html_req_template_injection
+  ]
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+  Rendering user-controlled data using `html/template` without proper sanitization can lead to **Server-Side Template Injection (SSTI)**.  
+  Attackers can inject malicious code or scripts into the template, potentially leading to:  
+  - Arbitrary code execution  
+  - Data leakage  
+  - Cross-Site Scripting (XSS) attacks  
+
+  Impact: 
+  - SSTI allows attackers to manipulate the server-side template, which can compromise server integrity and data confidentiality.  
+  - Even though `html/template` auto-escapes content, improper handling of user input or using `text/template` for HTML output can bypass protections.  
+
+  Recommendation: 
+  - Always validate and sanitize user inputs before using them in templates.  
+  - Use `html/template` (not `text/template`) for rendering HTML to ensure automatic escaping.  
+  - Consider encoding input using libraries like `bluemonday` for extra safety.  
+  - Avoid directly mapping user input to template data without checks.  
+
+  Secure Code Example:
+  ```go
+  package main
+
+  import (
+      "html/template"
+      "log"
+      "net/http"
+  )
+
+  func safeHandler(w http.ResponseWriter, r *http.Request) {
+      if err := r.ParseForm(); err != nil {
+          http.Error(w, "Invalid form", http.StatusBadRequest)
+          return
+      }
+
+      // Sanitize user input
+      userInput := template.HTMLEscapeString(r.FormValue("username"))
+
+      data := map[string]string{
+          "Username": userInput,
+      }
+
+      tmpl, err := template.New("example").Parse("<h1>Hello, {{.Username}}</h1>")
+      if err != nil {
+          http.Error(w, "Template error", http.StatusInternalServerError)
+          return
+      }
+
+      if err := tmpl.Execute(w, data); err != nil {
+          http.Error(w, "Execution error", http.StatusInternalServerError)
+      }
+  }
