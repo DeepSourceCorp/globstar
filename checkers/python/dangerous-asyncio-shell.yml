@@ -1,0 +1,42 @@
+language: py
+name: dangerous-asyncio-shell
+message: Detected passing of user controlled data into asyncio subprocess function
+category: security
+
+patterns:
+  - >
+    (call
+      function: (attribute
+        object: (identifier) @loop
+        attribute: (identifier) @methodName)
+      arguments: (argument_list
+        (_)
+        .
+        (subscript
+          value: (identifier) @eventArg
+          subscript: (string))
+        )
+      (#eq? @loop "loop")
+      (#eq? @methodName "subprocess_shell")
+      (#eq? @eventArg "event")) @dangerous-asyncio-shell
+
+  - >
+    (call
+      function: (attribute) @funcName
+      arguments: (argument_list
+        .
+        (subscript
+          value: (identifier) @eventArg
+          subscript: (string))
+        (_)*)
+      (#match? @funcName "^(asyncio.create_subprocess_shell|asyncio.subprocess.create_subprocess_shell|subprocess.create_subprocess_shell|create_subprocess_shell)$")) @dangerous-asyncio-shell 
+
+filters:
+  - pattern-inside: >
+      (function_definition
+        name: (identifier) @funcname
+        parameters: (_)*
+        (#match? @funcname ".*handler.*"))
+
+description: >
+  Potential command injection risk: event data flows into asyncio subprocess_shell function. If this data can be controlled by attackers, it could lead to command injection. Consider using 'shlex.escape()' to sanitize inputs.
