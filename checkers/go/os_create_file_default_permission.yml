@@ -1,0 +1,54 @@
+language: go
+name: go_os_create_file_default_permission
+message: "Avoid creating files with default permissions to prevent unauthorized access."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+  (short_var_declaration
+    left: (expression_list 
+      (identifier) @file_var 
+      (identifier) @err_var)
+    right: (expression_list
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @os_pkg
+          field: (field_identifier) @create_method
+        )
+        arguments: (argument_list
+          (identifier) @filename
+        )
+      )
+    )
+    (#eq? @os_pkg "os")
+    (#eq? @create_method "Create")
+  )
+  ) @go_os_create_file_default_permission
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Calling `os.Create()` creates a file with default permissions (`0666`), which may allow unintended read and write access to other users on the system.
+
+  Instead, explicitly set file permissions using `os.OpenFile()` to prevent unauthorized access.
+
+  Insecure Code:
+  ```go
+  file, err := os.Create("example.txt") // Creates file with default permissions (0666)
+  if err != nil {
+      log.Fatal(err)
+  }
+  defer file.Close()
+
+  Remediation:
+  ```go
+  file, err := os.OpenFile("example.txt", os.O_CREATE|os.O_WRONLY, 0600) // Set file permissions to 0600
+  if err != nil {
+      log.Fatal(err)
+  }
+  defer file.Close()
+  ```
