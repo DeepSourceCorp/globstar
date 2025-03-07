@@ -1,0 +1,81 @@
+language: py
+name: insufficient-keysize
+message: Detected insufficient key size in cryptographic key generation
+category: security
+
+pattern: |
+  ;; elliptic curves
+  (call
+    function: (attribute
+      object: (identifier) @ec
+      attribute: (identifier) @genmethod)
+    arguments: (argument_list
+      (_)*
+      [(keyword_argument
+        name: (identifier) @curve
+        value: (attribute
+          object: (identifier) @ec
+          attribute: (identifier) @size))
+
+        (attribute
+          object: (identifier) @ec
+          attribute: (identifier) @size)
+      ]
+      (_)*)
+    (#eq? @ec "ec")
+    (#eq? @genmethod "generate_private_key")
+    (#match? @size "^(SECP192R1|SECT163K1|SECT163R2)$")) @insufficient-keysize
+
+  ;; DSA
+  (call
+    function: (attribute
+      object: (identifier) @dsa
+      attribute: (identifier) @genmethod)
+    arguments: (argument_list
+      (_)*
+      [(keyword_argument
+        name: (identifier) @keysize
+        value: (integer) @sizeval)
+
+        (integer) @sizeval
+      ]
+      (_)*)
+    (#eq? @dsa "dsa")
+    (#eq? @genmethod "generate_private_key")
+    (#eq? @keysize "key_size")
+    (#match? @sizeval "^(?:[0-1]?[0-9]{1,3}|1[0-9]{3}|20[0-3][0-9]|204[0-7])$")
+    ) @insufficient-keysize
+
+  ;; RSA with key
+  (call
+    function: (attribute
+      object: (identifier) @rsa
+      attribute: (identifier) @genmethod)
+    arguments: (argument_list
+      (_)*
+      (keyword_argument
+        name: (identifier) @keysize
+        value: (integer) @sizeval)
+      (_)*)
+    (#eq? @rsa "rsa")
+    (#eq? @genmethod "generate_private_key")
+    (#eq? @keysize "key_size")
+    (#match? @sizeval "^(?:[0-1]?[0-9]{1,3}|1[0-9]{3}|20[0-3][0-9]|204[0-7])$")
+    ) @insufficient-keysize
+
+  ;; RSA without key
+  (call
+    function: (attribute
+      object: (identifier) @rsa
+      attribute: (identifier) @genmethod)
+    arguments: (argument_list
+      (_)
+      (integer) @sizeval
+      (_)*)
+    (#eq? @rsa "rsa")
+    (#eq? @genmethod "generate_private_key")
+    (#match? @sizeval "^(?:[0-1]?[0-9]{1,3}|1[0-9]{3}|20[0-3][0-9]|204[0-7])$")
+    ) @insufficient-keysize
+
+description: |
+  Small key sizes are easily broken by brute-force attacks, cryptanalysis, and advancing computing power. Modern standards require key sizes greater than 2048 bits to prevent breaches and ensure compliance.

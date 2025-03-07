@@ -1,0 +1,23 @@
+language: py
+name: insecure-cipher-arc4
+message: Detected usage of insecure cryptographic algorithm
+category: security
+
+pattern: |
+  (call
+    function: (identifier) @cipher
+    arguments: (argument_list
+      (_)*
+      (call
+        function: (attribute
+          object: (identifier) @algorithms
+          attribute: (identifier) @method)
+        arguments: (argument_list
+          (_)))
+      (_)*)
+    (#eq? @cipher "Cipher")
+    (#eq? @algorithms "algorithms")
+    (#match? @method "^(ARC4|Blowfish|IDEA|)$")) @insecure-cipher-arc4
+
+description: |
+  Weak cryptographic algorithms have serious vulnerabilities that can compromise security, especially in their initialization or key handling. Their use is strongly discouraged. Unlike modern ciphers, many lack secure mode options or suffer from known attacks. Instead, use strong, well-vetted algorithms like AES for encryption.
