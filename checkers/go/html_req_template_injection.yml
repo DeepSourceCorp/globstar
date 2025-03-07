@@ -1,5 +1,5 @@
 language: go
-name: go_html_req_template_injection
+name: html_req_template_injection
 message: "Rendering user-controlled data using html/template without proper sanitization may lead to template injection. Sanitize user inputs or use context-aware encoding before rendering."
 category: security
 severity: critical
@@ -55,7 +55,7 @@ pattern: >
           (#eq? @template.data @data.var)
         )
       )
-    )) @template.execution) @go_html_req_template_injection
+    )) @template.execution) @html_req_template_injection
   ]
 
 exclude:
