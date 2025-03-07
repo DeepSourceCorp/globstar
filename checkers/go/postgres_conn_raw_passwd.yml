@@ -1,0 +1,56 @@
+language: go
+name: go_postgres_conn_raw_passwd
+message: "Do not hardcode PostgreSQL passwords in the source code."
+category: security
+severity: critical
+pattern: >
+  [
+    (call_expression
+  function: (selector_expression
+    operand: (identifier) @sql
+    field: (field_identifier) @method
+    (#match? @sql "^sql$")
+    (#match? @method "^Open$"))
+  arguments: (argument_list 
+    (_) @driver
+    (interpreted_string_literal) @conn_string
+    (#match? @conn_string "^\"postgres://.*:.*@.*\"$"))) @go_postgres_conn_raw_passwd
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Hardcoding PostgreSQL connection strings with passwords in the source code is a critical security risk. 
+  It exposes sensitive credentials, making applications vulnerable to unauthorized access, especially 
+  if the code is shared or stored in version control systems.
+
+  Why this is a problem:
+  - Attackers can easily extract hardcoded credentials from repositories or compiled binaries.
+  - Credentials in source code can lead to database breaches and data theft.
+
+  Remediation:
+  - Use environment variables or configuration files to store sensitive information.
+  - Implement secure credential management practices, such as using secrets management tools.
+  - Rotate passwords regularly and avoid storing them in plaintext.
+  Secure Example:
+  ```go
+    user := os.Getenv("PG_USER")
+    passwd := os.Getenv("PG_PASSWORD")
+    host := os.Getenv("PG_HOST")
+    port := os.Getenv("PG_PORT")
+    name := os.Getenv("PG_DBNAME")
+
+    // Check if essential environment variables are set
+    if user == "" || passwd == "" || host == "" || port == "" || name == "" {
+      log.Fatal("One or more environment variables (PG_USER, PG_PASSWORD, PG_HOST, PG_PORT, PG_DBNAME) are missing.")
+    }
+
+    connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", user, passwd, host, port, name)
+    dbSecure, err := sql.Open("postgres", connStr)
+    if err != nil {
+      log.Fatalf("Failed to connect (secure): %v", err)
+    }
+    defer dbSecure.Close()
+    ```
