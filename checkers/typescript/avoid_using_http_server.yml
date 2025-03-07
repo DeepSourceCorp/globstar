@@ -1,18 +1,20 @@
 language: ts
 name: avoid_using_http_server
-message: Detected usage of http server which is insecure Please use https
+message: Usage of an insecure HTTP server detected. Please use HTTPS instead.
 category: security
 
 pattern: |
   ( 
     (import_statement
-    (import_clause
+      (import_clause
         (named_imports
             (import_specifier) @components
               (#match? @components "createServer")
           )	
       )
-      source : (string) @package_name (#eq? @package_name "http")
+      source : (string
+      (string_fragment) @package_name (#eq? @package_name "http")
+      ) 
     )
     (lexical_declaration
         (variable_declarator
@@ -24,5 +26,35 @@ pattern: |
   ) @avoid_using_http_server
 
 description: |
-  Detected usage of http server which is insecure Please use https 
+  The usage of the `http` module to create a server has been detected. This is insecure because it does not encrypt data in transit. It is recommended to use HTTPS instead to ensure secure communication.
+  **Example of insecure usage:**
+  ```ts
+  import { createServer } from "http";
+
+  const server = createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Hello, world!");
+  });
+
+  server.listen(3000, () => {
+    console.log("Server running at http://localhost:3000/");
+  });
+  ***Secure alternative using HTTPS:***
+  import { createServer } from "https";
+  import { readFileSync } from "fs";
+
+  const options = {
+    key: readFileSync("server.key"),
+    cert: readFileSync("server.cert")
+  };
+
+  const server = createServer(options, (req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Hello, secure world!");
+  });
+
+  server.listen(3000, () => {
+    console.log("Secure server running at https://localhost:3000/");
+  });
+
 
