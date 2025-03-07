@@ -1,0 +1,55 @@
+language: go
+name: go_tls_config_minver
+message: "Setting the MinVersion field ensures that the server only accepts secure TLS connections."
+category: security
+severity: critical
+pattern: >
+  [
+      (
+    (short_var_declaration
+      right: (expression_list
+        (unary_expression
+          operand: (composite_literal
+            type: (qualified_type
+              package: (package_identifier) @tls_pkg
+              name: (type_identifier) @config_type
+            )
+            body: (literal_value) @config.value
+            )
+          )
+        )
+      )
+      (#eq? @tls_pkg "tls")
+      (#eq? @config_type "Config")
+      (#not-match? @config.value ".*MinVersion.*")
+    ) @go_tls_config_minver
+  ]
+
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+
+description: |
+  The `MinVersion` field in the `tls.Config` struct ensures that the server only accepts secure TLS connections.
+  Omitting this field allows clients to negotiate older, deprecated versions of TLS (such as TLS 1.0 or TLS 1.1),
+  which are vulnerable to attacks like POODLE and BEAST.
+
+  Impact:
+  - Potential exposure to vulnerabilities in outdated TLS versions.
+  - Non-compliance with security standards (e.g., PCI-DSS, NIST guidelines).
+  - Increased risk of man-in-the-middle (MITM) attacks and data breaches.
+
+  Remediation:
+  Set the `MinVersion` field to `tls.VersionTLS12` or higher** to ensure strong encryption and protocol security.  
+  Prefer `tls.VersionTLS13` if both the client and server support it for improved performance and security.
+
+  secure Example (Missing `MinVersion`):
+  ```go
+  //tls.Config.MinVersion is set
+  config := &tls.Config{
+    ServerName: "example.com",
+    MinVersion: tls.VersionTLS12,
+  }
+
