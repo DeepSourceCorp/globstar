@@ -1,0 +1,36 @@
+# .globstar/insecure_cookie.yml
+
+language: js 
+name: insecure_cookie
+message: "Insecure cookie configuration detected. Set 'httpOnly' to true, 'secure' to true, and 'sameSite' to 'Strict' to enhance security."
+category: security
+pattern: |
+  
+  (call_expression
+    function: (member_expression
+      object: (identifier)
+      property: (property_identifier) @property
+    )
+    arguments: (arguments
+      (string) ; First argument ('user')
+      (_) ; Second argument ('john_doe')
+      (object
+        (pair
+          key: (property_identifier) @insecure_key
+          value: [(false) (string)] @insecure_value
+        )+
+      )
+    )
+    (#eq? @property "cookie")
+    (#match? @insecure_key "httpOnly|secure|sameSite")
+    (#eq? @insecure_value "false")
+  ) @insecure_cookie
+
+description: |
+  This pattern detects instances where the res.cookie() function is used with insecure configurations in JavaScript (e.g., Express.js). It specifically identifies cases where httpOnly, secure, or sameSite options are set to false or omitted.
+
+  - ***httpOnly:*** false → Makes cookies accessible via JavaScript, increasing the risk of XSS (Cross-Site Scripting) attacks.
+  - ***secure:*** false → Allows cookies to be sent over insecure HTTP connections, making them vulnerable to interception (MITM attacks).
+  - ***sameSite:*** false → Weakens CSRF (Cross-Site Request Forgery) protections by allowing cookies to be sent with cross-site requests.
+  - ***Recommendation:***
+    - Ensure that cookies are configured securely by setting httpOnly: true, secure: true, and sameSite: 'Strict' wherever applicable.
