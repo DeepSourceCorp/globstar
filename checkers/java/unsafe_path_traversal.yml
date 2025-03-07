@@ -1,0 +1,54 @@
+language: java
+name: unsafe_path_traversal
+message: "Avoid using File() with dynamic input as it can lead to path traversal vulnerabilities"
+category: security
+severity: critical
+
+pattern: |
+  (object_creation_expression
+    type: (type_identifier) @type
+    arguments: (argument_list
+      [
+        ; Direct user input in File constructor
+        (identifier) @user_input
+        
+        ; String concatenation with user input
+        (binary_expression
+          left: [
+            (identifier) @user_input
+            (string_literal)
+            (binary_expression)
+          ]
+          right: [
+            (identifier) @user_input
+            (string_literal)
+          ]
+        )
+
+        ; String.format with user input
+        (method_invocation
+          object: (identifier) @format_obj
+          name: (identifier) @format_method
+          arguments: (argument_list
+            (string_literal)
+            (identifier) @user_input)
+        )
+      ]
+    ) @unsafe_path_traversal
+
+    (#eq? @type "File")
+    (#any-of? @format_obj "String")
+    (#any-of? @format_method "format")
+  )
+          
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: |
+  Using File() with unvalidated input can lead to path traversal
+  vulnerabilities (CWE-22), allowing unauthorized file access. To prevent
+  exploitation, avoid dynamic path construction, and use secure APIs like
+  Paths.get() with strict access controls.
