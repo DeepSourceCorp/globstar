@@ -1,0 +1,17 @@
+language: js
+name: no_api_key
+message: Harcoded API keys found , Please use env varaibles to fetch secret data
+category: security
+
+pattern: |
+  (
+    (pair
+      key: (property_identifier) @key
+      value: (string) @value
+    )
+    (#match? @key "^[aA][pP][iI][kK][eE][yY]$")
+  ) @no_api_key
+
+description: |
+  Hard Coded API keys when exposed can be used by hackers and can cause severe damage
+
