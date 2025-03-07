@@ -4,14 +4,29 @@ message: The hostVerifier function in the ssh2 configuration is set to always re
 category: security
 
 pattern: |
-  (object
-    (pair
-      key: (property_identifier) @key (#eq? @key "hostVerifier")
-      value: (arrow_function
-        parameters: (formal_parameters)
-        body: (true) @ssh2_hostverifier
+  (call_expression
+    function : (_
+        object : (_
+            function : (_
+                property : (_) @on (#eq? @on "on")
+              )
+          )
+          property : (_) @connect (#eq? @connect "connect")
+      
       )
-    )
+      arguments : (arguments
+        (object
+          (pair
+            key: (property_identifier) @key (#eq? @key "hostVerifier")
+            value: (arrow_function
+              parameters: (formal_parameters)
+              body: (true) @ssh2_hostverifier
+            )
+          )
+        )
+      
+      )
+      
   ) @disable_host_verifier
 
 description: |
