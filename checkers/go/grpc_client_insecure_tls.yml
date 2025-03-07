@@ -1,0 +1,71 @@
+language: go
+name: go_grpc_client_insecure_tls
+message: "Avoid using
+  grpc.WithInsecure() in gRPC client connection which disables transport security."
+category: security
+severity: critical
+pattern: >
+   (
+    (call_expression
+      function: (selector_expression
+        operand: (identifier) @_pkg
+        (#eq? @_pkg "grpc")
+        field: (field_identifier) @_dial
+        (#eq? @_dial "Dial")
+      )
+      arguments: (argument_list
+        (call_expression
+          function: (selector_expression
+            operand: (identifier) @_grpc_pkg
+            (#eq? @_grpc_pkg "grpc")
+            field: (field_identifier) @insecure_func
+            (#eq? @insecure_func "WithInsecure")
+        )
+      )
+    )
+   )) @go_grpc_client_insecure_tls
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Using grpc.WithInsecure() disables TLS (Transport Layer Security) in gRPC client connections, exposing your application to Man-in-the-Middle (MITM) attacks and other security vulnerabilities. 
+  Transport security ensures that data exchanged between clients and servers is encrypted, maintaining confidentiality and integrity.
+  Remediation:
+    Use grpc.WithTransportCredentials() with proper TLS configurations to secure communication.
+
+  InSecure Example: (Insecure - Do Not Use)
+
+  ```go
+  import (
+    "google.golang.org/grpc"
+  )
+
+  conn, err := grpc.Dial("example.com:50051", grpc.WithInsecure()) // Disables security
+  if err != nil {
+    log.Fatalf("Connection failed: %v", err)
+  }
+  defer conn.Close()
+
+  Secure Example:
+
+  ```go
+  import (
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials"
+    "log"
+  )
+
+  func main() {
+    creds, err := credentials.NewClientTLSFromFile("server-cert.pem", "")
+    if err != nil {
+      log.Fatalf("Failed to load TLS credentials: %v", err)
+    }
+
+    conn, err := grpc.Dial("example.com:50051", grpc.WithTransportCredentials(creds)) // Secure connection
+    if err != nil {
+      log.Fatalf("Connection failed: %v", err)
+    }
+    defer conn.Close()
+  }
