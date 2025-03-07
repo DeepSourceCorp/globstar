@@ -46,7 +46,7 @@ def handler_func5(event, context):
         # <expect-error>
         proc = loop.run_until_complete(asyncio.subprocess.create_subprocess_exec(program, ["bash", "-c", args]))
 
-def handler_func5(event, context):
+def handler_func6(event, context):
     program = "sh"
     with AsyncEventLoop() as loop:
         # <expect-error>
