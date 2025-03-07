@@ -1,0 +1,36 @@
+language: js
+name: dangerous_xss_unsanitized_input
+message: "Unsanitized DOM manipulation detected. This could lead to XSS vulnerabilities."
+category: security
+severity: critical
+
+pattern: |
+  (
+    [
+      (assignment_expression
+        left: (member_expression
+          object: (identifier) @obj (#eq? @obj "document")
+          property: (property_identifier) @prop (#match? @prop "innerHTML|outerHTML")
+        )
+        right: (_) @rhs
+      )
+      (call_expression
+        function: (member_expression
+          object: (identifier) @dom (#eq? @dom "document")
+          property: (property_identifier) @method (#match? @method "write|writeln")
+        )
+        arguments: (argument_list (_) @args)
+      )
+    ]
+  ) @dangerous_xss_unsanitized_input
+
+filters:
+  - pattern-not-inside: (catch_clause)
+
+exclude:
+  - "node_modules/**"
+  - "dist/**"
+
+description: |
+  Direct DOM manipulation with unsanitized input exposes XSS vulnerabilities. 
+  Always use safe methods like textContent or DOM sanitization libraries.
