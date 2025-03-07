@@ -5,14 +5,10 @@ category: security
 
 pattern: |
   (
-    (interface_declaration
-      name : (type_identifier) @interface_name
-    )
-    (_)*
     (lexical_declaration
       (variable_declarator 
           value : (as_expression
-              (type_identifier) @inter_name (#eq? @inter_name @interface_name)
+              (type_identifier) @inter_name
             
             )
         ) 
