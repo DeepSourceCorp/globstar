@@ -7,3 +7,6 @@ pattern: >
   (call
     function: (attribute) @ftpFunc
   (#match? @ftpFunc "^(ftplib.FTP|FTP)$")) @use-ftp-tls
+
+description: >
+  The `FTP` class transmits data unencrypted, making it vulnerable to interception. Use `FTP_TLS` instead for a secure, encrypted connection.

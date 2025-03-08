@@ -8,16 +8,16 @@ import (
 	"globstar.dev/analysis"
 )
 
-var InsecureOpenerDirectorFtpOpen *analysis.Analyzer = &analysis.Analyzer{
+var InsecureUrllibFtp *analysis.Analyzer = &analysis.Analyzer{
 	Name:        "insecure-urllib-ftp",
 	Language:    analysis.LangPy,
-	Description: "An unsecured FTP connection was detected where ftp:// is being used. Data transmitted over this channel is unencrypted, posing a security risk. It is recommended to use SFTP instead. Since urllib does not support SFTP, consider using a library that provides secure file transfer capabilities.",
+	Description: "An unsecured FTP connection was detected where `ftp://` is being used. Data transmitted over this channel is unencrypted, posing a security risk. It is recommended to use `SFTP` instead. Since `urllib` does not support `SFTP`, consider using a library that provides secure file transfer capabilities.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityError,
-	Run:         checkInsecureOpenerDirectorFtpOpen,
+	Run:         checkInsecureUrllibFtp,
 }
 
-func checkInsecureOpenerDirectorFtpOpen(pass *analysis.Pass) (interface{}, error) {
+func checkInsecureUrllibFtp(pass *analysis.Pass) (interface{}, error) {
 	urlVarMap := make(map[string]bool)
 	odVarMap := make(map[string]bool)
 
@@ -73,7 +73,7 @@ func checkInsecureOpenerDirectorFtpOpen(pass *analysis.Pass) (interface{}, error
 
 		functionNode := node.ChildByFieldName("function")
 
-		if !isOpenDirectorCall(functionNode, pass.FileContext.Source, odVarMap) {
+		if !isUrllibCall(functionNode, pass.FileContext.Source, odVarMap) {
 			return
 		}
 
@@ -99,7 +99,7 @@ func checkInsecureOpenerDirectorFtpOpen(pass *analysis.Pass) (interface{}, error
 	return nil, nil
 }
 
-func isOpenDirectorCall(node *sitter.Node, source []byte, odVarMap map[string]bool) bool {
+func isUrllibCall(node *sitter.Node, source []byte, odVarMap map[string]bool) bool {
 	funcContent := node.Content(source)
 	if strings.Contains(funcContent, "OpenerDirector") || strings.Contains(funcContent, "Request") || strings.Contains(funcContent, "urlopen") || strings.Contains(funcContent, "URLopener") || strings.Contains(funcContent, "urlretrieve") {
 		return true

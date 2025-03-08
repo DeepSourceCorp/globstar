@@ -72,7 +72,7 @@ var AnalyzerRegistry = []Analyzer{
 	},
 	{
 		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{python.InsecureOpenerDirectorFtpOpen},
+		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp},
 	},
 }
 
