@@ -9,6 +9,7 @@ import (
 
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers/javascript"
+	"globstar.dev/checkers/python"
 	"globstar.dev/pkg/analysis"
 )
 
@@ -68,6 +69,10 @@ var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
 		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq, javascript.SQLInjection},
+	},
+	{
+		TestDir: "checkers/python/testdata",
+		Analyzers: []*goAnalysis.Analyzer{python.InsecureOpenerDirectorFtpOpen},
 	},
 }
 

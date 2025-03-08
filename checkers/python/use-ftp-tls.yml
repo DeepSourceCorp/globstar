@@ -1,0 +1,9 @@
+language: py
+name: use-ftp-tls
+message: Detected usage of `FTP` class which sends information unencrypted
+category: security
+
+pattern: >
+  (call
+    function: (attribute) @ftpFunc
+  (#match? @ftpFunc "^(ftplib.FTP|FTP)$")) @use-ftp-tls
