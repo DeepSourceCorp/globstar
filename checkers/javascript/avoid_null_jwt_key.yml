@@ -1,0 +1,78 @@
+language: js
+name: avoid_null_jwt_key
+message: Detected the usage of null key , Please provide a secret key (for HMAC) or a public key (for RSA/ECDSA).
+category: security
+
+pattern: |
+  (
+    (lexical_declaration
+      (variable_declarator
+        name : (identifier) @var_name
+        value : (_
+            function : (identifier) @require (#eq @require "require")
+            arguments : (arguments
+                (string
+                    (string_fragment) @pack (#eq @pack "jsonwebtoken")
+                  )
+              )
+          )
+      )
+      )
+      (lexical_declaration
+        (variable_declarator
+            value : (_
+                function : (member_expression
+                    object : (identifier) @obj (#eq @obj @var_name)
+                      property : (property_identifier) @avoid_null_jwt_key (#eq @avoid_null_jwt_key "verify")
+                      
+                  )
+                  arguments : (arguments
+                    (null) @null (#eq @null "null")
+                  )
+              )
+          )
+          
+      
+      )
+  )  @jwt_require
+
+description: |
+  **Issue:**
+    The JWT verification function does not specify a secret key or restrict allowed algorithms, making it vulnerable to the "none" algorithm attack. This allows attackers to forge unsigned JWTs and bypass authentication.
+
+  **Impact:**
+    If an attacker crafts a JWT with `"alg": "none"`, the server may accept it as valid, leading to unauthorized access to protected resources. This effectively nullifies authentication and authorization mechanisms, resulting in a security breach.
+
+  **Remedy:**
+    - Never use `null` or `undefined` as the secret key.
+    - Explicitly specify secure algorithms (`HS256`, `RS256`, `ES256`) in `jwt.verify()`.
+    - Use strong, environment-stored secrets to validate tokens.
+
+  **Example (Bad - Vulnerable to Attack):**
+    ```javascript
+    const jwt = require('jsonwebtoken');
+
+    const token = "attacker.jwt.token.here";
+
+    try {
+      const decoded = jwt.verify(token, null); // Bad pattern: Allows 'none' algorithm
+      console.log("Decoded payload:", decoded);
+    } catch (err) {
+      console.error("Invalid token:", err.message);
+    }
+    ```
+
+  **Example (Good - Secure Implementation):**
+    ```javascript
+    const jwt = require('jsonwebtoken');
+
+    const token = "your.jwt.token.here";
+    const secret = process.env.SECRET; // Good pattern: Use a securely stored secret key
+
+    try {
+      const decoded = jwt.verify(token, secret, { algorithms: ['HS256', 'RS256', 'ES256'] }); // Good pattern: Restrict allowed algorithms
+      console.log("Decoded payload:", decoded);
+    } catch (err) {
+      console.error("Invalid token:", err.message);
+    }
+    ```
