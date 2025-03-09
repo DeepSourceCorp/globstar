@@ -1,6 +1,6 @@
 language: ts
 name: bypass_assertion
-message: Found assertion being by passed, assign  directly to a typed varibale
+message: Found type assertion being bypassed, assign directly to a typed variable
 category: security
 
 pattern: |
@@ -17,27 +17,35 @@ pattern: |
   ) @bypass_assertion
 
 description: |
-  Asserting an Object with Extra Properties (Unsafe Assertions)
-  - Incorrect way :  ❌ Incorrect: Type assertion ignores extra properties
-                  ```ts
-                  const person = { name: "Alice", age: 30, extra: true } as Person;
-                  ```
-  - Correct way : ```ts
-                const person : Person = { name: "Alice", age: 30, extra: true };
-                ```
-  Using Type Assertions to Bypass Type Checking
-  - ❌ Incorrect: Forcing a type assertion with as when it's wrong
-    - ```ts
+  Asserting an object containing extra properties (Unsafe Assertions):
+  - Incorrect: Type assertion ignores extra properties
+     ```ts
+     const person = { name: "Alice", age: 30, extra: true } as Person;
+     ```
+  - Correct: 
+     ```ts
+     const person : Person = { name: "Alice", age: 30, extra: true };
+     ```
+
+  Using type assertions to bypass type checking:
+  - Incorrect: Forcing a type assertion with `as` when it's wrong
+     ```ts
       let value: unknown = "Hello";
-      let num = value as number; // ❌ TypeScript allows, but it's incorrect at runtime
-      console.log(num * 2); // ❌ Runtime error
+      let num = value as number; // TypeScript allows this, but it results in runtime error
+      console.log(num * 2); // Runtime error
       ```
-  - ✅ Fix: Use proper type checking
-    -```ts
+  - Correct: Use proper type checking
+    ```ts
       let value: unknown = "Hello";
 
       if (typeof value === "number") {
-          let num: number = value; // ✅ Now TypeScript ensures it's correct
+          let num: number = value; // Now TypeScript ensures it's correct
       }
       ```
 
+  `Person` is defined as below:
+  ```ts
+  interface Person {
+      name: string;
+      age: number;
+  }
