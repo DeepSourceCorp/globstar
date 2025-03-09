@@ -1,5 +1,5 @@
 language: js
-name: jwt_require
+name: avoid_null_jwt_key
 message: Detected the usage of null key , Please provide a secret key (for HMAC) or a public key (for RSA/ECDSA).
 category: security
 
