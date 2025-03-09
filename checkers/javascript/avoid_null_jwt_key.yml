@@ -55,7 +55,7 @@ description: |
     const token = "attacker.jwt.token.here";
 
     try {
-      const decoded = jwt.verify(token, null); // ❌ Allows 'none' algorithm
+      const decoded = jwt.verify(token, null); // Bad pattern: Allows 'none' algorithm
       console.log("Decoded payload:", decoded);
     } catch (err) {
       console.error("Invalid token:", err.message);
@@ -67,10 +67,10 @@ description: |
     const jwt = require('jsonwebtoken');
 
     const token = "your.jwt.token.here";
-    const secret = process.env.SECRET; // ✅ Use a securely stored secret key
+    const secret = process.env.SECRET; // Good pattern: Use a securely stored secret key
 
     try {
-      const decoded = jwt.verify(token, secret, { algorithms: ['HS256', 'RS256', 'ES256'] }); // ✅ Restrict allowed algorithms
+      const decoded = jwt.verify(token, secret, { algorithms: ['HS256', 'RS256', 'ES256'] }); // Good pattern: Restrict allowed algorithms
       console.log("Decoded payload:", decoded);
     } catch (err) {
       console.error("Invalid token:", err.message);
