@@ -1,0 +1,22 @@
+language: py
+name: avoid_allowing_all_hosts
+message: Detected setting the value of ALLOWED_HOSTS = ["*"]
+category: security
+
+pattern: |
+  (
+  	(expression_statement
+    	(assignment
+        	left: (identifier) @var (#eq? @var "ALLOWED_HOSTS")
+            right: (list
+              (string) @host_list
+              (#match? @host_list "\\*")
+            )
+        )
+    ) 
+  )  @avoid_allowing_all_hosts
+
+include: ["**/settings.py"]
+description: |
+  ALLOWED_HOSTS = ["*"] cannot be used in production in django framework.
+
