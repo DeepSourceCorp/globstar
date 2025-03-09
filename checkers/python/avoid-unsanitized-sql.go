@@ -9,58 +9,60 @@ import (
 	"globstar.dev/analysis"
 )
 
-// checkSQLInjection is the rule callback that inspects each call node.
-func checkSQLInjection(r analysis.Rule, ana *analysis.Analyzer, node *sitter.Node) {
-	source := ana.FileContext.Source
-
-	// Only process call nodes.
-	if node.Type() != "call" {
-		return
-	}
-
-	// Extract the function part (e.g. cursor.execute).
-	functionNode := node.ChildByFieldName("function")
-	if functionNode == nil {
-		return
-	}
-
-	// Proceed only if the function is one of our recognized SQL methods.
-	if !isSQLExecuteMethod(functionNode, source) {
-		return
-	}
-
-	// Check the first argument.
-	argsNode := node.ChildByFieldName("arguments")
-	if argsNode == nil {
-		return
-	}
-	firstArg := getNthChild(argsNode, 0)
-	if firstArg == nil {
-		return
-	}
-
-	// If the query string is built unsafely, report an issue.
-	if isUnsafeString(firstArg, source) {
-		ana.Report(&analysis.Issue{
-			Message:  "Concatenated string in SQL query is an SQL injection threat!",
-			Category: analysis.CategorySecurity,
-			Severity: analysis.SeverityCritical,
-			Range:    node.Range(),
-		})
-		return
-	}
-
-	// If the argument is an identifier, trace its origin.
-	if firstArg.Type() == "identifier" {
-		varName := firstArg.Content(source)
-		traceVariableOrigin(r, ana, varName, node, make(map[string]bool), make(map[string]bool), source)
-	}
+var AvoidUnsanitizedSQL = &analysis.Analyzer{
+	Name:        "avoid-unsanitized-sql",
+	Language:    analysis.LangPy,
+	Description: "Check if SQL query is sanitized",
+	Category:    analysis.CategorySecurity,
+	Severity:    analysis.SeverityCritical,
+	Run:         checkSQLInjection,
 }
 
-// SQLInjection registers the SQL injection rule.
-func SQLInjection() analysis.Rule {
-	var entry analysis.VisitFn = checkSQLInjection
-	return analysis.CreateRule("call", analysis.LangPy, &entry, nil)
+// checkSQLInjection is the rule callback that inspects each call node.
+func checkSQLInjection(pass *analysis.Pass) (interface{}, error) {
+	analysis.Preorder(pass, func(node *sitter.Node) {
+		source := pass.FileContext.Source
+
+		// Only process call nodes.
+		if node.Type() != "call" {
+			return
+		}
+
+		// Extract the function part (e.g. cursor.execute).
+		functionNode := node.ChildByFieldName("function")
+		if functionNode == nil {
+			return
+		}
+
+		// Proceed only if the function is one of our recognized SQL methods.
+		if !isSQLExecuteMethod(functionNode, source) {
+			return
+		}
+
+		// Check the first argument.
+		argsNode := node.ChildByFieldName("arguments")
+		if argsNode == nil {
+			return
+		}
+		firstArg := getNthChild(argsNode, 0)
+		if firstArg == nil {
+			return
+		}
+
+		// If the query string is built unsafely, report an issue.
+		if isUnsafeString(firstArg, source) {
+			pass.Report(pass, node, "Concatenated string in SQL query is an SQL injection threat")
+			return
+		}
+
+		// If the argument is an identifier, trace its origin.
+		if firstArg.Type() == "identifier" {
+			varName := firstArg.Content(source)
+			traceVariableOrigin(pass, varName, node, make(map[string]bool), make(map[string]bool), source)
+		}
+	})
+
+	return nil, nil
 }
 
 // --- Helper Functions ---
@@ -107,7 +109,7 @@ func isUnsafeString(node *sitter.Node, source []byte) bool {
 	return false
 }
 
-func traceVariableOrigin(r analysis.Rule, ana *analysis.Analyzer, varName string, originalNode *sitter.Node,
+func traceVariableOrigin(pass *analysis.Pass, varName string, originalNode *sitter.Node,
 	visitedVars map[string]bool, visitedFiles map[string]bool, source []byte) {
 
 	if visitedVars[varName] {
@@ -115,18 +117,18 @@ func traceVariableOrigin(r analysis.Rule, ana *analysis.Analyzer, varName string
 	}
 	visitedVars[varName] = true
 
-	if traceLocalAssignments(r, ana, varName, originalNode, visitedVars, visitedFiles, source) {
+	if traceLocalAssignments(pass, varName, originalNode, visitedVars, visitedFiles, source) {
 		return
 	}
 
-	traceCrossFileImports(r, ana, varName, originalNode, visitedVars, visitedFiles, source)
+	traceCrossFileImports(pass, varName, originalNode, visitedVars, visitedFiles, source)
 }
 
-func traceLocalAssignments(r analysis.Rule, ana *analysis.Analyzer, varName string, originalNode *sitter.Node,
+func traceLocalAssignments(pass *analysis.Pass, varName string, originalNode *sitter.Node,
 	visitedVars map[string]bool, visitedFiles map[string]bool, source []byte) bool {
 
 	query := `(assignment left: (identifier) @var right: (_) @value)`
-	q, err := sitter.NewQuery([]byte(query), ana.Language.Parser())
+	q, err := sitter.NewQuery([]byte(query), pass.Analyzer.Language.Grammar())
 	if err != nil {
 		return false
 	}
@@ -134,7 +136,7 @@ func traceLocalAssignments(r analysis.Rule, ana *analysis.Analyzer, varName stri
 
 	cursor := sitter.NewQueryCursor()
 	defer cursor.Close()
-	cursor.Exec(q, ana.FileContext.Ast)
+	cursor.Exec(q, pass.FileContext.Ast)
 
 	for {
 		match, ok := cursor.NextMatch()
@@ -143,8 +145,8 @@ func traceLocalAssignments(r analysis.Rule, ana *analysis.Analyzer, varName stri
 		}
 
 		var varNode, valueNode *sitter.Node
-		for _, capture := range match.Captures {
-			switch capture.Name {
+		for idx, capture := range match.Captures {
+			switch q.CaptureNameForId(uint32(idx)) {
 			case "var":
 				varNode = capture.Node
 			case "value":
@@ -154,16 +156,13 @@ func traceLocalAssignments(r analysis.Rule, ana *analysis.Analyzer, varName stri
 
 		if varNode != nil && varNode.Content(source) == varName {
 			if isUnsafeString(valueNode, source) {
-				ana.Report(&analysis.Issue{
-					Message: fmt.Sprintf("Variable '%s' originates from an unsafe string", varName),
-					Range:   originalNode.Range(),
-				})
+				pass.Report(pass, originalNode, fmt.Sprintf("Variable '%s' originates from an unsafe string", varName))
 				return true
 			}
 
 			if valueNode.Type() == "identifier" {
 				newVar := valueNode.Content(source)
-				traceVariableOrigin(r, ana, newVar, originalNode, visitedVars, visitedFiles, source)
+				traceVariableOrigin(pass, newVar, originalNode, visitedVars, visitedFiles, source)
 				return true
 			}
 		}
@@ -171,7 +170,7 @@ func traceLocalAssignments(r analysis.Rule, ana *analysis.Analyzer, varName stri
 	return false
 }
 
-func traceCrossFileImports(r analysis.Rule, ana *analysis.Analyzer, varName string, originalNode *sitter.Node,
+func traceCrossFileImports(pass *analysis.Pass, varName string, originalNode *sitter.Node,
 	visitedVars map[string]bool, visitedFiles map[string]bool, source []byte) {
 
 	query := `(
@@ -180,7 +179,7 @@ func traceCrossFileImports(r analysis.Rule, ana *analysis.Analyzer, varName stri
 			name: (dotted_name) @imported_var
 		) @import
 	)`
-	q, err := sitter.NewQuery([]byte(query), ana.Language.Parser())
+	q, err := sitter.NewQuery([]byte(query), pass.Analyzer.Language.Grammar())
 	if err != nil {
 		return
 	}
@@ -188,7 +187,7 @@ func traceCrossFileImports(r analysis.Rule, ana *analysis.Analyzer, varName stri
 
 	cursor := sitter.NewQueryCursor()
 	defer cursor.Close()
-	cursor.Exec(q, ana.FileContext.Ast)
+	cursor.Exec(q, pass.FileContext.Ast)
 
 	for {
 		match, ok := cursor.NextMatch()
@@ -197,8 +196,8 @@ func traceCrossFileImports(r analysis.Rule, ana *analysis.Analyzer, varName stri
 		}
 
 		var moduleNode, varNode *sitter.Node
-		for _, capture := range match.Captures {
-			switch capture.Name {
+		for idx, capture := range match.Captures {
+			switch q.CaptureNameForId(uint32(idx)) {
 			case "module":
 				moduleNode = capture.Node
 			case "imported_var":
@@ -213,16 +212,16 @@ func traceCrossFileImports(r analysis.Rule, ana *analysis.Analyzer, varName stri
 			}
 			visitedFiles[modulePath] = true
 
-			for _, file := range ana.Files {
+			for _, file := range pass.Files {
 				if strings.HasSuffix(file.FilePath, modulePath) {
 					// Create a temporary analyzer context for the imported file.
-					tempAna := &analysis.Analyzer{
-						Language:    ana.Language,
+					tempPass := &analysis.Pass{
+						Analyzer:    pass.Analyzer,
 						FileContext: file,
-						Files:       ana.Files,
-						Report:      ana.Report, // Reuse the report function.
+						Files:       pass.Files,
+						Report:      pass.Report, // Reuse the report function.
 					}
-					traceVariableOrigin(r, tempAna, varName, originalNode, visitedVars, visitedFiles, file.Source)
+					traceVariableOrigin(tempPass, varName, originalNode, visitedVars, visitedFiles, file.Source)
 				}
 			}
 		}
