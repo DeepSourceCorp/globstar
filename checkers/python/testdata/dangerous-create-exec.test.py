@@ -51,3 +51,24 @@ def handler_func6(event, context):
     with AsyncEventLoop() as loop:
         # <expect-error>
         proc = loop.run_until_complete(asyncio.subprocess.create_subprocess_exec(program, ["bash", "-c", event['cmds']]))
+
+def ok_handler1(event, context):
+    program = "echo"
+    loop = asyncio.new_event_loop()
+    # <no-error>
+    proc = loop.run_until_complete(asyncio.subprocess.create_subprocess_exec(program, [program, "123"]))
+    loop.run_until_complete(proc.communicate())
+
+def ok_handler2(event, context):
+    program = "sudo"
+    ok_cmd2 = "cat"
+    with AsyncEventLoop() as loop:
+        # <no-error>
+        proc = loop.run_until_complete(asyncio.subprocess.create_subprocess_exec(program, "bash", "-c", ok_cmd2))
+
+def ok_handler3(event, context):
+    program = "sudo"
+    ok_cmd3 = "rm -rf /"
+    with AsyncEventLoop() as loop:
+        # <no-error>
+        proc = loop.run_until_complete(subprocess.create_subprocess_exec(program, ok_cmd3))
