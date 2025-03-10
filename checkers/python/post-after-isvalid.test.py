@@ -34,6 +34,20 @@ def create_new_tournament_dangerous(request):
         context = { 'form': CreateTournamentForm()}
         return render(request, 'create_tournament.html', context)
 
+def create_new_tournament_dangerous_post_after_few_lines(request):
+    if request.method == 'POST':
+        form = CreateTournamentForm(request.POST)
+        if form.is_valid():
+            # placeholder comment
+            print("Placeholder print statement")
+            # <expect-error>
+            t = Tournament(name=request.POST.get('name'))
+            t.save()
+            return redirect('index')
+    else:
+        context = { 'form': CreateTournamentForm()}
+        return render(request, 'create_tournament.html', context)
+
 # This handler DOES use request.cleaned_data[], even after form.is_valid() has run
 def create_new_tournament_safe(request):
     if request.method == 'POST':
