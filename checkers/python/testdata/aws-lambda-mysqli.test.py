@@ -9,13 +9,22 @@ mydbCursor = mydb.cursor()
 
 def lambda_handler(event, context):
     publicIP=event["queryStringParameters"]["publicIP"]
-    sql = """UPDATE `EC2ServerPublicIP` SET %s = '%s' WHERE %s = %d""" % ("publicIP",publicIP,"ID", 1)
+    sql1 = """UPDATE `EC2ServerPublicIP` SET %s = '%s' WHERE %s = %d""" % ("publicIP",publicIP,"ID", 1)
 
     # <expect-error>
     mydbCursor.executemany("""UPDATE `EC2ServerPublicIP` SET %s = '%s' WHERE %s = %d""" % ("publicIP",publicIP,"ID", 1))
 
     # <expect-error>
-    mydbCursor.execute(sql)
+    mydbCursor.execute(sql1)
+
+    sql2 = """UPDATE `EC2ServerPublicIP` SET {column} = '{value}' WHERE {condition_column} = {condition_value}""".format(
+    column="publicIP",
+    value=publicIP,
+    condition_column="ID",
+    condition_value=1)
+
+    # <expect-error>
+    mydbCursor.execute(sql2)
 
     # <no-error>
     mydbCursor.execute("UPDATE `EC2ServerPublicIP` SET %s = '%s' WHERE %s = %s", ("publicIP",publicIP,"ID", 1))
