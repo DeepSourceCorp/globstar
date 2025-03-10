@@ -26,6 +26,9 @@ def lambda_handler(event, context):
     # <expect-error>
     mydbCursor.execute(sql2)
 
+    # <expect-error>
+    mydbCursor.execute(f"""UPDATE `EC2ServerPublicIP` SET publicIP = '{publicIP}' WHERE ID = {1}""")
+
     # <no-error>
     mydbCursor.execute("UPDATE `EC2ServerPublicIP` SET %s = '%s' WHERE %s = %s", ("publicIP",publicIP,"ID", 1))
     mydb.commit()
