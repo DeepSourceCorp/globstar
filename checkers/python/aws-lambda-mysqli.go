@@ -1,7 +1,6 @@
 package python
 
 import (
-	"fmt"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
@@ -54,8 +53,6 @@ func checkAwsLambdaMySqlInjection(pass *analysis.Pass) (interface{}, error) {
 			sqlStringMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
-
-	fmt.Println(sqlStringMap)
 
 	// check for insecure sql query calls
 	analysis.Preorder(pass, func(node *sitter.Node) {
@@ -129,9 +126,8 @@ func isDangerousArgument(node *sitter.Node, source []byte, sqlVarMap, eventVarMa
 
 	case "string":
 		strContent := arg.Content(source)
-
 		// check if f-string
-		if strContent[0] == 'f' {
+		if strContent[0] != 'f' {
 			return false
 		}
 
@@ -155,7 +151,7 @@ func isDangerousArgument(node *sitter.Node, source []byte, sqlVarMap, eventVarMa
 	case "call":
 		funcNode := arg.ChildByFieldName("function")
 		funcAttr := funcNode.Content(source)
-		if !strings.HasSuffix(".format", funcAttr) {
+		if !strings.HasSuffix(funcAttr, ".format") {
 			return false
 		}
 		funcArgNode := arg.ChildByFieldName("arguments")
@@ -221,7 +217,7 @@ func isTaintedSqlString(node *sitter.Node, source []byte, eventVarMap map[string
 	case "call":
 		funcNode := node.ChildByFieldName("function")
 		funcAttr := funcNode.Content(source)
-		if !strings.HasSuffix(".format", funcAttr) {
+		if !strings.HasSuffix(funcAttr, ".format") {
 			return false
 		}
 		argNode := node.ChildByFieldName("arguments")
