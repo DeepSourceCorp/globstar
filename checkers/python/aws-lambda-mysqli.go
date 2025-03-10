@@ -1,6 +1,7 @@
 package python
 
 import (
+	"fmt"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
@@ -54,6 +55,8 @@ func checkAwsLambdaMySqlInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 	})
 
+	fmt.Println(sqlStringMap)
+
 	// check for insecure sql query calls
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "call" {
@@ -66,7 +69,6 @@ func checkAwsLambdaMySqlInjection(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-
 		isSqlVarPresent := false
 		for key := range sqlCursorMap {
 			if strings.Contains(funcCall, key) {
@@ -78,27 +80,99 @@ func checkAwsLambdaMySqlInjection(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-
 		argNode := node.ChildByFieldName("arguments")
 
-		// tainted sql strings will only contain a single variable
-		// or a single formatted string. if argument count is > 1 then it must be
+		// Tainted sql strings will only contain a single variable
+		// or a single formatted string. If argument count is > 1 then it must be
 		// a parametrized sql query which is safe
 		if argNode != nil && argNode.NamedChildCount() > 1 {
 			return
 		}
 
-		args := argNode.Content(pass.FileContext.Source)
-
-		for key := range sqlStringMap {
-			if strings.Contains(args, key) {
-				pass.Report(pass, node, "Detected SQL injection risk. Query incorporates unsanitized user input instead of using parameterized statements.")
-			}
+		if isDangerousArgument(argNode, pass.FileContext.Source, sqlStringMap, eventVarMap) {
+			pass.Report(pass, node, "Detected SQL injection risk. Query contains tainted data.")
 		}
 	})
 
-
 	return nil, nil
+}
+
+func isDangerousArgument(node *sitter.Node, source []byte, sqlVarMap, eventVarMap map[string]bool) bool {
+	if node.Type() != "argument_list" {
+		return false
+	}
+
+	arg := node.NamedChild(0)
+	switch arg.Type() {
+	case "identifier":
+		argContent := arg.Content(source)
+		for key := range sqlVarMap {
+			if strings.Contains(argContent, key) {
+				return true
+			}
+		}
+	case "binary_operator":
+		rightNode := arg.ChildByFieldName("right")
+		rightNodeContent := rightNode.Content(source)
+
+		// check if variable containing tainted is present in the query
+		for key := range eventVarMap {
+			if strings.Contains(rightNodeContent, key) {
+				return true
+			}
+		}
+
+		// check if the `event` variable is used in the sql query
+		if strings.Contains(rightNodeContent, "event") {
+			return true
+		}
+
+	case "string":
+		strContent := arg.Content(source)
+
+		// check if f-string
+		if strContent[0] == 'f' {
+			return false
+		}
+
+		allChildren := getAllChildren(arg, 0)
+
+		// check if tainted data is present in f-string interpolation
+		for _, child := range allChildren {
+			if child.Type() == "interpolation" {
+				interpolationContent := child.Content(source)
+				if strings.Contains(interpolationContent, "event") {
+					return true
+				}
+
+				for key := range eventVarMap {
+					if strings.Contains(interpolationContent, key) {
+						return true
+					}
+				}
+			}
+		}
+	case "call":
+		funcNode := arg.ChildByFieldName("function")
+		funcAttr := funcNode.Content(source)
+		if !strings.HasSuffix(".format", funcAttr) {
+			return false
+		}
+		funcArgNode := arg.ChildByFieldName("arguments")
+		funcArgContent := funcArgNode.Content(source)
+
+		// check if tainted
+		for key := range eventVarMap {
+			if strings.Contains(funcArgContent, key) {
+				return true
+			}
+		}
+
+		if strings.Contains(funcArgContent, "event") {
+			return true
+		}
+	}
+	return false
 }
 
 func isTaintedSqlString(node *sitter.Node, source []byte, eventVarMap map[string]bool) bool {
