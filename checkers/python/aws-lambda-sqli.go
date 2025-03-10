@@ -1,42 +1,51 @@
 package python
 
 import (
-
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
 
 	"strings"
 )
 
-var AwsLambdaMySqlInjection *analysis.Analyzer = &analysis.Analyzer{
-	Name:        "aws-lambda-mysqli",
+var AwsLambdaSqlInjection *analysis.Analyzer = &analysis.Analyzer{
+	Name:        "aws-lambda-sqli",
 	Language:    analysis.LangPy,
 	Description: "An SQL statement in the code is using data from the event object, which could lead to SQL injection if the input is user-controlled and not properly sanitized. To prevent this vulnerability, it's recommended to use parameterized queries or prepared statements. For example, instead of directly embedding variables in the query, use cursor.execute('SELECT * FROM projects WHERE status = %s', ('active',)) to ensure safe query execution.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
-	Run:         checkAwsLambdaMySqlInjection,
+	Run:         checkAwsLambdaSqlInjection,
 }
 
-func checkAwsLambdaMySqlInjection(pass *analysis.Pass) (interface{}, error) {
+func checkAwsLambdaSqlInjection(pass *analysis.Pass) (interface{}, error) {
 	sqlCursorMap := make(map[string]bool)
 	sqlStringMap := make(map[string]bool)
 	eventVarMap := make(map[string]bool)
 
 	// first pass: get cursor variable and event variable names
 	analysis.Preorder(pass, func(node *sitter.Node) {
-		if node.Type() != "assignment" {
+		if node.Type() != "assignment" && node.Type() != "with_statement" {
 			return
 		}
 
-		leftNode := node.ChildByFieldName("left")
-		rightNode := node.ChildByFieldName("right")
+		if node.Type() == "assignment" {
 
-		if isSqlCursor(rightNode, pass.FileContext.Source) {
-			sqlCursorMap[leftNode.Content(pass.FileContext.Source)] = true
-		}
+			leftNode := node.ChildByFieldName("left")
+			rightNode := node.ChildByFieldName("right")
 
-		if isEventVar(rightNode, pass.FileContext.Source) {
-			eventVarMap[leftNode.Content(pass.FileContext.Source)] = true
+			if isSqlCursor(rightNode, pass.FileContext.Source) {
+				sqlCursorMap[leftNode.Content(pass.FileContext.Source)] = true
+			}
+
+			if isEventVar(rightNode, pass.FileContext.Source) {
+				eventVarMap[leftNode.Content(pass.FileContext.Source)] = true
+			}
+		} else if node.Type() == "with_statement" {
+			varName, ok := isSqlCursorWithStatement(node, pass.FileContext.Source)
+			if !ok {
+				return
+			}
+
+			sqlCursorMap[varName] = true
 		}
 	})
 
@@ -62,7 +71,7 @@ func checkAwsLambdaMySqlInjection(pass *analysis.Pass) (interface{}, error) {
 
 		funcNode := node.ChildByFieldName("function")
 		funcCall := funcNode.Content(pass.FileContext.Source)
-		if !strings.Contains(funcCall, "execute") {
+		if !strings.Contains(funcCall, "execute") && !strings.Contains(funcCall, "mogrify") {
 			return
 		}
 
@@ -243,6 +252,41 @@ func isEventVar(node *sitter.Node, source []byte) bool {
 
 func isSqlCursor(node *sitter.Node, source []byte) bool {
 	return node.Type() == "call" && strings.Contains(node.Content(source), "cursor")
+}
+
+func isSqlCursorWithStatement(node *sitter.Node, source []byte) (string, bool) {
+	withClauseNode := node.NamedChild(0)
+	if withClauseNode.Type() != "with_clause" {
+		return "", false
+	}
+
+	withItemNode := withClauseNode.NamedChild(0)
+	if withItemNode.Type() != "with_item" {
+		return "", false
+	}
+
+	valueNode := withItemNode.ChildByFieldName("value")
+	if valueNode.Type() != "as_pattern" {
+		return "", false
+	}
+
+	attributeNode := valueNode.NamedChild(0)
+	if attributeNode.Type() != "attribute" {
+		return "", false
+	}
+
+	attributeContent := attributeNode.Content(source)
+	if !strings.Contains(attributeContent, "cursor") {
+		return "", false
+	}
+
+	aliasNode := valueNode.ChildByFieldName("alias")
+	if aliasNode.Type() != "as_pattern_target" {
+		return "", false
+	}
+
+	asVarName := aliasNode.Content(source)
+	return asVarName, true
 }
 
 func getAllChildren(node *sitter.Node, startIdx int) []*sitter.Node {
