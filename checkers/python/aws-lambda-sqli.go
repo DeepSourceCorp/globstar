@@ -10,7 +10,7 @@ import (
 var AwsLambdaSqlInjection *analysis.Analyzer = &analysis.Analyzer{
 	Name:        "aws-lambda-sqli",
 	Language:    analysis.LangPy,
-	Description: "An SQL statement in the code is using data from the event object, which could lead to SQL injection if the input is user-controlled and not properly sanitized. To prevent this vulnerability, it's recommended to use parameterized queries or prepared statements. For example, instead of directly embedding variables in the query, use cursor.execute('SELECT * FROM projects WHERE status = %s', ('active',)) to ensure safe query execution.",
+	Description: "An SQL statement in the code is using data from the event object, which could lead to SQL injection if the input is user-controlled and not properly sanitized. To prevent this vulnerability, it's recommended to use parameterized queries or prepared statements.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
 	Run:         checkAwsLambdaSqlInjection,
