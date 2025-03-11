@@ -8,7 +8,7 @@ import (
 	"globstar.dev/analysis"
 )
 
-var DangerpusSubprocessUse *analysis.Analyzer = &analysis.Analyzer{
+var DangerousSubprocessUse *analysis.Analyzer = &analysis.Analyzer{
 	Name:        "dangerous-subprocess-use",
 	Language:    analysis.LangPy,
 	Description: "Potential command injection risk: event data flows into subprocess with shell=True. This allows attackers to execute arbitrary commands through maliciously crafted input. Consider using shell=False (the default) with shlex.split() to safely separate command arguments.",
@@ -70,7 +70,7 @@ func checkDangerousSubprocessUse(pass *analysis.Pass) (interface{}, error) {
 			argNode := node.ChildByFieldName("arguments")
 				
 			if argNode != nil && argNode.NamedChildCount() >= 4 {
-				argumentsNode := getNamedChildren(argNode, 0)
+				argumentsNode := getAllNamedChildren(argNode, 0)
 				eventBool := false
 				shellBool := false
 
@@ -96,7 +96,7 @@ func checkDangerousSubprocessUse(pass *analysis.Pass) (interface{}, error) {
 
 
 // get all the children nodes of a node
-func getNamedChildren(node *sitter.Node, startIdx int) []*sitter.Node {
+func getAllNamedChildren(node *sitter.Node, startIdx int) []*sitter.Node {
 	var namedChildren []*sitter.Node
 	childrenCount := node.NamedChildCount()
 	

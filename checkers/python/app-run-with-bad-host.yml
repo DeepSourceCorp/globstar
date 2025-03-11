@@ -1,0 +1,31 @@
+language: py
+name: app-run-with-bad-host
+message: Running Flask with host 0.0.0.0 allows connections from any network interface, posing a security risk.
+category: security
+severity: warning
+
+pattern: >
+  (call
+    function: (attribute
+      object: (identifier) @app
+      attribute: (identifier) @run)
+    arguments: (argument_list
+      (_)*
+      [
+      (keyword_argument
+        name: (identifier) @host
+        value: (string
+          (string_content) @ip))
+      
+      (string
+        (string_content) @ip)
+      ]
+      (_)*)
+    (#eq? @app "app")
+    (#eq? @run "run")
+    (#eq? @host "host")
+    (#eq? @ip "0.0.0.0")) @app-run-with-bad-host
+
+
+description: >
+  Running a Flask application with the host set to 0.0.0.0 allows it to accept connections from any network interface, potentially exposing the server to the public internet. This can pose security risks, as unauthorized users may be able to access the application if proper authentication and firewall rules are not in place

@@ -72,7 +72,7 @@ var AnalyzerRegistry = []Analyzer{
 	},
 	{
 		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{python.DangerpusSubprocessUse},
+		Analyzers: []*goAnalysis.Analyzer{python.DangerousSubprocessUse, python.InsecureUrllibFtp},
 	},
 }
 
