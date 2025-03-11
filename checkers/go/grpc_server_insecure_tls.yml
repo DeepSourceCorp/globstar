@@ -1,0 +1,46 @@
+language: go
+name: go_grpc_server_insecure_tls
+message: "Using grpc.NewServer without TLS credentials creates an insecure server. Add grpc.Creds with valid TLS credentials to secure communications."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+  (short_var_declaration
+    right: (expression_list
+      (call_expression
+        function: (selector_expression
+          operand: (identifier) @_pkg
+          field: (field_identifier) @_func
+        )
+        arguments: (argument_list) @args
+      )
+    )
+  )
+  (#eq? @_pkg "grpc")
+  (#eq? @_func "NewServer")
+  (#not-match? @args ".*Creds.*")
+  ) @go_grpc_server_insecure_tls
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+    Using `grpc.NewServer` without providing TLS credentials (`grpc.Creds`) creates a gRPC server that communicates over plaintext. This exposes the server to man-in-the-middle (MITM) attacks, allowing attackers to intercept, modify, or read sensitive data.
+
+  Impact:
+    Insecure gRPC connections can lead to data leakage, unauthorized access, and loss of confidentiality and integrity.
+
+  Remediation: 
+    Always secure gRPC servers with TLS credentials. Use `credentials.NewServerTLSFromFile(certFile, keyFile)` to load a certificate and pass it to `grpc.NewServer` using `grpc.Creds`.
+
+  Example of secure usage:
+    ```go
+    creds, err := credentials.NewServerTLSFromFile("server.crt", "server.key")
+    if err != nil {
+        log.Fatalf("Failed to load TLS keys: %v", err)
+    }
+    server := grpc.NewServer(grpc.Creds(creds))

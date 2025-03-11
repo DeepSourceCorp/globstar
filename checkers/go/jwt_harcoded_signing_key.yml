@@ -1,0 +1,52 @@
+language: go
+name: go_jwt_harcoded_signing_key
+message: "Avoid using
+  hardcoded signing key in JWT as it can be easily compromised."
+category: security
+severity: critical
+pattern: >
+  [
+    (
+  (call_expression
+    function: (selector_expression
+      operand: (_) @token
+      field: (field_identifier) @method
+      (#eq? @method "SignedString")
+    )
+    arguments: (argument_list) @args
+    (#match? @args "\".*\"")
+  )
+  ) @go_jwt_harcoded_signing_key
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue  
+  Hardcoding signing keys in JWT tokens exposes them to potential source code leaks and compromises.  
+  If attackers obtain the key, they can forge valid tokens, bypassing authentication and authorization mechanisms.
+
+  Impact  
+  - Unauthorized access to protected resources  
+  - Token forgery and privilege escalation  
+  - Breach of sensitive data and user impersonation
+
+  Remediation
+  - Use a secure random key generator to create a strong signing key.
+  - Store the key securely, such as in a secure key management system.
+  - Rotate keys periodically to limit exposure in case of a breach.
+  - Use Environment Variables or Configuration Files to load the key dynamically.
+
+  Example
+  ```go
+  // Vulnerable: Hardcoded signing key
+  token := jwt.New(jwt.SigningMethodHS256)
+  tokenString, err := token.SignedString([]byte("my_secret_key"))
+
+  // Secure: Load signing key from environment variable
+  key := os.Getenv("JWT_SIGNING_KEY")
+  token := jwt.New(jwt.SigningMethodHS256)
+  tokenString, err := token.SignedString([]byte(key))
+  ```

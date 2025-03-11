@@ -17,5 +17,5 @@ jobs:
       - name: build
         run: make build
 
-      - name: test-builtin-rules
-        run: make test-builtin-rules
+      - name: test
+        run: make testall

@@ -1,0 +1,58 @@
+language: ruby
+name: ruby_rails_http_hardcoded_passwd
+message: "Avoid hardcoding passwords in HTTP authentication as it exposes sensitive credentials."
+category: security
+severity: critical
+pattern: >
+  (
+    (
+      call
+      method: (identifier) @auth_method
+      arguments: (argument_list
+        (pair
+          key: (hash_key_symbol) @credential_key
+          value: (string) @credential_string
+        )
+      )
+      (#eq? @auth_method "http_basic_authenticate_with")
+      (#match? @credential_key "password")
+      (#match? @credential_string "^\".*\"$")
+    )
+  ) @ruby_rails_http_hardcoded_passwd
+
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:
+  Hardcoding passwords in HTTP authentication exposes sensitive credentials in the source code.
+  This increases the risk of credential leaks through version control, logs, and unauthorized access.
+
+  Why is this a problem?
+  - Security Risk: Hardcoded passwords can be extracted by attackers.
+  - Version Control Exposure: If committed, credentials can be accessed from Git history.
+  - Difficult to Rotate: Changing passwords requires modifying the source code.
+
+  Remediation:
+  - Use environment variables instead of hardcoded strings.
+  - Use Rails credentials to securely store secrets.
+
+  Example Fix:
+  ```ruby
+  class AdminController < ApplicationController
+    # Insecure: Hardcoded password (Avoid this)
+    http_basic_authenticate_with name: "admin", password: "password"
+
+    # Secure Alternative: Using environment variable
+    http_basic_authenticate_with name: "admin", password: ENV['ADMIN_PASSWORD']
+
+    # More Secure: Using Rails credentials
+    http_basic_authenticate_with name: "admin", password: Rails.application.credentials[:admin_password]
+
+    def index
+      render plain: "Welcome, Admin!"
+    end
+  end
+  ```

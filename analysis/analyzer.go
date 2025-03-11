@@ -1,8 +1,10 @@
 package analysis
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -68,12 +70,25 @@ func walkTree(node *sitter.Node, f func(*sitter.Node)) {
 
 func Preorder(pass *Pass, fn func(*sitter.Node)) {
 	// TODO: cache the traversal results to avoid running the traversal for each analyzer
-	for _, file := range pass.Files {
-		walkTree(file.Ast, fn)
-	}
+	walkTree(pass.FileContext.Ast, fn)
 }
 
-func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
+var defaultIgnoreDirs = []string{
+	"checkers",
+	"node_modules",
+	"vendor",
+	"dist",
+	"build",
+	"out",
+	".git",
+	".svn",
+	"venv",
+	"__pycache__",
+	".idea",
+	".vitepress",
+}
+
+func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bool) ([]*Issue, error) {
 	raisedIssues := []*Issue{}
 	langAnalyzerMap := make(map[Language][]*Analyzer)
 	for _, analyzer := range analyzers {
@@ -87,11 +102,21 @@ func RunAnalyzers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 		}
 
 		if info.IsDir() {
+			if slices.Contains(defaultIgnoreDirs, info.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if fileFilter != nil && !fileFilter(path) {
 			return nil
 		}
 
 		file, err := ParseFile(path)
 		if err != nil {
+			if err != ErrUnsupportedLanguage {
+				fmt.Println(err)
+			}
 			return nil
 		}
 

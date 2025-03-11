@@ -1,0 +1,35 @@
+language: py
+name: distributed-security-required-encryption
+message: Detected security context for Dask with `require-encryption` keyword as False
+
+pattern: |
+  (call
+    function: (identifier) @security
+    arguments: (argument_list
+      (_)*
+      (keyword_argument
+        name: (identifier) @reqenc
+        value: (false))
+      (_)*)
+    (#eq? @reqenc "require_encryption")) @distributed-security-required-encryption
+
+  (call
+    function: (attribute
+      object: (attribute
+        object: (identifier) @dist
+        attribute: (identifier) @security_mod)
+      attribute: (identifier) @security_method)
+    arguments: (argument_list
+      (_)*
+      (keyword_argument
+        name: (identifier) @reqenc
+        value: (false))
+      (_)*)
+    (#eq? @dist "distributed")
+    (#eq? @security_mod "security")
+    (#eq? @security_method "Security")
+    (#eq? @reqenc "require_encryption")
+    ) @distributed-security-required-encryption
+
+description: |
+  Setting `require_encryption` as False in Dask security may weaken encryption. Set it to True to ensure data protection.

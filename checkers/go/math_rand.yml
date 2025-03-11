@@ -1,0 +1,44 @@
+language: go
+name: go_math_rand
+message: "Avoid using the math/rand package for cryptographic operations. Use crypto/rand for secure randomness."
+category: security
+severity: critical
+pattern: >
+  [
+    (import_spec
+      path: (interpreted_string_literal) @import
+      (#eq? @import "\"math/rand\""))
+  ] @go_math_rand
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+  The `math/rand` package generates deterministic pseudo-random numbers and is **not suitable** for cryptographic use cases such as token generation, password creation, or secure key generation. 
+  Predictable random values can lead to security vulnerabilities.
+
+  Impact:  
+  Attackers can exploit predictable randomness to guess tokens or keys, compromising authentication and data integrity.
+
+  Remediation: 
+  - Replace `math/rand` with `crypto/rand` for all security-sensitive randomness.  
+  - Example of secure random number generation:
+    ```go
+    import (
+      "crypto/rand"
+      "fmt"
+      "math/big"
+    )
+
+    func main() {
+      n := int64(100)
+      randomNumber, err := rand.Int(rand.Reader, big.NewInt(n))
+      if err != nil {
+        fmt.Println("Error generating secure random number:", err)
+        return
+      }
+      fmt.Println("Secure random number:", randomNumber.Int64())
+    }
+    ```

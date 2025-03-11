@@ -65,12 +65,12 @@ func (fc *FailureConfig) PopulateDefaults() {
 }
 
 type Config struct {
-	RuleDir         string        `yaml:"ruleDir"`
-	EnabledRules    []string      `yaml:"enabledRules"`
-	DisabledRules   []string      `yaml:"disabledRules"`
-	TargetDirs      []string      `yaml:"targetDirs"`
-	ExcludePatterns []string      `yaml:"excludePatterns"`
-	FailWhen        FailureConfig `yaml:"failWhen"`
+	CheckerDir       string        `yaml:"checkerDir"`
+	EnabledCheckers  []string      `yaml:"enabledCheckers"`
+	DisabledCheckers []string      `yaml:"disabledCheckers"`
+	TargetDirs       []string      `yaml:"targetDirs"`
+	ExcludePatterns  []string      `yaml:"excludePatterns"`
+	FailWhen         FailureConfig `yaml:"failWhen"`
 
 	excludedGlobs []glob.Glob
 }
@@ -101,8 +101,8 @@ func NewConfigFromFile(path string) (*Config, error) {
 }
 
 func (config *Config) PopulateDefaults() {
-	if config.RuleDir == "" {
-		config.RuleDir = ".globstar"
+	if config.CheckerDir == "" {
+		config.CheckerDir = ".globstar"
 	}
 
 	config.FailWhen.PopulateDefaults()

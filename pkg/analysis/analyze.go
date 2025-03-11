@@ -78,40 +78,40 @@ type Analyzer struct {
 	// ParseResult is the result of parsing a file with a tree-sitter parser,
 	// along with some extra appendages (e.g: scope information).
 	ParseResult *ParseResult
-	// rules is a list of all rules that should be applied to the AST
+	// checkers is a list of all checkers that should be applied to the AST
 	// for this language.
-	rules []Rule
-	// patternRules is a list of all rules that run after a query is run on the AST.
+	checkers []Checker
+	// patternCheckers is a list of all checkers that run after a query is run on the AST.
 	// Usually, these are written in a DSL (which, for now, is the tree-sitter S-Expression query language)
-	YmlRules []YmlRule
-	// entryRules maps node types to the rules that should be applied
+	YamlCheckers []YamlChecker
+	// entryCheckers maps node types to the checkers that should be applied
 	// when entering that node.
-	entryRulesForNode map[string][]Rule
-	// exitRules maps node types to the rules that should be applied
+	entryCheckersForNode map[string][]Checker
+	// exitCheckers maps node types to the checkers that should be applied
 	// when leaving that node.
-	exitRulesForNode map[string][]Rule
-	issuesRaised     []*Issue
+	exitCheckersForNode map[string][]Checker
+	issuesRaised        []*Issue
 }
 
-func FromFile(filePath string, baseRules []Rule) (*Analyzer, error) {
+func FromFile(filePath string, baseCheckers []Checker) (*Analyzer, error) {
 	res, err := ParseFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewAnalyzer(res, baseRules), nil
+	return NewAnalyzer(res, baseCheckers), nil
 }
 
-func NewAnalyzer(file *ParseResult, rules []Rule) *Analyzer {
+func NewAnalyzer(file *ParseResult, checkers []Checker) *Analyzer {
 	ana := &Analyzer{
-		ParseResult:       file,
-		Language:          file.Language,
-		entryRulesForNode: map[string][]Rule{},
-		exitRulesForNode:  map[string][]Rule{},
+		ParseResult:          file,
+		Language:             file.Language,
+		entryCheckersForNode: map[string][]Checker{},
+		exitCheckersForNode:  map[string][]Checker{},
 	}
 
-	for _, rule := range rules {
-		ana.AddRule(rule)
+	for _, checker := range checkers {
+		ana.AddChecker(checker)
 	}
 
 	return ana
@@ -119,30 +119,30 @@ func NewAnalyzer(file *ParseResult, rules []Rule) *Analyzer {
 
 func (ana *Analyzer) Analyze() []*Issue {
 	WalkTree(ana.ParseResult.Ast, ana)
-	ana.runPatternRules()
+	ana.runPatternCheckers()
 	return ana.issuesRaised
 }
 
-func (ana *Analyzer) AddRule(rule Rule) {
-	ana.rules = append(ana.rules, rule)
-	typ := rule.NodeType()
+func (ana *Analyzer) AddChecker(checker Checker) {
+	ana.checkers = append(ana.checkers, checker)
+	typ := checker.NodeType()
 
-	if rule.OnEnter() != nil {
-		ana.entryRulesForNode[typ] = append(ana.entryRulesForNode[typ], rule)
+	if checker.OnEnter() != nil {
+		ana.entryCheckersForNode[typ] = append(ana.entryCheckersForNode[typ], checker)
 	}
 
-	if rule.OnLeave() != nil {
-		ana.exitRulesForNode[typ] = append(ana.exitRulesForNode[typ], rule)
+	if checker.OnLeave() != nil {
+		ana.exitCheckersForNode[typ] = append(ana.exitCheckersForNode[typ], checker)
 	}
 }
 
 func (ana *Analyzer) OnEnterNode(node *sitter.Node) bool {
 	nodeType := node.Type()
-	rules := ana.entryRulesForNode[nodeType]
-	for _, rule := range rules {
-		visitFn := rule.OnEnter()
+	checkers := ana.entryCheckersForNode[nodeType]
+	for _, checker := range checkers {
+		visitFn := checker.OnEnter()
 		if visitFn != nil {
-			(*visitFn)(rule, ana, node)
+			(*visitFn)(checker, ana, node)
 		}
 	}
 	return true
@@ -150,19 +150,19 @@ func (ana *Analyzer) OnEnterNode(node *sitter.Node) bool {
 
 func (ana *Analyzer) OnLeaveNode(node *sitter.Node) {
 	nodeType := node.Type()
-	rules := ana.exitRulesForNode[nodeType]
-	for _, rule := range rules {
-		visitFn := rule.OnLeave()
+	checkers := ana.exitCheckersForNode[nodeType]
+	for _, checker := range checkers {
+		visitFn := checker.OnLeave()
 		if visitFn != nil {
-			(*visitFn)(rule, ana, node)
+			(*visitFn)(checker, ana, node)
 		}
 	}
 }
 
-func (ana *Analyzer) shouldSkipRule(rule YmlRule) bool {
-	pathFilter := rule.PathFilter()
+func (ana *Analyzer) shouldSkipChecker(checker YamlChecker) bool {
+	pathFilter := checker.PathFilter()
 	if pathFilter == nil {
-		// no filter is set, so we should not skip this rule
+		// no filter is set, so we should not skip this checker
 		return false
 	}
 
@@ -181,7 +181,7 @@ func (ana *Analyzer) shouldSkipRule(rule YmlRule) bool {
 			}
 		}
 
-		// no exclude globs matched, so we should not skip this rule
+		// no exclude globs matched, so we should not skip this checker
 		return false
 	}
 
@@ -192,7 +192,7 @@ func (ana *Analyzer) shouldSkipRule(rule YmlRule) bool {
 			}
 		}
 
-		// no include globs matched, so we should skip this rule
+		// no include globs matched, so we should skip this checker
 		return true
 	}
 
@@ -224,9 +224,9 @@ func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node
 	return false
 }
 
-// runParentFilters checks if the parent filters for a rule match the given node.
-func (ana *Analyzer) runParentFilters(rule YmlRule, node *sitter.Node) bool {
-	filters := rule.NodeFilters()
+// runParentFilters checks if the parent filters for a checker match the given node.
+func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bool {
+	filters := checker.NodeFilters()
 	if len(filters) == 0 {
 		return true
 	}
@@ -245,7 +245,7 @@ func (ana *Analyzer) runParentFilters(rule YmlRule, node *sitter.Node) bool {
 			if ana.filterMatchesParent(&filter, parent) {
 				nodeMatched = true
 				if !shouldMatch {
-					// pattern-not-inside matched, so this rule should be skipped
+					// pattern-not-inside matched, so this checker should be skipped
 					return false
 				} else {
 					// pattern-inside matched, so we can break out of the loop
@@ -262,7 +262,7 @@ func (ana *Analyzer) runParentFilters(rule YmlRule, node *sitter.Node) bool {
 	return true
 }
 
-func (ana *Analyzer) executeRuleQuery(rule YmlRule, query *sitter.Query) {
+func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()
 
@@ -277,28 +277,36 @@ func (ana *Analyzer) executeRuleQuery(rule YmlRule, query *sitter.Query) {
 		m = qc.FilterPredicates(m, ana.ParseResult.Source)
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
-			// TODO: explain why captureName == rule.Name()
-			if captureName == rule.Name() && ana.runParentFilters(rule, capture.Node) {
-				rule.OnMatch(ana, query, capture.Node, m.Captures)
+			// TODO: explain why captureName == checker.Name()
+			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) {
+				checker.OnMatch(ana, query, capture.Node, m.Captures)
 			}
 		}
 	}
 }
 
-// runPatternRules executes all rules that are written as AST queries.
-func (ana *Analyzer) runPatternRules() {
-	for _, rule := range ana.YmlRules {
-		if ana.shouldSkipRule(rule) {
+// runPatternCheckers executes all checkers that are written as AST queries.
+func (ana *Analyzer) runPatternCheckers() {
+	for _, checker := range ana.YamlCheckers {
+		if ana.shouldSkipChecker(checker) {
 			continue
 		}
 
-		queries := rule.Patterns()
+		queries := checker.Patterns()
 		for _, q := range queries {
-			ana.executeRuleQuery(rule, q)
+			ana.executeCheckerQuery(checker, q)
 		}
 	}
 }
 
 func (ana *Analyzer) Report(issue *Issue) {
 	ana.issuesRaised = append(ana.issuesRaised, issue)
+}
+
+func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
+	issues := []*Issue{}
+	for _, analyzer := range analyzers {
+		issues = append(issues, analyzer.Analyze()...)
+	}
+	return issues, nil
 }

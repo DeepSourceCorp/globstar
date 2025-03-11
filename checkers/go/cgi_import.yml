@@ -1,0 +1,29 @@
+language: go
+name: go_cgi_import
+message: "Avoid importing 'net/http/cgi' package as it is deprecated and insecure."
+category: security
+severity: critical
+pattern: >
+  [
+    ((import_spec
+      path: (interpreted_string_literal) @import_path)
+      (#eq? @import_path "\"net/http/cgi\"")) @go_cgi_import
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The 'net/http/cgi' package is deprecated and insecure. Using it can expose applications to security vulnerabilities, including command injection and resource exhaustion.  
+  CGI-based architectures are outdated, slow, and not recommended for modern web applications.
+
+  Remediation:
+  Use the `net/http` package for building HTTP servers, which is more secure, efficient, and actively maintained:
+
+  ```go
+  // Insecure (deprecated and vulnerable)
+  import "net/http/cgi"
+
+  // Secure alternative
+  import "net/http"

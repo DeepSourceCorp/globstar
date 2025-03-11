@@ -1,0 +1,30 @@
+language: ruby
+name: ruby_sha1_weak_hash
+message: "Avoid using SHA-1 to hash sensitive data as it is cryptographically weak."
+category: security
+severity: critical
+pattern: >
+  [
+    (scope_resolution
+      scope: (constant) @digest (#eq? @digest "Digest")
+      name: (constant) @sha1 (#eq? @sha1 "SHA1"))
+    @ruby_sha1_weak_hash
+  ]
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The SHA-1 hashing algorithm is considered cryptographically weak and is vulnerable to collision attacks.  
+  Using SHA-1 to hash sensitive data, such as passwords or digital signatures, exposes applications to significant security risks, including data forgery and integrity breaches.  
+
+  Remediation:  
+  Replace `Digest::SHA1` with a stronger hashing algorithm like `Digest::SHA256`:  
+
+  ruby
+  # Insecure (vulnerable to collisions)
+  Digest::SHA1.hexdigest("sensitive_data")
+
+  # Secure (recommended)
+  Digest::SHA256.hexdigest("sensitive_data")

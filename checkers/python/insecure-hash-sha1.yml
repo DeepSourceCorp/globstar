@@ -1,0 +1,16 @@
+language: py
+name: insecure-hash-sha1
+message: Detected usage of insecure SHA1 hashing algorithm
+
+pattern: |
+  (call
+    function: (attribute
+      object: (identifier) @hashes
+      attribute: (identifier) @sha1)
+    (#eq? @hashes "hashes")
+    (#match? @sha1 "^(SHA1|MD5)$")
+    ) @insecure-hash-sha1
+
+description: |
+  Using SHA1 hashing algorithm is insecure as it is not collision resistant. Switch to
+  SHA256 or SHA3 instead.

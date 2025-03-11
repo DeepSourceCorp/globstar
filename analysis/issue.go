@@ -23,25 +23,26 @@ type Issue struct {
 	Id *string
 }
 
+type location struct {
+	Row    int `json:"row"`
+	Column int `json:"column"`
+}
+
+type position struct {
+	Filename string   `json:"filename"`
+	Start    location `json:"start"`
+	End      location `json:"end"`
+}
+
+type issueJson struct {
+	Category Category `json:"category"`
+	Severity Severity `json:"severity"`
+	Message  string   `json:"message"`
+	Range    position `json:"range"`
+	Id       string   `json:"id"`
+}
+
 func (i *Issue) AsJson() ([]byte, error) {
-	type location struct {
-		Row    int `json:"row"`
-		Column int `json:"column"`
-	}
-
-	type position struct {
-		Filename string   `json:"filename"`
-		Start    location `json:"start"`
-		End      location `json:"end"`
-	}
-
-	type issueJson struct {
-		Category Category `json:"category"`
-		Severity Severity `json:"severity"`
-		Message  string   `json:"message"`
-		Range    position `json:"range"`
-		Id       string   `json:"id"`
-	}
 	issue := issueJson{
 		Category: i.Category,
 		Severity: i.Severity,
@@ -65,4 +66,30 @@ func (i *Issue) AsJson() ([]byte, error) {
 
 func (i *Issue) AsText() ([]byte, error) {
 	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, int(i.Node.Range().StartPoint.Row)+1, i.Node.Range().StartPoint.Column, i.Message)), nil
+}
+
+func IssueFromJson(jsonData []byte) (*Issue, error) {
+	var issue issueJson
+	err := json.Unmarshal(jsonData, &issue)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Issue{
+		Category: issue.Category,
+		Severity: issue.Severity,
+		Message:  issue.Message,
+		Filepath: issue.Range.Filename,
+		Node:     nil,
+		Id:       &issue.Id,
+	}, nil
+}
+
+func IssueAsTextFromJson(jsonData []byte) ([]byte, error) {
+	var issue issueJson
+	err := json.Unmarshal(jsonData, &issue)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(fmt.Sprintf("%s:%d:%d:%s", issue.Range.Filename, issue.Range.Start.Row, issue.Range.Start.Column, issue.Message)), nil
 }

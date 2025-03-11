@@ -1,0 +1,30 @@
+language: ruby
+name: ruby_force_ssl
+message: "Disablement of SSL detected. Enforce SSL to secure data in transit."
+category: security
+severity: warning
+pattern: >
+  (
+    (assignment
+      left: (call
+        method: (identifier) @method (#eq? @method "force_ssl"))
+      right: (false))
+  ) @ruby_force_ssl
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Disabling SSL (`config.force_ssl = false`) allows data to be transmitted over plaintext HTTP, making it vulnerable to interception, manipulation, and man-in-the-middle (MITM) attacks.  
+  Enforcing SSL ensures all HTTP traffic is redirected to HTTPS, securing data in transit.  
+
+  Remediation: 
+  Set `config.force_ssl = true` in your production environment configuration to enforce HTTPS:  
+
+  ```ruby
+  # config/environments/production.rb
+  Rails.application.configure do
+    config.force_ssl = true
+  end
+  ```

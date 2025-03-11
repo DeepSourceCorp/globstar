@@ -1,0 +1,42 @@
+language: go
+name: go_md5_weak_hash
+message: "Avoid using MD5 to hash sensitive data as it is vulnerable to collision attacks. Use SHA-256 or stronger algorithms instead."
+category: security
+severity: critical
+pattern: >
+  [
+    (import_spec
+      path: (interpreted_string_literal) @import
+      (#eq? @import "\"crypto/md5\""))
+  ] @go_md5_weak_hash
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue:  
+  MD5 is a cryptographically weak hashing algorithm that is vulnerable to collision and preimage attacks, making it unsuitable for hashing sensitive data such as passwords, tokens, or digital signatures. Attackers can exploit these weaknesses to forge data integrity checks or bypass security controls.
+
+  Impact:  
+  Using MD5 for security purposes can lead to data tampering, authentication bypass, and compromise of system integrity.
+
+  Remediation:  
+  - Do not use MD5 for any cryptographic or security-related purposes.  
+  - Recommended alternatives: Use SHA-256 (`crypto/sha256`), SHA-512 (`crypto/sha512`), or modern password hashing algorithms like bcrypt, scrypt, or Argon2 for secure hashing.  
+  -  Example using SHA-256:
+    ```go
+    import (
+      "crypto/sha256"
+      "encoding/hex"
+      "fmt"
+    )
+
+    func main() {
+      data := "example_data"
+      hasher := sha256.New()
+      hasher.Write([]byte(data))
+      hashBytes := hasher.Sum(nil)
+      fmt.Printf("SHA256 Hash: %s\n", hex.EncodeToString(hashBytes))
+    }
+    ``` 

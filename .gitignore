@@ -9,6 +9,7 @@
 *.dylib
 cmd/globstar/globstar
 bin/
+custom-analyzer
 
 # Test binary, built with `go test -c`
 *.test

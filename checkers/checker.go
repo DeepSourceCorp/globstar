@@ -4,19 +4,20 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers/javascript"
+	"globstar.dev/checkers/python"
 	"globstar.dev/pkg/analysis"
 )
 
 //go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
-func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
-	rulesMap := make(map[analysis.Language][]analysis.YmlRule)
-	err := fs.WalkDir(builtinCheckers, ".", func(path string, d fs.DirEntry, err error) error {
+func findYamlCheckers(checkersMap map[analysis.Language][]analysis.YamlChecker) func(path string, d fs.DirEntry, err error) error {
+	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -36,20 +37,80 @@ func LoadYamlRules() (map[analysis.Language][]analysis.YmlRule, error) {
 			return nil
 		}
 
-		patternRule, err := analysis.ReadFromBytes(fileContent)
+		patternChecker, err := analysis.ReadFromBytes(fileContent)
 		if err != nil {
-			return fmt.Errorf("invalid rule '%s': %s", d.Name(), err.Error())
+			return fmt.Errorf("invalid checker '%s': %s", d.Name(), err.Error())
 		}
 
-		lang := patternRule.Language()
-		rulesMap[lang] = append(rulesMap[lang], patternRule)
+		lang := patternChecker.Language()
+		checkersMap[lang] = append(checkersMap[lang], patternChecker)
 		return nil
-	})
-	return rulesMap, err
+	}
 }
 
-func LoadGoRules() []*goAnalysis.Analyzer {
-	return []*goAnalysis.Analyzer{
-		&javascript.NoDoubleEq,
+func LoadBuiltinYamlCheckers() (map[analysis.Language][]analysis.YamlChecker, error) {
+	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+	err := fs.WalkDir(builtinCheckers, ".", findYamlCheckers(checkersMap))
+	return checkersMap, err
+}
+
+func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.YamlChecker, error) {
+	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap))
+	return checkersMap, err
+}
+
+type Analyzer struct {
+	TestDir   string
+	Analyzers []*goAnalysis.Analyzer
+}
+
+var AnalyzerRegistry = []Analyzer{
+	{
+		TestDir:   "checkers/javascript/testdata", // relative to the repository root
+		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq, javascript.SQLInjection},
+	},
+	{
+		TestDir: "checkers/python/testdata",
+		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp},
+	},
+}
+
+func LoadGoCheckers() []*goAnalysis.Analyzer {
+	analyzers := []*goAnalysis.Analyzer{}
+
+	for _, analyzer := range AnalyzerRegistry {
+		analyzers = append(analyzers, analyzer.Analyzers...)
 	}
+	return analyzers
+}
+
+func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
+	passed := true
+	errors := []error{}
+	cwd, err := os.Getwd()
+	if err != nil {
+		errors = append(errors, err)
+		return false, errors
+	}
+
+	for _, analyzerReg := range analyzerRegistry {
+
+		fmt.Printf("Running tests in %s for analyzers:\n", analyzerReg.TestDir)
+		testDir := filepath.Join(cwd, analyzerReg.TestDir)
+
+		diff, log, isPassed, err := goAnalysis.RunAnalyzerTests(testDir, analyzerReg.Analyzers)
+		if err != nil {
+			errors = append(errors, err)
+		}
+
+		fmt.Println(log)
+
+		if !isPassed {
+			fmt.Printf("Issues raised are not as expected:\n%s\n", diff)
+			passed = false
+		}
+	}
+
+	return passed, errors
 }

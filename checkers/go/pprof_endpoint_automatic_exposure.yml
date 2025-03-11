@@ -1,0 +1,63 @@
+language: go
+name: go_pprof_endpoint_automatic_exposure
+message: "Avoid exposing net/http/pprof; it automatically exposes the /debug/pprof endpoint."
+category: security
+severity: warning
+pattern: >
+  (
+    (import_spec
+      name: (blank_identifier)
+      path: (interpreted_string_literal) @import_path
+      (#match? @import_path "\"net/http/pprof\"")
+    )
+  )
+  @go_pprof_endpoint_automatic_exposure
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Importing the net/http/pprof package automatically registers debugging and profiling endpoints 
+  under /debug/pprof. While useful for development, exposing these endpoints in production can lead 
+  to information disclosure, allowing attackers to access application internals like goroutine dumps, 
+  heap profiles, and CPU usage.
+
+  Why this is a problem:
+  - Exposes sensitive runtime information that can aid attackers in crafting exploits.
+  - Can reveal performance bottlenecks and resource usage details to unauthorized users.
+
+  Remediation Steps:
+  1. **Remove net/http/pprof in production environments:**  
+     Use build tags to include pprof only during development.
+     ```go
+     //go:build debug
+     import _ "net/http/pprof"
+     ```
+  2. Secure the pprof endpoint if needed in production:  
+     Restrict access using middleware, IP whitelisting, or authentication.
+     ```go
+     import (
+       "net/http"
+       "net/http/pprof"
+     )
+
+     func registerPprofRoutes(mux *http.ServeMux) {
+       mux.HandleFunc("/debug/pprof/", pprof.Index)
+     }
+
+     // Wrap with basic auth (for example purposes only)
+     ```
+  3. Use runtime/pprof for manual profiling without exposing HTTP endpoints:
+     ```go
+     import (
+       "os"
+       "runtime/pprof"
+     )
+
+     func main() {
+       f, _ := os.Create("cpu.prof")
+       pprof.StartCPUProfile(f)
+       defer pprof.StopCPUProfile()
+     }
+     ```

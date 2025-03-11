@@ -1,0 +1,39 @@
+language: go
+name: go_fmt_print_in_prod
+message: "Avoid using fmt.Print* functions in production code."
+category: best-practice
+severity: warning
+pattern: >
+  (
+      (call_expression
+  function: (selector_expression
+  	operand: (identifier) @pkg
+    (#eq? @pkg "fmt")
+    field: (field_identifier) @func
+    (#match? @func "Println|Printf|Print")
+  ))
+  )
+  @go_fmt_print_in_prod
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  The fmt.Print* functions (fmt.Print, fmt.Println, fmt.Printf) are convenient for debugging and development, but they should be avoided in production environments. Printing directly to standard output can:
+  - Expose sensitive information: Logs may reveal internal details to unauthorized users.
+  - Impact performance: Frequent console output can slow down applications, especially under high load.
+  - Lack flexibility: fmt doesn’t support log levels (e.g., INFO, WARN, ERROR) or structured logging, making maintenance and troubleshooting difficult in production.
+
+  Remediation:
+  - Use a logging library: Libraries like logrus, zap, or log15 provide more features and flexibility for logging in production.
+  - Implement structured logging: Use structured logging to add context to logs and make them easier to search and analyze.
+  - Set log levels: Use log levels to control the verbosity of logs and filter out unnecessary information.
+
+  Example:
+  ```go
+  // Bad
+  fmt.Println("Hello, World!")
+
+  // Good
+  log.Println("Hello, World!")

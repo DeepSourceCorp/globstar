@@ -1,0 +1,31 @@
+language: ruby
+name: ruby_ssl_no_verify
+message: "Avoid disabling SSL verification as it makes the application vulnerable to MITM attacks."
+category: security
+severity: critical
+pattern: >
+  (scope_resolution
+    scope: (scope_resolution
+      scope: (constant) @openssl (#eq? @openssl "OpenSSL")
+      name: (constant) @ssl (#eq? @ssl "SSL"))
+    name: (constant) @verify (#eq? @verify "VERIFY_NONE")) @ruby_ssl_no_verify
+exclude:
+  - "test/**"
+  - "*_test.rb"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Disabling SSL verification (`OpenSSL::SSL::VERIFY_NONE`) exposes the application to Man-in-the-Middle (MITM) attacks, allowing attackers to intercept and manipulate sensitive data in transit.  
+  SSL/TLS certificate verification ensures the authenticity and integrity of the server you are communicating with, protecting against eavesdropping and data tampering.
+
+  Remediation:  
+  Always enable SSL verification by using `OpenSSL::SSL::VERIFY_PEER`:
+
+  ruby
+  # Insecure (disables SSL verification)
+  ssl_context = OpenSSL::SSL::SSLContext.new
+  ssl_context.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+  # Secure (verifies SSL certificates)
+  ssl_context = OpenSSL::SSL::SSLContext.new
+  ssl_context.verify_mode = OpenSSL::SSL::VERIFY_PEER

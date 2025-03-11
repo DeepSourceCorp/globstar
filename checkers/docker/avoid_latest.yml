@@ -1,0 +1,19 @@
+language: dockerfile
+name: avoid_latest
+message: "Avoid using the 'latest' tag, use a specific version instead"
+category: bug-risk
+severity: warning
+
+pattern: |
+ (from_instruction
+  (image_spec
+    name: (image_name)
+    tag: (image_tag) @image_tag
+     (#eq? @image_tag ":latest")
+  )
+ ) @avoid_latest
+
+description: |
+ Using the 'latest' tag for docker images can lead to non-reproducible builds and unexpected behavior,
+ this is because 'latest' may point to different versions over time. It's recommended to specify a
+ version tag to ensure consistency and prevent unexpected changes.
