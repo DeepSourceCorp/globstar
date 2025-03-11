@@ -1,36 +1,245 @@
-language: js
+language: javascript
 name: dangerous_xss_unsanitized_input
 message: "Unsanitized DOM manipulation detected. This could lead to XSS vulnerabilities."
 category: security
 severity: critical
-
 pattern: |
-  (
-    [
-      (assignment_expression
-        left: (member_expression
-          object: (identifier) @obj (#eq? @obj "document")
-          property: (property_identifier) @prop (#match? @prop "innerHTML|outerHTML")
-        )
-        right: (_) @rhs
-      )
-      (call_expression
-        function: (member_expression
-          object: (identifier) @dom (#eq? @dom "document")
-          property: (property_identifier) @method (#match? @method "write|writeln")
-        )
-        arguments: (argument_list (_) @args)
-      )
-    ]
-  ) @dangerous_xss_unsanitized_input
+  [
+    
+    (assignment_expression
+      left: (member_expression
+        object: (member_expression
+          object: (identifier) @doc
+          (#match? @doc "^(document|element|elem|node|div|span|container|wrapper|section|component)$")
+          property: (property_identifier) @prop1
+          (#match? @prop1 "^(body|innerHTML|outerHTML)$"))
+        property: (property_identifier) @prop2
+        (#eq? @prop2 "innerHTML"))
+      right: (identifier) @id
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
 
-filters:
-  - pattern-not-inside: (catch_clause)
+    
+    (call_expression
+      function: (member_expression
+        object: (identifier) @doc
+        property: (property_identifier) @write)
+      arguments: (arguments
+        (identifier) @id)
+      (#eq? @doc "document")
+      (#eq? @write "write")
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
 
+    
+    (call_expression
+      function: (member_expression
+        object: (identifier) @elem
+        property: (property_identifier) @write)
+      arguments: (arguments
+        (identifier) @id)
+      (#match? @elem "^(element|elem|node|div|span|container|wrapper|section|component)$")
+      (#eq? @write "write")
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        object: (identifier) @doc
+        property: (property_identifier) @prop)
+      right: (identifier) @id
+      (#eq? @doc "document")
+      (#match? @prop "^(innerHTML|outerHTML)$")
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        object: (call_expression
+          function: (member_expression
+            object: (identifier) @doc
+            (#eq? @doc "document")
+            property: (property_identifier) @getById)
+          arguments: (arguments
+            (string)))
+        property: (property_identifier) @prop)
+      right: (identifier) @id
+      (#eq? @getById "getElementById")
+      (#match? @prop "^(innerHTML|outerHTML)$")
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (identifier) @htmlVar
+      right: (template_string
+        (template_substitution
+          (identifier) @id)
+        (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$"))) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        object: (call_expression
+          function: (member_expression
+            object: (identifier) @doc
+            (#eq? @doc "document")
+            property: (property_identifier) @getById)
+          arguments: (arguments
+            (string)))
+        property: (property_identifier) @prop)
+      right: (identifier) @htmlVar
+      (#eq? @getById "getElementById")
+      (#match? @prop "^(innerHTML|outerHTML)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (identifier) @htmlVar
+      right: (template_string))
+
+    (assignment_expression
+      left: (member_expression
+        object: (call_expression
+          function: (member_expression
+            object: (identifier) @doc
+            (#eq? @doc "document")
+            property: (property_identifier) @getById)
+          arguments: (arguments))
+        property: (property_identifier) @prop)
+      right: (identifier) @htmlVar
+      (#eq? @getById "getElementById")
+      (#match? @prop "^(innerHTML|outerHTML)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (identifier) @htmlVar
+      right: (binary_expression
+        left: (_)
+        operator: "+"
+        right: (identifier) @id)
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (identifier) @htmlVar
+      right: (binary_expression
+        left: (identifier) @id
+        operator: "+"
+        right: (_))
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        object: (identifier) @elem
+        property: (property_identifier) @prop)
+      right: (identifier) @id
+      (#match? @elem "^(element|elem|node|div|span|container|wrapper|section|component)$")
+      (#match? @prop "^(innerHTML|outerHTML)$")
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        object: (identifier) @elem
+        property: (property_identifier) @prop)
+      right: (binary_expression
+        (binary_expression
+          left: (string)
+          operator: "+"
+          right: (identifier) @input)
+        operator: "+"
+        right: (string))
+      (#match? @elem "^(document|element|elem|node|div|span|container|wrapper|section|component)$")
+      (#match? @prop "^(innerHTML|outerHTML)$")
+      (#match? @input "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+      
+    
+    (assignment_expression
+      left: (member_expression
+        object: (member_expression
+          object: (identifier) @doc
+          (#match? @doc "^(document|element|elem|node|div|span|container|wrapper|section|component)$")
+          property: (property_identifier) @body
+          (#match? @body "^(body|innerHTML|outerHTML)$"))
+        property: (property_identifier) @prop
+        (#eq? @prop "innerHTML"))
+      right: (binary_expression)) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        object: (identifier) @elem
+        property: (property_identifier) @prop)
+      right: (binary_expression
+        left: (string)
+        operator: "+"
+        right: (identifier) @input)
+      (#match? @elem "^(document|element|elem|node|div|span|container|wrapper|section|component)$")
+      (#match? @prop "^(innerHTML|outerHTML)$")
+      (#match? @input "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+      
+    
+    (assignment_expression
+      left: (member_expression
+        object: (identifier) @elem
+        property: (property_identifier) @prop)
+      right: (binary_expression
+        left: (identifier) @input
+        operator: "+"
+        right: (string))
+      (#match? @elem "^(document|element|elem|node|div|span|container|wrapper|section|component)$")
+      (#match? @prop "^(innerHTML|outerHTML)$")
+      (#match? @input "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        property: (property_identifier) @prop
+        (#match? @prop "^(innerHTML|outerHTML)$"))
+      right: (call_expression
+        function: (identifier) @func
+        (#match? @func "^(getUserInput|getInput|fetchData|getData|retrieveData|loadData|parseData|parseInput|processInput)$"))) @dangerous_xss_unsanitized_input
+
+    
+    (call_expression
+      function: (member_expression
+        object: (identifier) @element
+        property: (property_identifier) @insertAdjacentHTML)
+      arguments: (arguments
+        (string)
+        (identifier) @id)
+      (#eq? @insertAdjacentHTML "insertAdjacentHTML")
+      (#match? @id "^(user_input|userInput|input|data|content|payload|untrustedData|rawData|response|responseData|formData|userData)$")) @dangerous_xss_unsanitized_input
+
+    
+    (call_expression
+      function: (member_expression
+        object: (identifier) @element
+        property: (property_identifier) @insertAdjacentHTML)
+      arguments: (arguments
+        (string)
+        (template_string))
+      (#eq? @insertAdjacentHTML "insertAdjacentHTML")) @dangerous_xss_unsanitized_input
+
+    
+    (assignment_expression
+      left: (member_expression
+        property: (property_identifier) @prop
+        (#match? @prop "^(innerHTML|outerHTML)$"))
+      right: (template_string)) @dangerous_xss_unsanitized_input
+  ]
 exclude:
   - "node_modules/**"
   - "dist/**"
-
+  - "vendor/**"
+  - "test/**"
+filters:
+  - pattern-not-inside: |
+      (try_statement
+        body: (statement_block)
+        handler: (catch_clause))
+  - pattern-not-inside: |
+      (call_expression
+        function: (identifier) @sanitizer
+        (#match? @sanitizer "^(sanitizeHTML|DOMPurify\.sanitize|escapeHTML|encodeHTML|htmlEncode)$"))
 description: |
-  Direct DOM manipulation with unsanitized input exposes XSS vulnerabilities. 
-  Always use safe methods like textContent or DOM sanitization libraries.
+  Direct DOM manipulation with unsanitized input exposes XSS vulnerabilities.
+  Always use safe methods like textContent or DOM sanitization libraries such as DOMPurify.
