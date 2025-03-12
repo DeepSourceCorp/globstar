@@ -7,16 +7,16 @@ import (
 	"globstar.dev/analysis"
 )
 
-var DjangoInsecureEval *analysis.Analyzer = &analysis.Analyzer{
-	Name:        "django-insecure-eval",
+var DjangoInsecureEvalExec *analysis.Analyzer = &analysis.Analyzer{
+	Name:        "django-insecure-eval-exec",
 	Language:    analysis.LangPy,
 	Description: "Using `eval` with user data creates a severe security vulnerability that allows attackers to execute arbitrary code on your system. This dangerous practice can lead to complete system compromise, data theft, or service disruption. Instead, replace `eval` with dedicated libraries or methods specifically designed for your required functionality.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
-	Run:         checkDjangoInsecureEval,
+	Run:         checkDjangoInsecureEvalExec,
 }
 
-func checkDjangoInsecureEval(pass *analysis.Pass) (interface{}, error) {
+func checkDjangoInsecureEvalExec(pass *analysis.Pass) (interface{}, error) {
 	requestVarMap := make(map[string]bool)
 	userFmtStrVarMap := make(map[string]bool)
 
@@ -48,7 +48,7 @@ func checkDjangoInsecureEval(pass *analysis.Pass) (interface{}, error) {
 		leftNode := node.ChildByFieldName("left")
 		rightNode := node.ChildByFieldName("right")
 
-		if isStringFormatted(rightNode, pass.FileContext.Source, requestVarMap) {
+		if isStringFormatted(rightNode, pass.FileContext.Source, requestVarMap, userFmtStrVarMap) {
 			userFmtStrVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 
@@ -60,7 +60,7 @@ func checkDjangoInsecureEval(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		funcNode := node.ChildByFieldName("function")
-		if !strings.Contains(funcNode.Content(pass.FileContext.Source), "eval") {
+		if !strings.Contains(funcNode.Content(pass.FileContext.Source), "eval") && !strings.Contains(funcNode.Content(pass.FileContext.Source), "exec") {
 			return
 		}
 
@@ -77,7 +77,7 @@ func checkDjangoInsecureEval(pass *analysis.Pass) (interface{}, error) {
 					}
 				}
 
-				// check for string user data formatted string var
+				// check for user data formatted string var
 				for key := range userFmtStrVarMap {
 					if key == arg.Content(pass.FileContext.Source) {
 						pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
@@ -90,7 +90,9 @@ func checkDjangoInsecureEval(pass *analysis.Pass) (interface{}, error) {
 				if isRequestCall(rightNode, pass.FileContext.Source) {
 					pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
 				}
-			} else if isStringFormatted(arg, pass.FileContext.Source, requestVarMap) {
+			} else if isStringFormatted(arg, pass.FileContext.Source, requestVarMap, userFmtStrVarMap) {
+				pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
+			} else if isBase64Decoded(arg, pass.FileContext.Source, requestVarMap, userFmtStrVarMap) {
 				pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
 			}
 		}
@@ -99,7 +101,64 @@ func checkDjangoInsecureEval(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
-func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bool) bool {
+func isBase64Decoded(node *sitter.Node, source []byte, reqVarMap map[string]bool, userFmtStringVarMap map[string]bool) bool {
+	if node.Type() != "call" {
+		return false
+	}
+
+	funcNode := node.ChildByFieldName("function")
+	if funcNode.Type() != "attribute" {
+		return false
+	}
+
+	funcAttribute := funcNode.Content(source)
+	if funcAttribute != "base64.decodestring" && funcAttribute != "decodestring" {
+		return false
+	}
+
+	argsListNode := node.ChildByFieldName("arguments")
+	argsList := getNamedChildren(argsListNode, 0)
+	for _, argsNode := range argsList {
+		switch argsNode.Type() {
+		case "call":
+			if isRequestCall(argsNode, source) || isStringFormatted(argsNode, source, reqVarMap, userFmtStringVarMap) {
+				return true
+			}
+			byteFuncName := argsNode.ChildByFieldName("function")
+			if byteFuncName.Type() != "identifier" && byteFuncName.Content(source) != "bytes" {
+				return false
+			}
+			byteArgsNode := argsNode.ChildByFieldName("arguments")
+			if byteArgsNode.NamedChildCount() == 0 {
+				return false
+			}
+			
+			byteArgs := getNamedChildren(byteArgsNode, 0)
+			for _, arg := range byteArgs {
+				if isStringFormatted(arg, source, reqVarMap, userFmtStringVarMap) || isRequestCall(arg, source) || hasUserDataVar(arg, source, reqVarMap, userFmtStringVarMap) {
+					return true
+				}
+			}
+
+			return false
+
+		case "identifier":
+			if hasUserDataVar(argsNode, source, reqVarMap, userFmtStringVarMap) {
+				return true
+			}
+			return false
+
+		case "string":
+			if isStringFormatted(node, source, reqVarMap, userFmtStringVarMap) {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
+func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bool, userFmtStringVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
 		funcNode := node.ChildByFieldName("function")
@@ -118,7 +177,7 @@ func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bo
 		}
 
 		reqArgNode := argNode.NamedChild(0)
-		if !isRequestCall(reqArgNode, source) && !hasUserDataVar(reqArgNode, source, reqVarMap) {
+		if !isRequestCall(reqArgNode, source) && !hasUserDataVar(reqArgNode, source, reqVarMap, userFmtStringVarMap) {
 			return false
 		}
 
@@ -131,7 +190,7 @@ func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bo
 			return false
 		}
 
-		if !isRequestCall(binaryOpRightNode, source) && !hasUserDataVar(binaryOpRightNode, source, reqVarMap) {
+		if !isRequestCall(binaryOpRightNode, source) && !hasUserDataVar(binaryOpRightNode, source, reqVarMap, userFmtStringVarMap) {
 			return false
 		}
 
@@ -149,7 +208,7 @@ func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bo
 		// check if user data is present in f-string interpolation
 		for _, child := range allChildren {
 			if child.Type() == "interpolation" {
-				if isRequestCall(child.NamedChild(0), source) || hasUserDataVar(child.NamedChild(0), source, reqVarMap) {
+				if isRequestCall(child.NamedChild(0), source) || hasUserDataVar(child.NamedChild(0), source, reqVarMap, userFmtStringVarMap) {
 					return true
 				}
 			}
@@ -160,7 +219,7 @@ func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bo
 	return false
 }
 
-func hasUserDataVar(node *sitter.Node, source []byte, reqVarMap map[string]bool) bool {
+func hasUserDataVar(node *sitter.Node, source []byte, reqVarMap map[string]bool, userFmtStringVarMap map[string]bool) bool {
 	if node.Type() != "identifier" {
 		return false
 	}
@@ -168,6 +227,12 @@ func hasUserDataVar(node *sitter.Node, source []byte, reqVarMap map[string]bool)
 	argName := node.Content(source)
 
 	for key := range reqVarMap {
+		if argName == key {
+			return true
+		}
+	}
+
+	for key := range userFmtStringVarMap {
 		if argName == key {
 			return true
 		}

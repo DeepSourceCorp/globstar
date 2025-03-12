@@ -1,4 +1,6 @@
 from textwrap import dedent
+import base64
+import os
 
 def unsafe(request):
     code = request.POST.get('code')
@@ -98,3 +100,79 @@ def fstr_safe(request):
     """
     # <no-error>
     eval(dedent(code))
+
+
+def unsafe(request):
+    message = request.POST.get('message')
+    print("do stuff here")
+    code_binary_op = """
+    print(%s)
+    """ % message
+    # <expect-error>
+    exec(code_binary_op)
+
+def unsafe_inline(request):
+    # <expect-error>
+    exec("print(%s)" % request.GET.get('message'))
+
+def unsafe_dict(request):
+    # <expect-error>
+    exec("print(%s)" % request.POST['message'])
+
+def safe(request):
+    # ok: user-exec-format-string
+    code = """
+    print('hello')
+    """
+    exec(dedent(code))
+
+def fmt_unsafe(request):
+    message = request.POST.get('message')
+    print("do stuff here")
+    code_format_call = """
+    print({})
+    """.format(message)
+    # <expect-error>
+    exec(code_format_call)
+
+def fmt_unsafe_inline(request):
+    # <expect-error>
+    exec("print({})".format(request.GET.get('message')))
+
+def fmt_unsafe_dict(request):
+    # <expect-error>
+    exec("print({}, {})".format(request.POST['message'], "pwned"))
+
+def fmt_safe(request):
+    # ok: user-exec-format-string
+    code = """
+    print('hello')
+    """
+    exec(dedent(code))
+
+def code_execution(request):
+    data = ''
+    msg = ''
+    first_name = ''
+    if request.method == 'POST':
+
+        # Clear out a previous success to reset the exercise
+        try:
+            os.unlink('p0wned.txt')
+        except:
+            pass
+
+        
+        first_name = request.POST.get('first_name', '')
+
+        try:    # Try it the Python 3 way...
+            # <expect-error>
+            exec(base64.decodestring(bytes(first_name, 'ascii')))
+        except TypeError:
+            try:    # Try it the Python 2 way...
+                # <expect-error>
+                exec(base64.decodestring(first_name))
+            except:
+                pass
+        except:
+            pass
