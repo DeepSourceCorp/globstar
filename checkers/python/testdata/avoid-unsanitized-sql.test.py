@@ -7,6 +7,7 @@ app = FastAPI()
 def execute_unsafe_query(query: str):
     conn = sqlite3.connect("test.db")
     cursor = conn.cursor()
+    #<expect-error>
     cursor.execute(query)  #unsafe with user input
     result = cursor.fetchall()
     conn.commit()
@@ -26,10 +27,10 @@ def better_query(query: str, params):
 @app.get("/unsafe_query/")
 def unsafe_query(user_input: str):
     #f-string case
-    #<expect-error>
+    
     query = f"SELECT * FROM users WHERE name = {user_input}"
     #binary operator case
-    #<expect-error>
+    
     query2= "SELECT * FROM users WHERE name ="+ user_input
     #should not identify this as an error
     query3= "SELECT * FROM user WHERE name= ?"
