@@ -1,0 +1,36 @@
+language: py
+name: post-after-isvalid
+message: Use form.cleaned_data[] after validation instead of request.POST[]
+category: security
+
+pattern: |
+  (subscript
+    value: (attribute
+      object: (identifier) @request
+      attribute: (identifier) @post)
+    subscript: (_)
+    (#eq? @request "request")
+    (#eq? @post "POST")) @post-after-isvalid
+
+  (call
+    function: (attribute
+      object: (attribute
+        object: (identifier) @request
+        attribute: (identifier) @post)
+      attribute: (identifier) @get)
+    (#eq? @request "request")
+    (#eq? @post "POST")
+    (#eq? @get "get")) @post-after-isvalid
+
+filters:
+  - pattern-inside: |
+      (if_statement
+        condition: (call
+          function: (attribute
+            object: (identifier)
+            attribute: (identifier) @isvalid)
+          arguments: (argument_list))
+        (#eq? @isvalid "is_valid"))
+
+description: |
+  Use form.cleaned_data[] instead of request.POST[] or request.POST.get() after form.is_valid() to ensure data is properly sanitized. Directly accessing request.POST[] can expose the application to security risks, including injection attacks.
