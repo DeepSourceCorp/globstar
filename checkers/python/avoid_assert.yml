@@ -1,0 +1,21 @@
+language: python
+name: avoid-assert
+message: "Avoid assert to enforce constraints. Assert statements are removed in optimised bytecode."
+category: bug-risk
+severity: info
+
+pattern: >
+    (
+      assert_statement
+    ) @avoid-assert
+
+exclude:
+  - "test/**"
+  - "*_test.py"
+  - "tests/**"
+  - '*test_*.py'
+    
+description: |
+  Using assert statements for enforcing constraints is risky because they are removed when Python is run in optimized mode (`python -O`).  
+  This can lead to unintended behavior, especially for security checks and critical logic.  
+  Instead, use explicit condition checks with exceptions (e.g., `if not condition: raise ValueError(...)`).
