@@ -32,6 +32,10 @@ func checkAwsLambdaSqlInjection(pass *analysis.Pass) (interface{}, error) {
 			leftNode := node.ChildByFieldName("left")
 			rightNode := node.ChildByFieldName("right")
 
+			if rightNode == nil {
+				return
+			}
+
 			if isSqlCursor(rightNode, pass.FileContext.Source) {
 				sqlCursorMap[leftNode.Content(pass.FileContext.Source)] = true
 			}
@@ -57,6 +61,10 @@ func checkAwsLambdaSqlInjection(pass *analysis.Pass) (interface{}, error) {
 
 		leftNode := node.ChildByFieldName("left")
 		rightNode := node.ChildByFieldName("right")
+
+		if rightNode == nil {
+			return
+		}
 
 		if isTaintedSqlString(rightNode, pass.FileContext.Source, eventVarMap) {
 			sqlStringMap[leftNode.Content(pass.FileContext.Source)] = true
