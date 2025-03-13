@@ -74,6 +74,10 @@ var AnalyzerRegistry = []Analyzer{
 		TestDir: "checkers/python/testdata",
 		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp},
 	},
+	{
+		TestDir: "checkers/python/testdata",
+		Analyzers: []*goAnalysis.Analyzer{python.DangerousCreateExec},
+	},
 }
 
 func LoadGoCheckers() []*goAnalysis.Analyzer {
