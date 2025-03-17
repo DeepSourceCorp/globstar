@@ -176,3 +176,24 @@ def code_execution(request):
                 pass
         except:
             pass
+
+
+def danger(request):
+    url = request.GET['url']
+    # <expect-error>
+    os.system('wget ' + url)
+
+def danger2(request):
+    image = request.POST['image']
+    # <expect-error>
+    os.system("./face-recognize %s --N 24" % image)
+
+def danger3(request):
+    url = request.GET['url']
+    # <expect-error>
+    os.system("nslookup " + url)
+
+def ok(request):
+    # <no-error>
+    url = request.GET['url']
+    os.system("echo 'hello'")
