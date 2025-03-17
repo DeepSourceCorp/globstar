@@ -10,7 +10,7 @@ import (
 var DjangoInsecureEvalExec *analysis.Analyzer = &analysis.Analyzer{
 	Name:        "django-insecure-eval-exec",
 	Language:    analysis.LangPy,
-	Description: "Using `eval` with user data creates a severe security vulnerability that allows attackers to execute arbitrary code on your system. This dangerous practice can lead to complete system compromise, data theft, or service disruption. Instead, replace `eval` with dedicated libraries or methods specifically designed for your required functionality.",
+	Description: "Using `eval`/`exec` or `os.system` with user data creates a severe security vulnerability that allows attackers to execute arbitrary code on your system. This dangerous practice can lead to complete system compromise, data theft, or service disruption. Instead, replace `eval` with dedicated libraries or methods specifically designed for your required functionality.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
 	Run:         checkDjangoInsecureEvalExec,
@@ -40,6 +40,7 @@ func checkDjangoInsecureEvalExec(pass *analysis.Pass) (interface{}, error) {
 
 	})
 
+	// second pass: get variable names for string formatting
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "assignment" {
 			return
@@ -56,11 +57,12 @@ func checkDjangoInsecureEvalExec(pass *analysis.Pass) (interface{}, error) {
 
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "call" {
-			return
+			return				fmt.Println(node.Content(pass.FileContext.Source))
+
 		}
 
 		funcNode := node.ChildByFieldName("function")
-		if !strings.Contains(funcNode.Content(pass.FileContext.Source), "eval") && !strings.Contains(funcNode.Content(pass.FileContext.Source), "exec") {
+		if !strings.Contains(funcNode.Content(pass.FileContext.Source), "eval") && !strings.Contains(funcNode.Content(pass.FileContext.Source), "exec") && !strings.Contains(funcNode.Content(pass.FileContext.Source), "os.system"){
 			return
 		}
 
@@ -70,30 +72,15 @@ func checkDjangoInsecureEvalExec(pass *analysis.Pass) (interface{}, error) {
 
 		for _, arg := range argumentList {
 			if arg.Type() == "identifier" {
-				// check for `request` method call var
-				for key := range requestVarMap {
-					if key == arg.Content(pass.FileContext.Source) {
-						pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
-					}
-				}
-
-				// check for user data formatted string var
-				for key := range userFmtStrVarMap {
-					if key == arg.Content(pass.FileContext.Source) {
-						pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
-					}
+				if hasUserDataVar(arg, pass.FileContext.Source, requestVarMap, userFmtStrVarMap) {
+					pass.Report(pass, node, "Detected user data in code-execution call which can cause remote code execution")
 				}
 			} else if isRequestCall(arg, pass.FileContext.Source) {
-				pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
-			} else if arg.Type() == "binary_operator" {
-				rightNode := arg.ChildByFieldName("right")
-				if isRequestCall(rightNode, pass.FileContext.Source) {
-					pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
-				}
+				pass.Report(pass, node, "Detected user data in code-execution call which can cause remote code execution")
 			} else if isStringFormatted(arg, pass.FileContext.Source, requestVarMap, userFmtStrVarMap) {
-				pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
+				pass.Report(pass, node, "Detected user data in code-execution call which can cause remote code execution")
 			} else if isBase64Decoded(arg, pass.FileContext.Source, requestVarMap, userFmtStrVarMap) {
-				pass.Report(pass, node, "Detected user data in `eval` call which can cause remote code execution")
+				pass.Report(pass, node, "Detected user data in code-execution call which can cause remote code execution")
 			}
 		}
 
