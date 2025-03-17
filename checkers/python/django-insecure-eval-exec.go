@@ -57,7 +57,7 @@ func checkDjangoInsecureEvalExec(pass *analysis.Pass) (interface{}, error) {
 
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "call" {
-			return				fmt.Println(node.Content(pass.FileContext.Source))
+			return
 
 		}
 
