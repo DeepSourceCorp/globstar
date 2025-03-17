@@ -1,7 +1,6 @@
 package python
 
 import (
-	// "fmt"
 	"regexp"
 	"strings"
 
@@ -57,7 +56,7 @@ func checkDjangoCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
-	// fmt.Println(userDataVarMap)
+
 	// find the occurrences of this vulnerability
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "call" {
