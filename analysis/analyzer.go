@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -50,14 +51,19 @@ type Analyzer struct {
 	Category    Category
 	Severity    Severity
 	Language    Language
-	Run         func(*Pass) (interface{}, error)
+	Requires    []*Analyzer
+	Run         func(*Pass) (any, error)
+	ResultType  reflect.Type
 }
 
 type Pass struct {
 	Analyzer    *Analyzer
 	FileContext *ParseResult
 	Files       []*ParseResult
+	ResultOf    map[*Analyzer]any
 	Report      func(*Pass, *sitter.Node, string)
+	// TODO (opt): the cache should ideally not be stored in-memory
+	ResultCache map[*Analyzer]map[*ParseResult]any
 }
 
 func walkTree(node *sitter.Node, f func(*sitter.Node)) {
@@ -88,11 +94,21 @@ var defaultIgnoreDirs = []string{
 	".vitepress",
 }
 
+func findAnalyzers(analyzer *Analyzer) []*Analyzer {
+	analyzers := []*Analyzer{}
+	for _, req := range analyzer.Requires {
+		analyzers = append(analyzers, findAnalyzers(req)...)
+	}
+	analyzers = append(analyzers, analyzer)
+	return analyzers
+}
+
 func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bool) ([]*Issue, error) {
 	raisedIssues := []*Issue{}
 	langAnalyzerMap := make(map[Language][]*Analyzer)
+
 	for _, analyzer := range analyzers {
-		langAnalyzerMap[analyzer.Language] = append(langAnalyzerMap[analyzer.Language], analyzer)
+		langAnalyzerMap[analyzer.Language] = append(langAnalyzerMap[analyzer.Language], findAnalyzers(analyzer)...)
 	}
 
 	trees := make(map[Language][]*ParseResult)
@@ -138,24 +154,32 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 	}
 
 	for lang, analyzers := range langAnalyzerMap {
-		for _, analyzer := range analyzers {
-			allFiles := trees[lang]
-			if len(allFiles) == 0 {
-				continue
-			}
+		pass := &Pass{
+			Files:       trees[lang],
+			Report:      reportFunc,
+			ResultOf:    make(map[*Analyzer]any),
+			ResultCache: make(map[*Analyzer]map[*ParseResult]any),
+		}
 
-			for _, file := range allFiles {
-				pass := &Pass{
-					Analyzer:    analyzer,
-					FileContext: file,
-					Files:       trees[lang],
-					Report:      reportFunc,
+		for _, file := range pass.Files {
+			pass.FileContext = file
+			for _, analyzer := range analyzers {
+				pass.Analyzer = analyzer
+
+				if len(pass.Files) == 0 {
+					continue
 				}
 
-				_, err := analyzer.Run(pass)
+				result, err := analyzer.Run(pass)
 				if err != nil {
 					return raisedIssues, err
 				}
+
+				pass.ResultOf[analyzer] = result
+				if _, ok := pass.ResultCache[analyzer]; !ok {
+					pass.ResultCache[analyzer] = make(map[*ParseResult]any)
+				}
+				pass.ResultCache[analyzer][file] = result
 			}
 		}
 	}
