@@ -386,9 +386,26 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	}
 
 	result := checkResult{}
-	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+	analysisFiles, err := c.GetChangedFiles()
+	if err != nil {
+		return err
+	}
+
+	//Creating a map instead of slices to enhance performance of large codebases.
+	changedFileMap := make(map[string]struct{}, len(analysisFiles))
+	for _, file := range analysisFiles {
+		changedFileMap[file] = struct{}{}
+	}
+
+	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			// skip this path
+			return nil
+		}
+
+		// Skip the path if it's not included in the changed files.
+		_, isChanged := changedFileMap[path]
+		if !isChanged {
 			return nil
 		}
 

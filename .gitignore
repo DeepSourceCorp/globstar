@@ -48,3 +48,4 @@ dist/
 .release-env
 
 .globstar/
+.idea/
