@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -50,13 +51,16 @@ type Analyzer struct {
 	Category    Category
 	Severity    Severity
 	Language    Language
+	Requires    []*Analyzer
 	Run         func(*Pass) (interface{}, error)
+	ReturnType  reflect.Type
 }
 
 type Pass struct {
 	Analyzer    *Analyzer
 	FileContext *ParseResult
 	Files       []*ParseResult
+	ResultOf    map[*Analyzer]interface{}
 	Report      func(*Pass, *sitter.Node, string)
 }
 
@@ -88,11 +92,20 @@ var defaultIgnoreDirs = []string{
 	".vitepress",
 }
 
+func findAnalyzers(analyzer *Analyzer) []*Analyzer {
+	analyzers := []*Analyzer{analyzer}
+	for _, req := range analyzer.Requires {
+		analyzers = append(analyzers, findAnalyzers(req)...)
+	}
+	return analyzers
+}
+
 func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bool) ([]*Issue, error) {
 	raisedIssues := []*Issue{}
 	langAnalyzerMap := make(map[Language][]*Analyzer)
+
 	for _, analyzer := range analyzers {
-		langAnalyzerMap[analyzer.Language] = append(langAnalyzerMap[analyzer.Language], analyzer)
+		langAnalyzerMap[analyzer.Language] = append(langAnalyzerMap[analyzer.Language], findAnalyzers(analyzer)...)
 	}
 
 	trees := make(map[Language][]*ParseResult)
@@ -152,10 +165,12 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 					Report:      reportFunc,
 				}
 
-				_, err := analyzer.Run(pass)
+				result, err := analyzer.Run(pass)
 				if err != nil {
 					return raisedIssues, err
 				}
+
+				pass.ResultOf[analyzer] = result
 			}
 		}
 	}
