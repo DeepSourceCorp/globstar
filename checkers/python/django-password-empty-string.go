@@ -8,12 +8,12 @@ import (
 )
 
 var DjangoPasswordEmptyString *analysis.Analyzer = &analysis.Analyzer{
-	Name: "django-password-empty-string",
-	Language: analysis.LangPy,
+	Name:        "django-password-empty-string",
+	Language:    analysis.LangPy,
 	Description: "Using empty string as password in `set_password()` may cause unintended behavior. To set an unusable password please set the password to None or call `set_unusable_password()`",
-	Category: analysis.CategorySecurity,
-	Severity: analysis.SeverityWarning,
-	Run: checkDjangoPasswordEmptyString,
+	Category:    analysis.CategorySecurity,
+	Severity:    analysis.SeverityWarning,
+	Run:         checkDjangoPasswordEmptyString,
 }
 
 func checkDjangoPasswordEmptyString(pass *analysis.Pass) (interface{}, error) {
