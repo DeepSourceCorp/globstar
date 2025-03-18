@@ -72,7 +72,7 @@ var AnalyzerRegistry = []Analyzer{
 	},
 	{
 		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp, python.DjangoSSRFInjection, python.DjangoInsecurePickleDeserialize, python.DjangoRequestDataWrite, python.DjangoRequestHttpResponse, python.DjangoMissingThrottleConfig, python.DjangoCsvWriterInjection, python.DjangoNanInjection},
+		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp, python.DjangoSSRFInjection, python.DjangoInsecurePickleDeserialize, python.DjangoRequestDataWrite, python.DjangoRequestHttpResponse, python.DjangoMissingThrottleConfig, python.DjangoCsvWriterInjection, python.DjangoNanInjection, python.DjangoPasswordEmptyString},
 	},
 }
 
