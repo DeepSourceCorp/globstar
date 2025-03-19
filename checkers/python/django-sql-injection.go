@@ -11,7 +11,7 @@ import (
 var DjangoSQLInjection *analysis.Analyzer = &analysis.Analyzer{
 	Name:        "django-sql-injection",
 	Language:    analysis.LangPy,
-	Description: "dnwe2e",
+	Description: "User-controlled data from a Python request is used in a raw database query, potentially leading to SQL injection and unauthorized data access. Use Django's QuerySets with parameterized queries to prevent injection risks.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
 	Run:         checkDjangoSQLInjection,
@@ -128,7 +128,7 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 		funcArgs := getNamedChildren(funcArgslist, 0)
 		for _, arg := range funcArgs {
 			if isUserTainted(arg, pass.FileContext.Source, intermVarMap, requestVarMap) {
-				pass.Report(pass, node, "diwhiweew")
+				pass.Report(pass, node, "Potential SQL injection detected: User-controlled data is used in a raw database query - use parameterized queries to mitigate risk")
 			}
 		}
 	})
