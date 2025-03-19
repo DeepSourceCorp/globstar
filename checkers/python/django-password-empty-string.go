@@ -32,12 +32,38 @@ func checkDjangoPasswordEmptyString(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if rightNode.Type() != "string" {
+		if rightNode.Type() != "string" && rightNode.Type() != "call" {
 			return
 		}
 
-		if rightNode.Content(pass.FileContext.Source) == "\"\"" || rightNode.Content(pass.FileContext.Source) == "''" {
+		if rightNode.Content(pass.FileContext.Source) == "\"\"" || rightNode.Content(pass.FileContext.Source) == "''" || isEmptyRequestGet(rightNode, pass.FileContext.Source) {
 			emptyPasswordVarMap[leftNode.Content(pass.FileContext.Source)] = true
+		}
+	})
+
+	// get function param names containing empty strings
+	analysis.Preorder(pass, func(node *sitter.Node) {
+		if node.Type() != "function_definition" {
+			return
+		}
+
+		parameterNode := node.ChildByFieldName("parameters")
+		if parameterNode.Type() != "parameters" {
+			return
+		}
+
+		paramNodesList := getNamedChildren(parameterNode, 0)
+		for _, paramNode := range paramNodesList {
+			if paramNode.Type() == "default_parameter" {
+				name := paramNode.ChildByFieldName("name")
+				valNode := paramNode.ChildByFieldName("value")
+				if name.Type() == "identifier" && (valNode.Type() == "string" || valNode.Type() == "call") {
+					val := valNode.Content(pass.FileContext.Source)
+					if val == "\"\"" || val == "''" || isEmptyRequestGet(valNode, pass.FileContext.Source) {
+						emptyPasswordVarMap[name.Content(pass.FileContext.Source)] = true
+					}
+				}
+			}
 		}
 	})
 
@@ -75,4 +101,37 @@ func checkDjangoPasswordEmptyString(pass *analysis.Pass) (interface{}, error) {
 	})
 
 	return nil, nil
+}
+
+func isEmptyRequestGet(node *sitter.Node, source []byte) bool {
+	if node.Type() != "call" {
+		return false
+	}
+
+	funcNode := node.ChildByFieldName("function")
+	if funcNode.Type() != "attribute" {
+		return false
+	}
+
+	// checking for the pattern request.<...>.get()
+	if !strings.HasPrefix(funcNode.Content(source), "request.") && !strings.HasSuffix(funcNode.Content(source), ".get") {
+		return false
+	}
+
+	argListNode := node.ChildByFieldName("arguments")
+	if argListNode.Type() != "argument_list" {
+		return false
+	}
+	if argListNode.NamedChildCount() < 2 {
+		return false
+	}
+	emptyArg := argListNode.NamedChild(1)
+	if emptyArg.Type() != "string" {
+		return false
+	}
+
+	if emptyArg.Content(source) == "\"\"" || emptyArg.Content(source) == "''" {
+		return true
+	}
+	return false
 }
