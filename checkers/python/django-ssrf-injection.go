@@ -147,10 +147,10 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 
 		argsNode := getNamedChildren(argListNode, 0)
 		for _, arg := range argsNode {
-			if arg.Type() == "identifier" {
-				if reqVarMap[arg.Content(source)] {
-					return true
-				}
+			if arg.Type() == "identifier" && reqVarMap[arg.Content(source)] {
+				return true
+			} else if arg.Type() == "call" && isRequestCall(arg, source) {
+				return true
 			}
 		}
 
@@ -163,6 +163,8 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 			if strnode.Type() == "interpolation" {
 				exprnode := strnode.ChildByFieldName("expression")
 				if exprnode.Type() == "identifier" && reqVarMap[exprnode.Content(source)] {
+					return true
+				} else if exprnode.Type() == "call" && isRequestCall(exprnode, source) {
 					return true
 				}
 			}
@@ -177,6 +179,20 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 
 			if re.MatchString(binOpStr) {
 				return true
+			}
+		}
+
+		rightNode := node.ChildByFieldName("right")
+		if rightNode.Type() == "call" && isRequestCall(rightNode, source) {
+			return true
+		} else if rightNode.Type()  == "tuple" {
+			targsNode := getNamedChildren(rightNode, 0)
+			for _, targ := range targsNode {
+				if targ.Type() == "identifier" && reqVarMap[targ.Content(source)] {
+					return true
+				} else if targ.Type() == "call" && isRequestCall(targ, source) {
+					return true
+				}
 			}
 		}
 

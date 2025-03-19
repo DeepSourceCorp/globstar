@@ -2,6 +2,7 @@ package python
 
 import (
 	"regexp"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
@@ -19,6 +20,7 @@ var DjangoSQLInjection *analysis.Analyzer = &analysis.Analyzer{
 func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 	requestVarMap := make(map[string]bool)
 	intermVarMap := make(map[string]bool)
+	cursorVarMap := make(map[string]bool)
 
 	// get request data variable names
 	analysis.Preorder(pass, func(node *sitter.Node) {
@@ -35,6 +37,58 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 
 		if isRequestCall(rightNode, pass.FileContext.Source) {
 			requestVarMap[leftNode.Content(pass.FileContext.Source)] = true
+		}
+	})
+
+	// get django.db.connection cursor var name
+	analysis.Preorder(pass, func(node *sitter.Node) {
+		switch node.Type() {
+		case "assignment":
+			leftNode := node.ChildByFieldName("left")
+			rightNode := node.ChildByFieldName("right")
+
+			if rightNode == nil {
+				return
+			}
+
+			if rightNode.Type() != "call" {
+				return
+			}
+
+			funcNode := rightNode.ChildByFieldName("function")
+			if funcNode.Type() != "attribute" {
+				return
+			}
+
+			funcObj := funcNode.ChildByFieldName("object")
+			funcAttr := funcNode.ChildByFieldName("attribute")
+
+			if funcAttr.Type() != "identifier" && funcObj.Type() != "identifier" {
+				return
+			}
+
+			if funcObj.Content(pass.FileContext.Source) == "connection" && funcAttr.Content(pass.FileContext.Source) == "cursor" {
+				cursorVarMap[leftNode.Content(pass.FileContext.Source)] = true
+			}
+
+		case "with_statement":
+			withClauseNode := node.NamedChild(0)
+			withItemNode := withClauseNode.NamedChild(0)
+			valueNode := withItemNode.ChildByFieldName("value")
+
+			if valueNode.Type() != "as_pattern" {
+				return
+			}
+
+			callNode := valueNode.NamedChild(0)
+			callFuncNode := callNode.ChildByFieldName("function")
+
+			if callFuncNode.Type() != "attribute" && callFuncNode.Content(pass.FileContext.Source) != "connection.cursor" {
+				return
+			}
+
+			aliasNode := valueNode.ChildByFieldName("alias")
+			cursorVarMap[aliasNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -56,20 +110,13 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 	})
 
-	// detect RawSQL injections
+	// detect sql injections
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "call" {
 			return
 		}
 
-
-		funcNode := node.ChildByFieldName("function")
-		funcName := funcNode.Content(pass.FileContext.Source)
-
-		rawsqlpat := `\bRawSQL\b`
-		re := regexp.MustCompile(rawsqlpat)
-
-		if !re.MatchString(funcName) {
+		if !isRawSqlMethod(node, pass.FileContext.Source) && !isCursorExecuteMethod(node, pass.FileContext.Source, cursorVarMap) && !isObjectRawMethod(node, pass.FileContext.Source) {
 			return
 		}
 
@@ -87,4 +134,34 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 	})
 
 	return nil, nil
+}
+
+func isRawSqlMethod(node *sitter.Node, source []byte) bool {
+	funcNode := node.ChildByFieldName("function")
+	funcName := funcNode.Content(source)
+
+	rawsqlpat := `\bRawSQL\b`
+	re := regexp.MustCompile(rawsqlpat)
+
+	return re.MatchString(funcName)
+}
+
+func isCursorExecuteMethod(node *sitter.Node, source []byte, cursorVarMap map[string]bool) bool {
+	funcNode := node.ChildByFieldName("function")
+	if funcNode.Type() != "attribute" {
+		return false
+	}
+	funcObj := funcNode.ChildByFieldName("object")
+	funcAttr := funcNode.ChildByFieldName("attribute")
+
+	return cursorVarMap[funcObj.Content(source)] && funcAttr.Content(source) == "execute"
+}
+
+func isObjectRawMethod(node *sitter.Node, source []byte) bool {
+	funcNode := node.ChildByFieldName("function")
+	if funcNode.Type() != "attribute" {
+		return false
+	}
+
+	return strings.HasSuffix(funcNode.Content(source), ".objects.raw")
 }
