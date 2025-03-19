@@ -75,7 +75,7 @@ func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if isRequestFormattedString(rightNode, pass.FileContext.Source, intermVarMap, reqDataVarMap) {
+		if isUserTainted(rightNode, pass.FileContext.Source, intermVarMap, reqDataVarMap) {
 			intermVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
@@ -97,7 +97,7 @@ func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 
 		argsNode := getNamedChildren(argListNode, 0)
 		for _, arg := range argsNode {
-			if isRequestFormattedString(arg, pass.FileContext.Source, intermVarMap, reqDataVarMap) {
+			if isUserTainted(arg, pass.FileContext.Source, intermVarMap, reqDataVarMap) {
 				pass.Report(pass, node, "Unvalidated user input detected in Server-Side Request - potential SSRF vulnerability")
 			}
 		}
@@ -128,7 +128,7 @@ func isImportedRequestMethod(node *sitter.Node, source []byte, reqMethodMap map[
 	return isReqMethod
 }
 
-func isRequestFormattedString(node *sitter.Node, source []byte, intermVarMap, reqVarMap map[string]bool) bool {
+func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
 		functionNode := node.ChildByFieldName("function")
@@ -172,7 +172,7 @@ func isRequestFormattedString(node *sitter.Node, source []byte, intermVarMap, re
 		binOpStr := node.Content(source)
 
 		for reqvar := range reqVarMap {
-			pattern := `\b` + reqvar + `b`
+			pattern := `\b` + reqvar + `\b`
 			re := regexp.MustCompile(pattern)
 
 			if re.MatchString(binOpStr) {
@@ -199,7 +199,7 @@ func isRequestCall(node *sitter.Node, source []byte) bool {
 			return false
 		}
 		objectNode := funcNode.ChildByFieldName("object")
-		if !strings.Contains(objectNode.Content(source), "requests") {
+		if !strings.Contains(objectNode.Content(source), "request") {
 			return false
 		}
 
@@ -221,7 +221,7 @@ func isRequestCall(node *sitter.Node, source []byte) bool {
 		}
 
 		objNode := valueNode.ChildByFieldName("object")
-		if objNode.Type() != "identifier" && objNode.Content(source) != "requests" {
+		if objNode.Type() != "identifier" && objNode.Content(source) != "request" {
 			return false
 		}
 
