@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -14,6 +13,12 @@ import (
 func (c *Cli) GetChangedFiles(compareHash string) ([]string, error) {
 	changedFiles := []string{}
 	repo, err := git.PlainOpen(c.RootDirectory)
+	if err !=  nil {
+		return nil, fmt.Errorf("Could not open the Directory.")
+	}
+
+	head, err := repo.Head()
+
 	if err != nil {
 		return changedFiles, fmt.Errorf("failed to open git repository: %w", err)
 	}
