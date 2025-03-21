@@ -72,7 +72,7 @@ var AnalyzerRegistry = []Analyzer{
 	},
 	{
 		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp, python.DjangoRequestDataWrite, python.DjangoRequestHttpResponse},
+		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp, python.DjangoInsecurePickleDeserialize, python.DjangoRequestDataWrite, python.DjangoRequestHttpResponse},
 	},
 }
 
