@@ -2,51 +2,65 @@ package cli
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-// GetChangedFiles returns the absolute paths of files that have changed since the last commit.
-// This includes both staged and unstaged changes in the working directory.
+// GetChangedFiles returns all changes (including working directory changes)
 func (c *Cli) GetChangedFiles() ([]string, error) {
-	// Open the repository
+
 	repo, err := git.PlainOpen(c.RootDirectory)
+	if err !=  nil {
+		return nil, fmt.Errorf("Could not open the Directory.")
+	}
+
+	head, err := repo.Head()
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to open git repository: %v", err)
+		return nil, fmt.Errorf("failed to get the HEAD: %v", err)
 	}
-	
-	// Get worktree
-	worktree, err := repo.Worktree()
+
+
+	currentCommitHash := head.Hash()
+
+	currCommit, err := repo.CommitObject(currentCommitHash)
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree: %v", err)
+		return nil, fmt.Errorf("Could not get commit from the hash")
 	}
-	
-	// Get status of working directory
-	status, err := worktree.Status()
+
+	commitIter, err := repo.Log(&git.LogOptions{From: currentCommitHash})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get status: %v", err)
+		return nil, fmt.Errorf("Unable to fetch details of the commits.")
 	}
-	
-	// Create a slice to store the absolute paths
-	changedFiles := make([]string, 0, len(status))
-	
-	// Iterate through all changes
-	for path, fileStatus := range status {
-		// Skip deleted files
-		if fileStatus.Worktree == git.Deleted && fileStatus.Staging == git.Unmodified {
-			continue
-		}
-		
-		// Include files with changes in either worktree or staging area
-		if fileStatus.Worktree != git.Unmodified || fileStatus.Staging != git.Unmodified {
-			absPath, err := filepath.Abs(filepath.Join(c.RootDirectory, path))
-			if err != nil {
-				return nil, fmt.Errorf("failed to get absolute path for %s: %v", path, err)
-			}
-			changedFiles = append(changedFiles, absPath)
-		}
+
+	var hashHistory []plumbing.Hash
+
+	err = commitIter.ForEach(func(c *object.Commit) error {
+		hashHistory	= append(hashHistory, c.Hash)
+		return nil
+	})
+
+	prevCommit, err:= repo.CommitObject(hashHistory[1])
+
+	if err != nil {
+		return nil, fmt.Errorf("could not get previous commitObject from hash")
 	}
-	
-	return changedFiles, nil
+
+	patch, err := currCommit.Patch(prevCommit)
+	if err != nil {
+		return nil, fmt.Errorf("Could not create patch")
+	}
+
+	filePatches := patch.FilePatches()
+
+	for _, filePatch := range filePatches {
+		_, file := filePatch.Files()
+		fmt.Printf("%v\n", file.Path())
+	}
+
+	return nil, nil
+
 }
