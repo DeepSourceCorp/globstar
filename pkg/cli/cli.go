@@ -418,7 +418,7 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 
 		// Only run if the incremental flag is provided.
-		if c.IncrementalMode {
+		if c.DiffMode{
 			// Skip the path if it's not included in the changed files.
 			_, isChanged := changedFileMap[path]
 			if !isChanged {
