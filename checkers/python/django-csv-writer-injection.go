@@ -169,46 +169,6 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 	return false
 }
 
-func isRequestCall(node *sitter.Node, source []byte) bool {
-	switch node.Type() {
-	case "call":
-		funcNode := node.ChildByFieldName("function")
-		if funcNode.Type() != "attribute" {
-			return false
-		}
-		objectNode := funcNode.ChildByFieldName("object")
-		if !strings.Contains(objectNode.Content(source), "request") {
-			return false
-		}
-
-		attributeNode := funcNode.ChildByFieldName("attribute")
-		if attributeNode.Type() != "identifier" {
-			return false
-		}
-
-		if !strings.Contains(attributeNode.Content(source), "get") {
-			return false
-		}
-
-		return true
-
-	case "subscript":
-		valueNode := node.ChildByFieldName("value")
-		if valueNode.Type() != "attribute" {
-			return false
-		}
-
-		objNode := valueNode.ChildByFieldName("object")
-		if objNode.Type() != "identifier" && objNode.Content(source) != "request" {
-			return false
-		}
-
-		return true
-	}
-
-	return false
-}
-
 func isCsvWriter(node *sitter.Node, source []byte) bool {
 	if node.Type() != "call" {
 		return false
