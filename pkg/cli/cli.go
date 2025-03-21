@@ -28,7 +28,7 @@ type Cli struct {
 	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
 	Checkers        []analysis.Checker
 	Config          *config.Config
-	IncrementalMode bool
+	DiffMode bool
 }
 
 func (c *Cli) loadConfig() error {
@@ -146,9 +146,9 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					},
 
 					&cli.BoolFlag{
-						Name:    "incremental",
-						Usage:   "Run Globstar in incremental mode",
-						Aliases: []string{"inc"},
+						Name:    "Diff Analyzer",
+						Usage:   "Run Globstar to analyze changed file in the directory",
+						Aliases: []string{"diff-only"},
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -157,9 +157,9 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						return err
 					}
 
-					incremental := cmd.Bool("incremental")
-					if incremental {
-						c.IncrementalMode = true
+					diff := cmd.Bool("diff-only")
+					if diff {
+						c.DiffMode= true
 					}
 
 					checkers := cmd.String("checkers")
@@ -418,7 +418,7 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 
 		// Only run if the incremental flag is provided.
-		if c.IncrementalMode {
+		if c.DiffMode{
 			// Skip the path if it's not included in the changed files.
 			_, isChanged := changedFileMap[path]
 			if !isChanged {
