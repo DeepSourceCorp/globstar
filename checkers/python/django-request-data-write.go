@@ -79,7 +79,7 @@ func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
 
 		argNodes := getNamedChildren(argListNode, 0)
 		for _, arg := range argNodes {
-			if isUserTainted(arg, pass.FileContext.Source, intermVarMap, reqVarMap) {
+			if isUserTaintedDataWrite(arg, pass.FileContext.Source, intermVarMap, reqVarMap) {
 				pass.Report(pass, node, "User-controlled data written to a file may enable log tampering, forced rotation, or disk exhaustion—sanitize input before writing")
 			}
 		}
@@ -89,7 +89,7 @@ func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
-func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map[string]bool) bool {
+func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
 		if isInFunc(node, source, intermVarMap, reqVarMap) {
@@ -188,45 +188,5 @@ func isInFunc(node *sitter.Node, source []byte, intermVarMap, reqvarmap map[stri
 			return true
 		}
 	}
-	return false
-}
-
-func isRequestCall(node *sitter.Node, source []byte) bool {
-	switch node.Type() {
-	case "call":
-		funcNode := node.ChildByFieldName("function")
-		if funcNode.Type() != "attribute" {
-			return false
-		}
-		objectNode := funcNode.ChildByFieldName("object")
-		if !strings.Contains(objectNode.Content(source), "request") {
-			return false
-		}
-
-		attributeNode := funcNode.ChildByFieldName("attribute")
-		if attributeNode.Type() != "identifier" {
-			return false
-		}
-
-		if !strings.Contains(attributeNode.Content(source), "get") {
-			return false
-		}
-
-		return true
-
-	case "subscript":
-		valueNode := node.ChildByFieldName("value")
-		if valueNode.Type() != "attribute" {
-			return false
-		}
-
-		objNode := valueNode.ChildByFieldName("object")
-		if objNode.Type() != "identifier" && objNode.Content(source) != "request" {
-			return false
-		}
-
-		return true
-	}
-
 	return false
 }
