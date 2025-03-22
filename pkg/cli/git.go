@@ -9,7 +9,7 @@ import (
 )
 
 // GetChangedFiles returns all changes between latest commit and the previous one
-func (c *Cli) GetChangedFiles() ([]string, error) {
+func (c *Cli) GetChangedFiles(compareCommitHash string) ([]string, error) {
 
 	// Open the git repository at the root directory
 	repo, err := git.PlainOpen(c.RootDirectory)
@@ -19,7 +19,7 @@ func (c *Cli) GetChangedFiles() ([]string, error) {
 
 	// Define references for the current and previous commits
 	head := "HEAD"
-	prev:= "HEAD~1"
+	prev:= compareCommitHash
 
 	// Resolve the hash for the latest commit
 	latestCommitHash, err := repo.ResolveRevision(plumbing.Revision(head))
@@ -34,13 +34,13 @@ func (c *Cli) GetChangedFiles() ([]string, error) {
 	}
 
 	// Resolve the hash for the previous commit
-	prevCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
+	providedCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
 	if err != nil {
 		return nil, fmt.Errorf("Couldnt get revision hash: %v", err)
 	}
 
 	// Get the commit object for the previous commit
-	prevCommit, err := repo.CommitObject(*prevCommitHash)
+	prevCommit, err := repo.CommitObject(*providedCommitHash)
 	if err != nil {
 		return nil, fmt.Errorf("Could not get revision commit: %v\n", err)
 	}
