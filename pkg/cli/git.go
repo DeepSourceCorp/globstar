@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -17,8 +18,12 @@ func (c *Cli) GetChangedFiles(compareHash string) ([]string, error) {
 		return nil, fmt.Errorf("Could not open the Directory.")
 	}
 
-	head, err := repo.Head()
+	// Define references for the current and previous commits
+	head := "HEAD"
+	prev:= "HEAD~1"
 
+	// Resolve the hash for the latest commit
+	latestCommitHash, err := repo.ResolveRevision(plumbing.Revision(head))
 	if err != nil {
 		return changedFiles, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -106,6 +111,8 @@ func (c *Cli) GetChangedFiles(compareHash string) ([]string, error) {
 	for file := range changedFilesMap {
 		changedFiles = append(changedFiles, filepath.Join(c.RootDirectory, file))
 	}
+
+	
 
 	return changedFiles, nil
 }
