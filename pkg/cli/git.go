@@ -63,7 +63,6 @@ func (c *Cli) GetChangedFiles() ([]string, error) {
 		}
 
 		changedFiles = append(changedFiles, filePath)
-		fmt.Printf("%v\n", filePath)
 	}
 
 	
