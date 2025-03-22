@@ -147,8 +147,8 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 
 					&cli.BoolFlag{
 						Name:    "Diff Analyzer",
-						Usage:   "Run Globstar to analyze changed file in the directory",
-						Aliases: []string{"diff-only"},
+						Usage:   "Run Globstar to analyze only the changed file from the last commit",
+						Aliases: []string{"new-since-rev"},
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -157,7 +157,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						return err
 					}
 
-					diff := cmd.Bool("diff-only")
+					diff := cmd.Bool("new-since-rev")
 					if diff {
 						c.DiffMode= true
 					}
