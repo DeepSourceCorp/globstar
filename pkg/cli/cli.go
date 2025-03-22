@@ -26,8 +26,9 @@ type Cli struct {
 	// RootDirectory is the target directory to analyze
 	RootDirectory string
 	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
-	Checkers []analysis.Checker
-	Config   *config.Config
+	Checkers        []analysis.Checker
+	Config          *config.Config
+	DiffMode bool
 }
 
 func (c *Cli) loadConfig() error {
@@ -143,11 +144,22 @@ or you can write your own in the .globstar directory of any repository.`,
 to run only the built-in checkers, and --checkers=all to run both.`,
 						Aliases: []string{"c"},
 					},
+
+					&cli.BoolFlag{
+						Name:    "Diff Analyzer",
+						Usage:   "Run Globstar to analyze only the changed file from the last commit",
+						Aliases: []string{"new-since-rev"},
+					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					ignorePattern := cmd.String("ignore")
 					if err := c.Config.AddExcludePatterns(ignorePattern); err != nil {
 						return err
+					}
+
+					diff := cmd.Bool("new-since-rev")
+					if diff {
+						c.DiffMode= true
 					}
 
 					checkers := cmd.String("checkers")
@@ -159,6 +171,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						return c.RunCheckers(true, true)
 					}
 					return fmt.Errorf("invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s", checkers)
+
 				},
 			},
 			{
@@ -386,10 +399,31 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	}
 
 	result := checkResult{}
-	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
+
+	analysisFiles, err := c.GetChangedFiles()
+	if err != nil {
+		return err
+	}
+
+	//Creating a map instead of slices to enhance performance of large codebases.
+	changedFileMap := make(map[string]struct{}, len(analysisFiles))
+	for _, file := range analysisFiles {
+		changedFileMap[file] = struct{}{}
+	}
+
+	err = filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			// skip this path
 			return nil
+		}
+
+		// Only run if the incremental flag is provided.
+		if c.DiffMode{
+			// Skip the path if it's not included in the changed files.
+			_, isChanged := changedFileMap[path]
+			if !isChanged {
+				return nil
+			}
 		}
 
 		if d.IsDir() {
