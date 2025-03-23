@@ -195,6 +195,14 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					goPassed := true
 					if dir == "checkers" {
 						var errs []error
+						// generating built-in checker registry
+						genErr := discover.GenerateBuiltinChecker(builtinCheckerLangs)
+						if genErr != nil {
+							fmt.Fprintln(os.Stderr, genErr.Error())
+							return genErr
+							// if the reigstry file cannot be created
+							// then built-in Go checkers cannot be run
+						}
 						goPassed, errs = checkers.RunAnalyzerTests(checkers.AnalyzerRegistry)
 						if len(errs) > 0 {
 							fmt.Fprintln(os.Stderr, "Errors running Go-based tests:")
@@ -345,6 +353,11 @@ var defaultIgnoreDirs = []string{
 	".idea",
 }
 
+var builtinCheckerLangs = []string{
+	"javascript",
+	"python",
+}
+
 // RunCheckers goes over all the files in the project and runs the checks for every file encountered
 func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -353,6 +366,14 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 
 	var goAnalyzers []*goAnalysis.Analyzer
 	if runBuiltinCheckers {
+		// generating built-in checker registry
+		err := discover.GenerateBuiltinChecker(builtinCheckerLangs)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			return err
+			// if the reigstry file cannot be created
+			// then built-in Go checkers cannot be run
+		}
 		goAnalyzers = checkers.LoadGoCheckers()
 		builtInPatternCheckers, err := checkers.LoadBuiltinYamlCheckers()
 		if err != nil {

@@ -65,3 +65,78 @@ func GenerateAnalyzer(checkerDir, dest string) error {
 
 	return nil
 }
+
+// for file checkers/registry.go
+// modify this template when adding checkers for a new language
+var builtinCheckersGo = `// AUTOMATICALLY GENERATED: DO NOT EDIT
+
+package checkers
+
+import (
+	"globstar.dev/checkers/javascript"
+	"globstar.dev/checkers/python"
+	goAnalysis "globstar.dev/analysis"
+)
+
+type Analyzer struct {
+	TestDir   string
+	Analyzers []*goAnalysis.Analyzer
+}
+
+var AnalyzerRegistry = []Analyzer{
+	{
+		TestDir:   "checkers/javascript/testdata", // relative to the repository root
+		Analyzers: []*goAnalysis.Analyzer{%[1]s
+		},
+	},
+	{
+		TestDir: "checkers/python/testdata",
+		Analyzers: []*goAnalysis.Analyzer{%[2]s
+		},
+	},
+}
+`
+
+func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
+	// a map with the language name as key and the checker name string as the value
+	checkerListMap := make(map[string]string)
+	for lang, builtinCheckerList := range builtinCheckerMap {
+		builtinChecker := "\n"
+		if len(builtinCheckerList) == 0 {
+			checkerListMap[lang] = ""
+		} else {
+			for _, checker := range builtinCheckerList {
+				builtinChecker += fmt.Sprintf("\t\t\t%s,\n", checker)
+			}
+		}
+		checkerListMap[lang] = builtinChecker
+	}
+	return fmt.Sprintf(builtinCheckersGo, checkerListMap["javascript"], checkerListMap["python"])
+}
+
+func GenerateBuiltinChecker(checkerDirs []string) error {
+	dest := "./checkers"
+	goCheckers := make(map[string][]string)
+	for _, dir := range checkerDirs {
+		var err error
+		goCheckers[dir], err = DiscoverGoCheckers("./checkers/" + dir)
+		if err != nil {
+			return fmt.Errorf("error discovering builtin checkers: %v", err)
+		}
+
+		if len(goCheckers[dir]) == 0 {
+			return fmt.Errorf("no builtin Go checkers found in the directory: %s", dir)
+		}
+	}
+
+	// generate the builtin checker registry
+	builtinCheckersGo := generateBuiltinCheckerRegistry(goCheckers)
+	// write the builtin checkers registry to the destination directory `./checkers`
+	// which assumed to be existing
+	err := os.WriteFile(filepath.Join(dest, "registry.go"), []byte(builtinCheckersGo), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing builtin checker registry: %v", err)
+	}
+
+	return nil
+}

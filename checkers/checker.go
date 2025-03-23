@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 
 	goAnalysis "globstar.dev/analysis"
-	"globstar.dev/checkers/javascript"
-	"globstar.dev/checkers/python"
 	"globstar.dev/pkg/analysis"
 )
 
@@ -58,22 +56,6 @@ func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.YamlCh
 	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
 	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap))
 	return checkersMap, err
-}
-
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
-}
-
-var AnalyzerRegistry = []Analyzer{
-	{
-		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq, javascript.SQLInjection},
-	},
-	{
-		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp, python.DjangoSSRFInjection, python.DjangoInsecurePickleDeserialize, python.DjangoRequestDataWrite, python.DjangoRequestHttpResponse, python.DjangoMissingThrottleConfig, python.DjangoCsvWriterInjection, python.DjangoNanInjection, python.DjangoPasswordEmptyString},
-	},
 }
 
 func LoadGoCheckers() []*goAnalysis.Analyzer {
