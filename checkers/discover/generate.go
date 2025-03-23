@@ -116,6 +116,8 @@ func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) strin
 
 func GenerateBuiltinChecker(checkerDirs []string) error {
 	dest := "./checkers"
+	registryFilePath := filepath.Join(dest, "registry.go")
+
 	goCheckers := make(map[string][]string)
 	for _, dir := range checkerDirs {
 		var err error
@@ -133,7 +135,22 @@ func GenerateBuiltinChecker(checkerDirs []string) error {
 	builtinCheckersGo := generateBuiltinCheckerRegistry(goCheckers)
 	// write the builtin checkers registry to the destination directory `./checkers`
 	// which assumed to be existing
-	err := os.WriteFile(filepath.Join(dest, "registry.go"), []byte(builtinCheckersGo), 0644)
+
+	// check if registry file exists. if not, create it
+	_, err := os.Stat(registryFilePath)
+
+	if os.IsNotExist(err) {
+		// file does not exist. create an empy registry file
+		newRegistryFile, err := os.Create(registryFilePath)
+		if err != nil {
+			return fmt.Errorf("error creating registry file: %v", err)
+		}
+		newRegistryFile.Close()
+	} else if err != nil {
+		return fmt.Errorf("error checking if registry file exists: %v", err)
+	}
+
+	err = os.WriteFile(registryFilePath, []byte(builtinCheckersGo), 0644)
 	if err != nil {
 		return fmt.Errorf("error writing builtin checker registry: %v", err)
 	}
