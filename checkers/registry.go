@@ -17,24 +17,24 @@ var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
 		Analyzers: []*goAnalysis.Analyzer{
-			javascript.SQLInjection,
 			javascript.NoDoubleEq,
+			javascript.SQLInjection,
 
 		},
 	},
 	{
 		TestDir: "checkers/python/testdata",
 		Analyzers: []*goAnalysis.Analyzer{
-			python.DjangoSQLInjection,
-			python.DjangoSSRFInjection,
-			python.DjangoCsvWriterInjection,
-			python.DjangoInsecurePickleDeserialize,
+			python.DjangoNanInjection,
+			python.DjangoRequestHttpResponse,
 			python.DjangoMissingThrottleConfig,
+			python.DjangoInsecurePickleDeserialize,
 			python.DjangoPasswordEmptyString,
 			python.DjangoRequestDataWrite,
-			python.DjangoRequestHttpResponse,
+			python.DjangoSQLInjection,
+			python.DjangoSSRFInjection,
 			python.InsecureUrllibFtp,
-			python.DjangoNanInjection,
+			python.DjangoCsvWriterInjection,
 
 		},
 	},

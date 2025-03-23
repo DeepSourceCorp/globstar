@@ -45,7 +45,7 @@ var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{
 	}
 }
 
-func TestGenerateBuiltinChecker(t *testing.T) {
+func TestGenerateBuiltinCheckerRegistry(t *testing.T) {
 	tests := []struct {
 		name       string
 		goCheckers map[string][]string
