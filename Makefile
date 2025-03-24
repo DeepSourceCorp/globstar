@@ -9,7 +9,7 @@ CLI_BUILD_FLAGS := -X 'globstar.dev/pkg/cli.version=$$(git describe --tags 2>/de
 .PHONY: generate-registry
 generate-registry:
 	@echo "Generating Go checker registry"
-	@go run ./cmd/genregistry/main.go
+	@go run ./cmd/genregistry/main.go --dir ./checkers
 
 .PHONY: sysroot-pack
 sysroot-pack:

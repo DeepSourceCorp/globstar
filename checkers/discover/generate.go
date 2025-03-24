@@ -67,7 +67,7 @@ func GenerateAnalyzer(checkerDir, dest string) error {
 }
 
 
-// define the templates to be used in the registry
+// define the templates to be used in the registry.go
 const (
     headerTemplate = `// AUTOMATICALLY GENERATED: DO NOT EDIT
 
@@ -83,7 +83,7 @@ var AnalyzerRegistry = []Analyzer{`
 
     entryTemplate = `
 	{
-        TestDir:   "checkers/%[1]s/testdata", // relative to the repository root
+        TestDir:   "%[1]s/testdata", // relative to the repository root
         Analyzers: []*goAnalysis.Analyzer{%[2]s
         },
     },
@@ -92,22 +92,6 @@ var AnalyzerRegistry = []Analyzer{`
     footerTemplate = "}\n"
 )
 
-// func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
-// 	// a map with the language name as key and the checker name string as the value
-// 	checkerListMap := make(map[string]string)
-// 	for lang, builtinCheckerList := range builtinCheckerMap {
-// 		builtinChecker := "\n"
-// 		if len(builtinCheckerList) == 0 {
-// 			checkerListMap[lang] = ""
-// 		} else {
-// 			for _, checker := range builtinCheckerList {
-// 				builtinChecker += fmt.Sprintf("\t\t\t%s,\n", checker)
-// 			}
-// 		}
-// 		checkerListMap[lang] = builtinChecker
-// 	}
-// 	return fmt.Sprintf(builtinCheckersGo, checkerListMap["javascript"], checkerListMap["python"])
-// }
 
 func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
 	var builder strings.Builder
@@ -139,13 +123,9 @@ func GenerateBuiltinChecker(checkerDirs []string) error {
 	goCheckers := make(map[string][]string)
 	for _, dir := range checkerDirs {
 		var err error
-		goCheckers[dir], err = DiscoverGoCheckers("./checkers/" + dir)
+		goCheckers[dir], err = DiscoverGoCheckers(dir)
 		if err != nil {
-			return fmt.Errorf("error discovering builtin checkers: %v", err)
-		}
-
-		if len(goCheckers[dir]) == 0 {
-			return fmt.Errorf("no builtin Go checkers found in the directory: %s", dir)
+			continue
 		}
 	}
 
@@ -175,24 +155,3 @@ func GenerateBuiltinChecker(checkerDirs []string) error {
 
 	return nil
 }
-
-// // helper function to get all subfolders
-// func getAllSubDirectories(topdir string) ([]string, error) {
-// 	var subdirs []string
-
-// 	err := filepath.WalkDir(topdir, func(path string, d fs.DirEntry, err error) error {
-// 		if err != nil {
-// 			return err
-// 		}
-// 		if d.IsDir() && path != topdir {
-// 			subdirs = append(subdirs, path)
-// 		}
-// 		return nil
-// 	})
-
-// 	if err != nil {
-// 		return nil, fmt.Errorf("error walking directory: %v", err)
-// 	}
-
-// 	return subdirs, err
-// }
