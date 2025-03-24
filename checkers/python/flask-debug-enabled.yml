@@ -1,0 +1,20 @@
+language: py
+name: flask-debug-enabled
+message: Deploying `Debug` enabled Flask app might leak sensitive information
+category: security
+severity: warning
+
+pattern: >
+  (call
+    function: (attribute
+      object: (identifier)
+      attribute: (identifier) @run_method)
+    arguments: (argument_list
+      (_)*
+      (keyword_argument
+        name: (identifier) @name (#eq? @name "debug")
+        value: (true))
+      (_)*)) @flask-debug-enabled
+
+description: >
+  Enabling debug mode in Flask applications exposes detailed error messages that can reveal sensitive information to attackers, creating a significant security vulnerability. Debug mode should never be used in production environments; instead, configure debugging through Flask configuration files or environment variables.
