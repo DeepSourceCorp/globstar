@@ -67,6 +67,11 @@ func LoadGoCheckers() []*goAnalysis.Analyzer {
 	return analyzers
 }
 
+type Analyzer struct {
+	TestDir   string
+	Analyzers []*goAnalysis.Analyzer
+}
+
 func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
 	passed := true
 	errors := []error{}

@@ -78,11 +78,6 @@ import (
 	goAnalysis "globstar.dev/analysis"
 )
 
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
-}
-
 var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
