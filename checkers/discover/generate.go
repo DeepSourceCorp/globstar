@@ -66,47 +66,70 @@ func GenerateAnalyzer(checkerDir, dest string) error {
 	return nil
 }
 
-// for file checkers/registry.go
-// modify this template when adding checkers for a new language
-var builtinCheckersGo = `// AUTOMATICALLY GENERATED: DO NOT EDIT
+
+// define the templates to be used in the registry
+const (
+    headerTemplate = `// AUTOMATICALLY GENERATED: DO NOT EDIT
 
 package checkers
 
 import (
-	"globstar.dev/checkers/javascript"
-	"globstar.dev/checkers/python"
-	goAnalysis "globstar.dev/analysis"
+    "globstar.dev/checkers/javascript"
+    "globstar.dev/checkers/python"
+    goAnalysis "globstar.dev/analysis"
 )
 
-var AnalyzerRegistry = []Analyzer{
+var AnalyzerRegistry = []Analyzer{`
+
+    entryTemplate = `
 	{
-		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{%[1]s
-		},
-	},
-	{
-		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{%[2]s
-		},
-	},
-}
+        TestDir:   "checkers/%[1]s/testdata", // relative to the repository root
+        Analyzers: []*goAnalysis.Analyzer{%[2]s
+        },
+    },
 `
 
+    footerTemplate = "}\n"
+)
+
+// func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
+// 	// a map with the language name as key and the checker name string as the value
+// 	checkerListMap := make(map[string]string)
+// 	for lang, builtinCheckerList := range builtinCheckerMap {
+// 		builtinChecker := "\n"
+// 		if len(builtinCheckerList) == 0 {
+// 			checkerListMap[lang] = ""
+// 		} else {
+// 			for _, checker := range builtinCheckerList {
+// 				builtinChecker += fmt.Sprintf("\t\t\t%s,\n", checker)
+// 			}
+// 		}
+// 		checkerListMap[lang] = builtinChecker
+// 	}
+// 	return fmt.Sprintf(builtinCheckersGo, checkerListMap["javascript"], checkerListMap["python"])
+// }
+
 func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
-	// a map with the language name as key and the checker name string as the value
-	checkerListMap := make(map[string]string)
-	for lang, builtinCheckerList := range builtinCheckerMap {
+	var builder strings.Builder
+	// write the header
+	builder.WriteString(headerTemplate)
+
+	for lang, checkerList := range builtinCheckerMap {
 		builtinChecker := "\n"
-		if len(builtinCheckerList) == 0 {
-			checkerListMap[lang] = ""
+		if len(checkerList) == 0 {
+			continue
 		} else {
-			for _, checker := range builtinCheckerList {
+			for _, checker := range checkerList {
 				builtinChecker += fmt.Sprintf("\t\t\t%s,\n", checker)
 			}
 		}
-		checkerListMap[lang] = builtinChecker
+		entryStr := fmt.Sprintf(entryTemplate, lang, builtinChecker)
+		builder.WriteString(entryStr)
 	}
-	return fmt.Sprintf(builtinCheckersGo, checkerListMap["javascript"], checkerListMap["python"])
+
+	builder.WriteString(footerTemplate)
+
+	return builder.String()
 }
 
 func GenerateBuiltinChecker(checkerDirs []string) error {
@@ -152,3 +175,24 @@ func GenerateBuiltinChecker(checkerDirs []string) error {
 
 	return nil
 }
+
+// // helper function to get all subfolders
+// func getAllSubDirectories(topdir string) ([]string, error) {
+// 	var subdirs []string
+
+// 	err := filepath.WalkDir(topdir, func(path string, d fs.DirEntry, err error) error {
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if d.IsDir() && path != topdir {
+// 			subdirs = append(subdirs, path)
+// 		}
+// 		return nil
+// 	})
+
+// 	if err != nil {
+// 		return nil, fmt.Errorf("error walking directory: %v", err)
+// 	}
+
+// 	return subdirs, err
+// }
