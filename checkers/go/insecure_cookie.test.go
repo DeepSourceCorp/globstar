@@ -1,4 +1,4 @@
-//go:build ignore
+//go:build exclude
 
 // <expect-error>
 http.SetCookie(&http.Cookie{

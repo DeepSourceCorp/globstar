@@ -1,3 +1,5 @@
+//go:build exclude
+
 func bind_all() {
 	// <expect-error> Bind to all interfaces
 	l, err := net.Listen("tcp", ":2000")

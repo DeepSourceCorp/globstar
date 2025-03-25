@@ -1,3 +1,5 @@
+//go:build exclude
+
 import (
 	// <expect-error> Weak hash function used
 	"crypto/md5"    // UNSAFE: Weak hash function

@@ -1,3 +1,4 @@
+//go:build exclude
 
 import (
 	"fmt"
