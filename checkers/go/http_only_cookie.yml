@@ -1,0 +1,55 @@
+language: go
+name: go_http_only_cookie
+message: "  Missing HttpOnly flag in cookie configuration allows client-side scripts to access cookies, increasing the risk of session hijacking. "
+category: security
+severity: warning
+pattern: >
+  [
+    (call_expression
+  function: (selector_expression
+    operand: (identifier) @http
+    field: (field_identifier) @method
+    (#match? @http "^http$")
+    (#match? @method "^SetCookie$"))
+  arguments: (argument_list
+    (unary_expression
+      (composite_literal
+        (qualified_type
+          package: (package_identifier) @pkg
+          name: (type_identifier) @type
+          (#match? @pkg "^http$")
+          (#match? @type "^Cookie$"))
+        (literal_value) @cookie_body
+        (#not-match? @cookie_body ".*HttpOnly.*true.*"))))) @go_http_only_cookie
+  ]
+exclude:
+  - "test/**"
+  - "*_test.go"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+  Omitting the `HttpOnly` flag in cookies allows client-side JavaScript to access them. Attackers exploiting XSS vulnerabilities can steal these cookies, leading to session hijacking and unauthorized account access.
+
+  Impact:
+  Without the `HttpOnly` flag:  
+  - Attackers can execute scripts to read cookies via `document.cookie`.  
+  - Session tokens, authentication cookies, and sensitive data become vulnerable.  
+  - Increased risk of account compromise and data theft.  
+
+  Example of Vulnerable Code:  
+  ```go
+  http.SetCookie(w, &http.Cookie{
+      Name:  "session_token",
+      Value: "abc123",
+      Path:  "/",
+      // Missing HttpOnly flag exposes cookie to client-side scripts
+  })
+
+  Secure the cookie by adding the `HttpOnly` flag:  
+  ```go
+  http.SetCookie(w, &http.Cookie{
+      Name:     "session_token",
+      Value:    "abc123",
+      HttpOnly: true,
+  })
