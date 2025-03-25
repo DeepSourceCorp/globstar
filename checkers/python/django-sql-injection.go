@@ -18,8 +18,7 @@ var DjangoSQLInjection *analysis.Analyzer = &analysis.Analyzer{
 }
 
 func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
-	requestVarMap := make(map[string]bool)
-	intermVarMap := make(map[string]bool)
+	userDataVarMap := make(map[string]bool)
 	cursorVarMap := make(map[string]bool)
 
 	// get request data variable names
@@ -36,7 +35,7 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		if isRequestCall(rightNode, pass.FileContext.Source) {
-			requestVarMap[leftNode.Content(pass.FileContext.Source)] = true
+			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -105,8 +104,8 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if isUserTainted(rightNode, pass.FileContext.Source, intermVarMap, requestVarMap) {
-			intermVarMap[leftNode.Content(pass.FileContext.Source)] = true
+		if isUserTainted(rightNode, pass.FileContext.Source, userDataVarMap) {
+			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -127,7 +126,7 @@ func checkDjangoSQLInjection(pass *analysis.Pass) (interface{}, error) {
 
 		funcArgs := getNamedChildren(funcArgslist, 0)
 		for _, arg := range funcArgs {
-			if isUserTainted(arg, pass.FileContext.Source, intermVarMap, requestVarMap) {
+			if isUserTainted(arg, pass.FileContext.Source, userDataVarMap) {
 				pass.Report(pass, node, "Potential SQL injection detected: User-controlled data is used in a raw database query - use parameterized queries to mitigate risk")
 			}
 		}

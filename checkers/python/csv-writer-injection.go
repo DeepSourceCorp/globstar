@@ -59,7 +59,7 @@ func checkCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
 			return
 		}
-		defNode := node.ChildByFieldName("function_definition")
+		defNode := node.ChildByFieldName("definition")
 		paramsNode := defNode.ChildByFieldName("parameters")
 		if paramsNode.Type() != "parameters" {
 			return
