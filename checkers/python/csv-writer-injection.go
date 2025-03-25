@@ -56,7 +56,7 @@ func checkCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 		if funcNode.Type() != "attribute" {
 			return
 		}
-		if strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
+		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
 			return
 		}
 		defNode := node.ChildByFieldName("function_definition")
@@ -138,7 +138,7 @@ func checkCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
-		if isRequestCall(node, source) && !strings.Contains(node.Content(source), "build_absolute_url") {
+		if isRequestCall(node, source) && !strings.Contains(node.Content(source), "build_absolute_uri") {
 			return true
 		}
 
@@ -182,7 +182,7 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 
 	case "binary_operator":
 		binaryOpStr := node.Content(source)
-
+		// fmt.Println(">>>", binaryOpStr)
 		for key := range userDataVarMap {
 			pattern := `\b` + key + `\b`
 			re := regexp.MustCompile(pattern)

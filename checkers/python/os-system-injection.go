@@ -10,7 +10,7 @@ import (
 var OsSystemInjection *analysis.Analyzer = &analysis.Analyzer{
 	Name: "os-system-injection",
 	Language: analysis.LangPy,
-	Description: "iqwiejew2ew2",
+	Description: "Command injection vulnerability detected where user-supplied data is passed directly to os.system. This allows attackers to execute arbitrary system commands by injecting shell metacharacters into the input. Replace with subprocess module and pass arguments as a list to properly separate command from parameters.",
 	Category: analysis.CategorySecurity,
 	Severity: analysis.SeverityError,
 	Run: checkOsSystemInjection,
@@ -105,7 +105,7 @@ func checkOsSystemInjection(pass *analysis.Pass) (interface{}, error) {
 		argnodes := getNamedChildren(arglistnode, 0)
 		for _, arg := range argnodes {
 			if isUSerData(arg, pass.FileContext.Source, userDataVarMap) {
-				pass.Report(pass, node, "iodoqwqw")
+				pass.Report(pass, node, "Command injection risk in os.system; use subprocess with argument lists instead.")
 			}
 		}
 	})

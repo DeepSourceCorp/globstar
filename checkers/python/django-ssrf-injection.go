@@ -213,17 +213,7 @@ func isRequestCall(node *sitter.Node, source []byte) bool {
 		if funcNode.Type() != "attribute" {
 			return false
 		}
-		objectNode := funcNode.ChildByFieldName("object")
-		if !strings.Contains(objectNode.Content(source), "request") {
-			return false
-		}
-
-		attributeNode := funcNode.ChildByFieldName("attribute")
-		if attributeNode.Type() != "identifier" {
-			return false
-		}
-
-		if !strings.Contains(attributeNode.Content(source), "get") {
+		if !strings.HasPrefix(funcNode.Content(source), "request.") && !strings.HasPrefix(funcNode.Content(source), "flask.request.") {
 			return false
 		}
 
@@ -235,8 +225,7 @@ func isRequestCall(node *sitter.Node, source []byte) bool {
 			return false
 		}
 
-		objNode := valueNode.ChildByFieldName("object")
-		if objNode.Type() != "identifier" && objNode.Content(source) != "request" {
+		if !strings.HasPrefix(valueNode.Content(source), "request.") && !strings.HasPrefix(valueNode.Content(source), "flask.request.") {
 			return false
 		}
 
