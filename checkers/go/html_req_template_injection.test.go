@@ -1,3 +1,5 @@
+//go:build ignore
+
 import (
 	"fmt"
 	"net/http"

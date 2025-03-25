@@ -1,3 +1,5 @@
+//go: build ignore
+
 // <expect-error>
 fmt.Print()
 

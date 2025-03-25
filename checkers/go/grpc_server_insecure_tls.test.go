@@ -1,3 +1,5 @@
+//go:build ignore
+
 func unsafe() {
 	// <expect-error> insecure grpc tls server
 	s := grpc.NewServer()
