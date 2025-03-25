@@ -56,43 +56,53 @@ func (c *Cli) GetChangedFiles(compareCommitHash string) ([]string, error) {
 	}
 
 	var changedFiles []string
-
-	prev := compareCommitHash
-	prevCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
-	if err != nil {
-		return nil, fmt.Errorf("Could not get revision hash: %v\n", err)
-	}
-
-	prevCommit, err := repo.CommitObject(*prevCommitHash)
-
-	if err != nil {
-		return nil, fmt.Errorf("Could not get the commit object for provided commit-hash: %v\n", prevCommit)
-	}
-
-	allChanges, err := getCurrentWorkDirState(repo, c.RootDirectory)
-
-	if err != nil {
-		return nil, fmt.Errorf("Problem getting current directory state: %v\n", err)
-	}
-
-	patch, err := prevCommit.Patch(headCommit)
-	if err != nil {
-		return nil, fmt.Errorf("Could not create a patch")
-	}
-	changedFiles = allChanges
-	// Extract the changed files from the patch
-	filePatches := patch.FilePatches()
-	for _, filePatch := range filePatches {
-		_, file := filePatch.Files()
-		// Construct absolute paths, to be used by the analyzer.
-		filePath, err := filepath.Abs(filepath.Join(c.RootDirectory, file.Path()))
+	switch len(compareCommitHash) {
+	case 0:
+		currDirState, err := getCurrentWorkDirState(repo, c.RootDirectory)
 		if err != nil {
-			return changedFiles, fmt.Errorf("could not resolve filepath")
+			return nil, fmt.Errorf("%v\n", err)
 		}
-		if slices.Contains(allChanges, filePath) {
-			continue
+
+		changedFiles = currDirState
+
+	default:
+		prev := compareCommitHash
+		prevCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
+		if err != nil {
+			return nil, fmt.Errorf("Could not get revision hash: %v\n", err)
 		}
-		changedFiles = append(changedFiles, filePath)
+
+		prevCommit, err := repo.CommitObject(*prevCommitHash)
+
+		if err != nil {
+			return nil, fmt.Errorf("Could not get the commit object for provided commit-hash: %v\n", prevCommit)
+		}
+
+		allChanges, err := getCurrentWorkDirState(repo, c.RootDirectory)
+
+		if err != nil {
+			return nil, fmt.Errorf("Problem getting current directory state: %v\n", err)
+		}
+
+		patch, err := prevCommit.Patch(headCommit)
+		if err != nil {
+			return nil, fmt.Errorf("Could not create a patch")
+		}
+		changedFiles = allChanges
+		// Extract the changed files from the patch
+		filePatches := patch.FilePatches()
+		for _, filePatch := range filePatches {
+			_, file := filePatch.Files()
+			// Construct absolute paths, to be used by the analyzer.
+			filePath, err := filepath.Abs(filepath.Join(c.RootDirectory, file.Path()))
+			if err != nil {
+				return changedFiles, fmt.Errorf("could not resolve filepath")
+			}
+			if slices.Contains(allChanges, filePath) {
+				continue
+			}
+			changedFiles = append(changedFiles, filePath)
+		}
 	}
 
 	return changedFiles, nil
