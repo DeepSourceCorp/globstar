@@ -1,4 +1,4 @@
-name: automatic-test-coverage-report
+name: run-tests
 
 on:
   push:
@@ -33,3 +33,4 @@ jobs:
             ./bin/deepsource report --analyzer test-coverage --key go --value-file ./coverage.html
         env:
             DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+
