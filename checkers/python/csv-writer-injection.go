@@ -68,8 +68,6 @@ func checkCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 		for _, p := range allparamNodes {
 			userDataVarMap[p.Content(pass.FileContext.Source)] = true
 		}
-
-
 	})
 
 	// get the variable names of user data or user formatted data
@@ -196,7 +194,11 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 
 	case "identifier":
 		return isRequestCall(node, source) || userDataVarMap[node.Content(source)]
+
+	case "subscript":
+		return isRequestCall(node, source)
 	}
+
 
 	return false
 }
