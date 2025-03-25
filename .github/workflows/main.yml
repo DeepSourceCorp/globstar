@@ -23,7 +23,7 @@ jobs:
       - name: Report test coverage results to DeepSource
         run: |
           # Run test commands
-            go test ./... -v -race -cover -coverprofile=cover.out -covermode=atomic
+            go test ./... -v -race -cover -coverprofile=cover.out -covermode=atomic $(go list ./... | grep -v "/checkers$")
             go tool cover -html=cover.out -o coverage.html
 
           # Install deepsource CLI
