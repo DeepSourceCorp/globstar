@@ -1,0 +1,35 @@
+name: automatic-test-coverage-report
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{github.event.pull_request.head.sha}}
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+      
+      - name: Report test coverage results to DeepSource
+        run: |
+          # Run test commands
+            go test ./... -v -race -cover -coverprofile=cover.out -covermode=atomic
+            go tool cover -html=cover.out -o coverage.html
+
+          # Install deepsource CLI
+            curl https://deepsource.io/cli | sh
+
+          # Run the report coverage command from the root directory
+            ./bin/deepsource report --analyzer test-coverage --key go --value-file ./coverage.html
+        env:
+            DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
