@@ -26,14 +26,9 @@ type Cli struct {
 	// RootDirectory is the target directory to analyze
 	RootDirectory string
 	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
-	Checkers        []analysis.Checker
-	Config          *config.Config
-	IncMode *IncrementalConfig
-}
-
-type IncrementalConfig struct {
-	trigger bool
-	compareHash string
+	Checkers    []analysis.Checker
+	Config      *config.Config
+	CmpHash string
 }
 
 func (c *Cli) loadConfig() error {
@@ -151,7 +146,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					},
 
 					&cli.StringFlag{
-						Name:    "Incremental Analyzer",
+						Name:    "Analyze Changeset",
 						Usage:   "Specify which commit to compare the head with to get changed file for analysis. Use --new-since-rev={commit-hash}",
 						Aliases: []string{"new-since-rev"},
 					},
@@ -163,14 +158,8 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					}
 
 					commitHash := cmd.String("new-since-rev")
-					if commitHash != ""{
-						if c.IncMode == nil {
-							c.IncMode = &IncrementalConfig{}
-						}
-					c.IncMode.trigger = true
-					c.IncMode.compareHash = commitHash
-					}
-					
+					c.CmpHash = commitHash
+
 					checkers := cmd.String("checkers")
 					if checkers == "local" {
 						return c.RunCheckers(false, true)
@@ -408,17 +397,13 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	}
 
 	result := checkResult{}
-	if c.IncMode == nil || c.IncMode.compareHash == "" {
-		return fmt.Errorf("No commit-hash provided\n")
-	}
 	
 
-	analysisFiles, err := c.GetChangedFiles(c.IncMode.compareHash)
-		if err != nil {
-			analysisFiles = []string{}
-			return err
-		}
-
+	analysisFiles, err := c.GetChangedFiles(c.CmpHash)
+	if err != nil {
+		analysisFiles = []string{}
+		return err
+	}
 
 	//Creating a map instead of slices to enhance performance of large codebases.
 	changedFileMap := make(map[string]struct{}, len(analysisFiles))
@@ -433,7 +418,7 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 
 		// Only run if the incremental flag is provided.
-		if c.IncMode.trigger{
+		if len(c.CmpHash) > 0 {
 			// Skip the path if it's not included in the changed files.
 			_, isChanged := changedFileMap[path]
 			if !isChanged {

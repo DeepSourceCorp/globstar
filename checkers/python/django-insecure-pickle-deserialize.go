@@ -169,7 +169,7 @@ func isRequestSource(node *sitter.Node, source []byte, reqVarMap map[string]bool
 		}
 
 		return true
-	
+
 	case "identifier":
 		return reqVarMap[node.Content(source)]
 	}

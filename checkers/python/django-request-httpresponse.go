@@ -1,8 +1,8 @@
 package python
 
 import (
-	"strings"
 	"regexp"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
@@ -67,11 +67,11 @@ func checkDjangoRequestHttpResponse(pass *analysis.Pass) (interface{}, error) {
 		if funcNode.Type() != "attribute" && funcNode.Type() != "identifier" {
 			return
 		}
-		
+
 		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), "HttpResponse") && !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), "HttpResponseBadRequest") {
 			return
 		}
-		
+
 		argListNode := node.ChildByFieldName("arguments")
 		if argListNode.Type() != "argument_list" {
 			return

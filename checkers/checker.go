@@ -71,7 +71,7 @@ var AnalyzerRegistry = []Analyzer{
 		Analyzers: []*goAnalysis.Analyzer{javascript.NoDoubleEq, javascript.SQLInjection},
 	},
 	{
-		TestDir: "checkers/python/testdata",
+		TestDir:   "checkers/python/testdata",
 		Analyzers: []*goAnalysis.Analyzer{python.InsecureUrllibFtp, python.DjangoSSRFInjection, python.DjangoInsecurePickleDeserialize, python.DjangoRequestDataWrite, python.DjangoRequestHttpResponse, python.DjangoMissingThrottleConfig, python.DjangoCsvWriterInjection, python.DjangoNanInjection, python.DjangoPasswordEmptyString},
 	},
 }

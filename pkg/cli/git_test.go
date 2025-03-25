@@ -16,32 +16,32 @@ import (
 
 func printDirectoryContents(tempDir string, t *testing.T) {
 	t.Log("Directory structure after commits:")
-		err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			
-			// Get relative path from tempDir for cleaner output
-			relPath, err := filepath.Rel(tempDir, path)
-			if err != nil {
-				relPath = path // Fallback to full path if relative fails
-			}
-			
-			// Skip the root directory itself
-			if relPath == "." {
-				return nil
-			}
-			
-			// Log each file/directory with its type
-			if info.IsDir() {
-				t.Logf("DIR: %s", relPath)
-			} else {
-				t.Logf("FILE: %s (%d bytes)", relPath, info.Size())
-			}
-			
+	err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Get relative path from tempDir for cleaner output
+		relPath, err := filepath.Rel(tempDir, path)
+		if err != nil {
+			relPath = path // Fallback to full path if relative fails
+		}
+
+		// Skip the root directory itself
+		if relPath == "." {
 			return nil
-		})
-		require.NoError(t, err, "Failed to walk directory structure")	
+		}
+
+		// Log each file/directory with its type
+		if info.IsDir() {
+			t.Logf("DIR: %s", relPath)
+		} else {
+			t.Logf("FILE: %s (%d bytes)", relPath, info.Size())
+		}
+
+		return nil
+	})
+	require.NoError(t, err, "Failed to walk directory structure")
 }
 
 func copyDirectory(src, dst string) error {
@@ -57,7 +57,7 @@ func copyDirectory(src, dst string) error {
 
 		dstPath := filepath.Join(dst, relPath)
 
-		if d.IsDir(){
+		if d.IsDir() {
 			return os.MkdirAll(dstPath, os.ModePerm)
 		}
 
@@ -66,8 +66,7 @@ func copyDirectory(src, dst string) error {
 	})
 }
 
-
-func copyFile(src, dst string) error{
+func copyFile(src, dst string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -87,15 +86,14 @@ func copyFile(src, dst string) error{
 	return nil
 }
 
- func TestGetChangedFiles(t *testing.T){
-	
+func TestGetChangedFiles(t *testing.T) {
+
 	testData := "testdata"
 
 	t.Run("Checking the recognition of an added file between two commits", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "git-test-*")
-		require.NoError(t,err)
+		require.NoError(t, err)
 		defer os.RemoveAll(tempDir)
-
 
 		cli := &Cli{RootDirectory: tempDir}
 		err = copyDirectory(testData, tempDir)
@@ -103,7 +101,7 @@ func copyFile(src, dst string) error{
 
 		repo, err := git.PlainInit(tempDir, false)
 		require.NoError(t, err)
-		
+
 		worktree, err := repo.Worktree()
 		require.NoError(t, err)
 
@@ -112,9 +110,9 @@ func copyFile(src, dst string) error{
 
 		commit, err := worktree.Commit("Initial commit", &git.CommitOptions{
 			Author: &object.Signature{
-				Name: "Test User",
+				Name:  "Test User",
 				Email: "test@example.com",
-				When: time.Now(),
+				When:  time.Now(),
 			},
 		})
 
@@ -127,13 +125,12 @@ func copyFile(src, dst string) error{
 
 		_, err = worktree.Commit("Add a new file", &git.CommitOptions{
 			Author: &object.Signature{
-				Name: "Test User",
+				Name:  "Test User",
 				Email: "test@example.com",
-				When: time.Now(),
+				When:  time.Now(),
 			},
 		})
 		require.NoError(t, err)
-
 
 		obj, err := repo.CommitObject(commit)
 		initialHash := obj.Hash.String()
@@ -145,7 +142,7 @@ func copyFile(src, dst string) error{
 
 	t.Run("Checking the recognition of updated files", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "git-test-*")
-		require.NoError(t,err)
+		require.NoError(t, err)
 		defer os.RemoveAll(tempDir)
 
 		cli := &Cli{RootDirectory: tempDir}
@@ -154,7 +151,7 @@ func copyFile(src, dst string) error{
 
 		repo, err := git.PlainInit(tempDir, false)
 		require.NoError(t, err)
-		
+
 		worktree, err := repo.Worktree()
 		require.NoError(t, err)
 
@@ -163,11 +160,11 @@ func copyFile(src, dst string) error{
 
 		commit, err := worktree.Commit("Initial commit", &git.CommitOptions{
 			Author: &object.Signature{
-				Name: "Test User",
+				Name:  "Test User",
 				Email: "test@example.com",
-				When: time.Now(),
+				When:  time.Now(),
 			},
-		})	
+		})
 
 		obj, err := repo.CommitObject(commit)
 		require.NoError(t, err)
@@ -188,9 +185,9 @@ func copyFile(src, dst string) error{
 
 		_, err = worktree.Commit("Edited file", &git.CommitOptions{
 			Author: &object.Signature{
-				Name: "Test User",
+				Name:  "Test User",
 				Email: "test@example.com",
-				When: time.Now(),
+				When:  time.Now(),
 			},
 		})
 
@@ -224,9 +221,9 @@ func copyFile(src, dst string) error{
 
 		commit, err := worktree.Commit("Initial commit ", &git.CommitOptions{
 			Author: &object.Signature{
-				Name: "Test User",
+				Name:  "Test User",
 				Email: "test@example.com",
-				When: time.Now(),
+				When:  time.Now(),
 			},
 		})
 		require.NoError(t, err)
@@ -243,9 +240,9 @@ func copyFile(src, dst string) error{
 
 		_, err = worktree.Commit("Rename file", &git.CommitOptions{
 			Author: &object.Signature{
-				Name: "Test User",
+				Name:  "Test User",
 				Email: "test@example.com",
-				When: time.Now(),
+				When:  time.Now(),
 			},
 		})
 		require.NoError(t, err)
@@ -254,8 +251,8 @@ func copyFile(src, dst string) error{
 		changedFiles, err := cli.GetChangedFiles(initialHash)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(changedFiles))
-		
+
 		assert.Contains(t, changedFiles, newFp)
 	})
 
- }
+}

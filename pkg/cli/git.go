@@ -3,57 +3,85 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
+func getCurrentWorkDirState(repo *git.Repository, rootDir string) ([]string, error) {
+	worktree, err := repo.Worktree()
+
+	if err != nil {
+		return nil, fmt.Errorf("Could not get the current directory worktree: %v\n", worktree)
+	}
+
+	var changedFiles []string
+
+	status, err := worktree.Status()
+	if err != nil {
+		return nil, fmt.Errorf("Could not get worktree status: %v", err)
+	}
+
+	for file, fileStatus := range status {
+		if fileStatus.Worktree != git.Unmodified || fileStatus.Staging != git.Unmodified {
+			fp, err := filepath.Abs(filepath.Join(rootDir, file))
+			if err != nil {
+				return changedFiles, fmt.Errorf("could not resolve filepath for %s: %v", file, err)
+			}
+			changedFiles = append(changedFiles, fp)
+		}
+
+	}
+
+	return changedFiles, nil
+}
+
 // GetChangedFiles returns all changes between latest commit and the previous one
 func (c *Cli) GetChangedFiles(compareCommitHash string) ([]string, error) {
-
 	// Open the git repository at the root directory
 	repo, err := git.PlainOpen(c.RootDirectory)
-	if err !=  nil {
+	if err != nil {
 		return nil, fmt.Errorf("Could not open the Directory.")
 	}
 
-	// Define references for the current and previous commits
-	head := "HEAD"
-	prev:= compareCommitHash
-
-	// Resolve the hash for the latest commit
-	latestCommitHash, err := repo.ResolveRevision(plumbing.Revision(head))
+	headRef, err := repo.Head()
 	if err != nil {
-		return nil, fmt.Errorf("Couldnt get revision hash: %v", err)
+		return nil, fmt.Errorf("Unable to fetch HEAD of the repo, try commiting first :P. Err: %v\n", err)
 	}
 
-	// Get the commit object for the latest commit
-	latestCommit, err := repo.CommitObject(*latestCommitHash)
+	headCommit, err := repo.CommitObject(headRef.Hash())
 	if err != nil {
-		return nil, fmt.Errorf("Could not get revision commit: %v\n", err)
+		return nil, fmt.Errorf("Could not get HEAD commit: %v\n", err)
 	}
 
-	// Resolve the hash for the previous commit
-	providedCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
+	var changedFiles []string
+
+	prev := compareCommitHash
+	prevCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
 	if err != nil {
-		return nil, fmt.Errorf("Couldnt get revision hash: %v", err)
+		return nil, fmt.Errorf("Could not get revision hash: %v\n", err)
 	}
 
-	// Get the commit object for the previous commit
-	prevCommit, err := repo.CommitObject(*providedCommitHash)
+	prevCommit, err := repo.CommitObject(*prevCommitHash)
+
 	if err != nil {
-		return nil, fmt.Errorf("Could not get revision commit: %v\n", err)
+		return nil, fmt.Errorf("Could not get the commit object for provided commit-hash: %v\n", prevCommit)
 	}
 
-	// GEnerate a patch between the previous and latest commits
-	patch, err := prevCommit.Patch(latestCommit)
+	allChanges, err := getCurrentWorkDirState(repo, c.RootDirectory)
+
+	if err != nil {
+		return nil, fmt.Errorf("Problem getting current directory state: %v\n", err)
+	}
+
+	patch, err := prevCommit.Patch(headCommit)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create a patch")
 	}
-
+	changedFiles = allChanges
 	// Extract the changed files from the patch
 	filePatches := patch.FilePatches()
-	var changedFiles []string;
 	for _, filePatch := range filePatches {
 		_, file := filePatch.Files()
 		// Construct absolute paths, to be used by the analyzer.
@@ -61,11 +89,11 @@ func (c *Cli) GetChangedFiles(compareCommitHash string) ([]string, error) {
 		if err != nil {
 			return changedFiles, fmt.Errorf("could not resolve filepath")
 		}
-
+		if slices.Contains(allChanges, filePath) {
+			continue
+		}
 		changedFiles = append(changedFiles, filePath)
 	}
-
-	
 
 	return changedFiles, nil
 
