@@ -1,3 +1,5 @@
+//go:build exclude
+
 // <expect-error>
 http.SetCookie(&http.Cookie{
     Name: "session",

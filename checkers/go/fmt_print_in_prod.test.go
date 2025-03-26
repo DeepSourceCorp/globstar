@@ -1,3 +1,5 @@
+//go:build exclude
+
 // <expect-error>
 fmt.Print()
 

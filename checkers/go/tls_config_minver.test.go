@@ -1,3 +1,5 @@
+//go:build exclude
+
 import (
 	"crypto/tls"
 	"fmt"

@@ -17,6 +17,7 @@ func TestGenerateAnalyzerRegistry(t *testing.T) {
 
 import (
 	"globstar.dev/analysis"
+	"globstar.dev/customanalyzer/checkers"
 )
 
 var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{}`,
@@ -28,6 +29,7 @@ var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{}`,
 
 import (
 	"globstar.dev/analysis"
+	"globstar.dev/customanalyzer/checkers"
 )
 
 var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{
@@ -39,7 +41,7 @@ var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := generateAnalyzerRegistry(tt.goCheckers); got != tt.want {
-				t.Errorf("generateAnalyzerRegistry() = %v, want %v", got, tt.want)
+				t.Errorf("generateAnalyzerRegistry() = \n%v, want \n%v", got, tt.want)
 			}
 		})
 	}

@@ -1,3 +1,5 @@
+//go:build exclude
+
 func unsafe() {
 	// <expect-error> insecure grpc dial
     conn, err := grpc.Dial(address, grpc.WithInsecure())

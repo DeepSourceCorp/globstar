@@ -10,7 +10,7 @@ import (
 
 // We use go.mod.embed because embedding is not supported for go.mod files
 //
-//go:embed custom_analyzer_stub/*.go custom_analyzer_stub/go.mod.embed  custom_analyzer_stub/go.sum.embed
+//go:embed custom_analyzer_stub/go.mod.embed  custom_analyzer_stub/go.sum.embed	custom_analyzer_stub/main.go.embed
 var AnalyzerStubs embed.FS
 
 // Copy all the files from the source directory to the destination directory
