@@ -13,7 +13,7 @@ var SQLInjectionDFG = &analysis.Analyzer{
 	Description: "Using raw SQL queries with unvalidated input can lead to SQL injection vulnerabilities",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityCritical,
-	// Run:         detectSQLInjection,
+	Run:         detectSQLInjectionDFG,
 }
 
 // DataFlowNode represents a node in our data flow graph
