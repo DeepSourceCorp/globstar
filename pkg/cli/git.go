@@ -14,16 +14,6 @@ import (
 func (c *Cli) GetChangedFiles(compareHash string) ([]string, error) {
 	changedFiles := []string{}
 	repo, err := git.PlainOpen(c.RootDirectory)
-	if err !=  nil {
-		return nil, fmt.Errorf("Could not open the Directory.")
-	}
-
-	// Define references for the current and previous commits
-	head := "HEAD"
-	prev:= "HEAD~1"
-
-	// Resolve the hash for the latest commit
-	latestCommitHash, err := repo.ResolveRevision(plumbing.Revision(head))
 	if err != nil {
 		return changedFiles, fmt.Errorf("failed to open git repository: %w", err)
 	}
@@ -111,8 +101,6 @@ func (c *Cli) GetChangedFiles(compareHash string) ([]string, error) {
 	for file := range changedFilesMap {
 		changedFiles = append(changedFiles, filepath.Join(c.RootDirectory, file))
 	}
-
-	
 
 	return changedFiles, nil
 }
