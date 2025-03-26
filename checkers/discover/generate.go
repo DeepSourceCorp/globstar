@@ -65,3 +65,93 @@ func GenerateAnalyzer(checkerDir, dest string) error {
 
 	return nil
 }
+
+
+// define the templates to be used in the registry.go
+const (
+    headerTemplate = `// AUTOMATICALLY GENERATED: DO NOT EDIT
+
+package checkers
+
+import (
+    "globstar.dev/checkers/javascript"
+    "globstar.dev/checkers/python"
+    goAnalysis "globstar.dev/analysis"
+)
+
+var AnalyzerRegistry = []Analyzer{`
+
+    entryTemplate = `
+	{
+        TestDir:   "%[1]s/testdata", // relative to the repository root
+        Analyzers: []*goAnalysis.Analyzer{%[2]s
+        },
+    },
+`
+
+    footerTemplate = "}\n"
+)
+
+
+func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
+	var builder strings.Builder
+	// write the header
+	builder.WriteString(headerTemplate)
+
+	for lang, checkerList := range builtinCheckerMap {
+		builtinChecker := "\n"
+		if len(checkerList) == 0 {
+			continue
+		} else {
+			for _, checker := range checkerList {
+				builtinChecker += fmt.Sprintf("\t\t\t%s,\n", checker)
+			}
+		}
+		entryStr := fmt.Sprintf(entryTemplate, lang, builtinChecker)
+		builder.WriteString(entryStr)
+	}
+
+	builder.WriteString(footerTemplate)
+
+	return builder.String()
+}
+
+func GenerateBuiltinChecker(checkerDirs []string) error {
+	dest := "./checkers"
+	registryFilePath := filepath.Join(dest, "registry.go")
+
+	goCheckers := make(map[string][]string)
+	for _, dir := range checkerDirs {
+		var err error
+		goCheckers[dir], err = DiscoverGoCheckers(dir)
+		if err != nil {
+			continue
+		}
+	}
+
+	// generate the builtin checker registry
+	builtinCheckersGo := generateBuiltinCheckerRegistry(goCheckers)
+	// write the builtin checkers registry to the destination directory `./checkers`
+	// which assumed to be existing
+
+	// check if registry file exists. if not, create it
+	_, err := os.Stat(registryFilePath)
+
+	if os.IsNotExist(err) {
+		// file does not exist. create an empy registry file
+		newRegistryFile, err := os.Create(registryFilePath)
+		if err != nil {
+			return fmt.Errorf("error creating registry file: %v", err)
+		}
+		newRegistryFile.Close()
+	} else if err != nil {
+		return fmt.Errorf("error checking if registry file exists: %v", err)
+	}
+
+	err = os.WriteFile(registryFilePath, []byte(builtinCheckersGo), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing builtin checker registry: %v", err)
+	}
+
+	return nil
+}

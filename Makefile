@@ -6,6 +6,11 @@ SYSROOT_ARCHIVE ?= sysroots.tar.bz2
 
 CLI_BUILD_FLAGS := -X 'globstar.dev/pkg/cli.version=$$(git describe --tags 2>/dev/null || echo dev)'
 
+.PHONY: generate-registry
+generate-registry:
+	@echo "Generating Go checker registry"
+	@go run ./cmd/genregistry/main.go --dir ./checkers
+
 .PHONY: sysroot-pack
 sysroot-pack:
 	@tar cf - $(SYSROOT_DIR) -P | pv -s $[$(du -sk $(SYSROOT_DIR) | awk '{print $1}') * 1024] | pbzip2 > $(SYSROOT_ARCHIVE)
@@ -60,10 +65,10 @@ fmt:
 	@gofmt -s -w .
 	@echo "Done."
 
-build:
+build: generate-registry
 	CGO_ENABLED=1 go build -ldflags "$(CLI_BUILD_FLAGS)" -o bin/globstar ./cmd/globstar
 
-test-builtin-rules:
+test-builtin-rules: generate-registry
 	echo "Testing built-in rules..."
 	./bin/globstar test -d checkers
 
