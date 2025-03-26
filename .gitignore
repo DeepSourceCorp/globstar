@@ -48,5 +48,5 @@ dist/
 .release-env
 
 .globstar/
-
 checkers/registry.go
+.idea/

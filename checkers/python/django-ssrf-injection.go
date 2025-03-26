@@ -185,7 +185,7 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 		rightNode := node.ChildByFieldName("right")
 		if rightNode.Type() == "call" && isRequestCall(rightNode, source) {
 			return true
-		} else if rightNode.Type()  == "tuple" {
+		} else if rightNode.Type() == "tuple" {
 			targsNode := getNamedChildren(rightNode, 0)
 			for _, targ := range targsNode {
 				if targ.Type() == "identifier" && reqVarMap[targ.Content(source)] {
@@ -205,7 +205,6 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 
 	return false
 }
-
 
 func isRequestCall(node *sitter.Node, source []byte) bool {
 	switch node.Type() {

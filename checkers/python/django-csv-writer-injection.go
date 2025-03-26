@@ -64,7 +64,7 @@ func checkDjangoCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		funcNode := node.ChildByFieldName("function")
-		
+
 		if funcNode.Type() != "attribute" {
 			return
 		}
@@ -82,11 +82,11 @@ func checkDjangoCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 
 		csvWriteMethodPat := `^(writerow|writerows|writeheader)$`
 		re := regexp.MustCompile(csvWriteMethodPat)
-		
+
 		if !re.MatchString(funcAttNode.Content(pass.FileContext.Source)) {
 			return
 		}
-		
+
 		argListNode := node.ChildByFieldName("arguments")
 		if argListNode.Type() != "argument_list" {
 			return
@@ -115,11 +115,10 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 		if funcNode.Type() != "attribute" {
 			return false
 		}
-		
+
 		if !strings.HasSuffix(funcNode.Content(source), ".format") {
 			return false
 		}
-
 
 		argListNode := node.ChildByFieldName("arguments")
 		if argListNode.Type() != "argument_list" {
