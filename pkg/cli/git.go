@@ -3,108 +3,104 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/utils/merkletrie"
 )
 
-func getCurrentWorkDirState(repo *git.Repository, rootDir string) ([]string, error) {
-	worktree, err := repo.Worktree()
-
-	if err != nil {
-		return nil, fmt.Errorf("Could not get the current directory worktree: %v\n", worktree)
-	}
-
-	var changedFiles []string
-
-	status, err := worktree.Status()
-	if err != nil {
-		return nil, fmt.Errorf("Could not get worktree status: %v", err)
-	}
-
-	for file, fileStatus := range status {
-		if fileStatus.Worktree != git.Unmodified || fileStatus.Staging != git.Unmodified {
-			fp, err := filepath.Abs(filepath.Join(rootDir, file))
-			if err != nil {
-				return changedFiles, fmt.Errorf("could not resolve filepath for %s: %v", file, err)
-			}
-			changedFiles = append(changedFiles, fp)
-		}
-
-	}
-
-	return changedFiles, nil
-}
-
-// GetChangedFiles returns all changes between latest commit and the previous one
-func (c *Cli) GetChangedFiles(compareCommitHash string) ([]string, error) {
-	// Open the git repository at the root directory
+// GetChangedFiles returns all changes between compareHash and the current
+// state of the working directory
+func (c *Cli) GetChangedFiles(compareHash string) ([]string, error) {
+	changedFiles := []string{}
 	repo, err := git.PlainOpen(c.RootDirectory)
 	if err != nil {
-		return nil, fmt.Errorf("Could not open the Directory.")
+		return changedFiles, fmt.Errorf("failed to open git repository: %w", err)
 	}
 
+	// Get worktree
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return changedFiles, fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	// Get status between commit and working directory
+	status, err := worktree.Status()
+	if err != nil {
+		return changedFiles, fmt.Errorf("failed to get status: %w", err)
+	}
+
+	// Get compare commit
+	if compareHash == "" {
+		return changedFiles, fmt.Errorf("compare hash is required")
+	}
+
+	hash := plumbing.NewHash(compareHash)
+	compareCommit, err := repo.CommitObject(hash)
+	if err != nil {
+		return changedFiles, fmt.Errorf("failed to get compare commit: %w", err)
+	}
+
+	// Get commit tree for comparison
+	compareTree, err := compareCommit.Tree()
+	if err != nil {
+		return changedFiles, fmt.Errorf("failed to get compare tree: %w", err)
+	}
+
+	// Get the status between the HEAD commit and the compare hash
+	// Get the HEAD commit tree for comparison
 	headRef, err := repo.Head()
 	if err != nil {
-		return nil, fmt.Errorf("Unable to fetch HEAD of the repo, try commiting first :P. Err: %v\n", err)
+		return changedFiles, fmt.Errorf("failed to get HEAD ref: %w", err)
 	}
 
 	headCommit, err := repo.CommitObject(headRef.Hash())
 	if err != nil {
-		return nil, fmt.Errorf("Could not get HEAD commit: %v\n", err)
+		return changedFiles, fmt.Errorf("failed to get HEAD commit: %w", err)
 	}
 
-	var changedFiles []string
-	switch len(compareCommitHash) {
-	case 0:
-		currDirState, err := getCurrentWorkDirState(repo, c.RootDirectory)
+	headTree, err := headCommit.Tree()
+	if err != nil {
+		return changedFiles, fmt.Errorf("failed to get HEAD tree: %w", err)
+	}
+
+	// Get the changes between the two trees
+	changes, err := compareTree.Diff(headTree)
+	if err != nil {
+		return changedFiles, fmt.Errorf("failed to get changes between HEAD and compare commit: %w", err)
+	}
+
+	changedFilesMap := map[string]struct{}{}
+	// Get the files that have changed
+	for _, change := range changes {
+		action, err := change.Action()
 		if err != nil {
-			return nil, fmt.Errorf("%v\n", err)
+			continue
 		}
 
-		changedFiles = currDirState
-
-	default:
-		prev := compareCommitHash
-		prevCommitHash, err := repo.ResolveRevision(plumbing.Revision(prev))
-		if err != nil {
-			return nil, fmt.Errorf("Could not get revision hash: %v\n", err)
+		if action == merkletrie.Delete {
+			continue
 		}
 
-		prevCommit, err := repo.CommitObject(*prevCommitHash)
+		changedFilesMap[change.To.Name] = struct{}{}
+	}
 
-		if err != nil {
-			return nil, fmt.Errorf("Could not get the commit object for provided commit-hash: %v\n", prevCommit)
+	for file, fileStatus := range status {
+		if fileStatus.Worktree == git.Deleted || fileStatus.Staging == git.Deleted {
+			delete(changedFilesMap, file)
+			continue
 		}
 
-		allChanges, err := getCurrentWorkDirState(repo, c.RootDirectory)
-
-		if err != nil {
-			return nil, fmt.Errorf("Problem getting current directory state: %v\n", err)
+		if fileStatus.Worktree == git.Unmodified && fileStatus.Staging == git.Unmodified {
+			continue
 		}
 
-		patch, err := prevCommit.Patch(headCommit)
-		if err != nil {
-			return nil, fmt.Errorf("Could not create a patch")
-		}
-		changedFiles = allChanges
-		// Extract the changed files from the patch
-		filePatches := patch.FilePatches()
-		for _, filePatch := range filePatches {
-			_, file := filePatch.Files()
-			// Construct absolute paths, to be used by the analyzer.
-			filePath, err := filepath.Abs(filepath.Join(c.RootDirectory, file.Path()))
-			if err != nil {
-				return changedFiles, fmt.Errorf("could not resolve filepath")
-			}
-			if slices.Contains(allChanges, filePath) {
-				continue
-			}
-			changedFiles = append(changedFiles, filePath)
-		}
+		changedFilesMap[file] = struct{}{}
+	}
+
+	for file := range changedFilesMap {
+		changedFiles = append(changedFiles, filepath.Join(c.RootDirectory, file))
 	}
 
 	return changedFiles, nil
-
 }

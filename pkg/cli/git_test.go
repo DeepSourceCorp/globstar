@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -55,14 +56,14 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(dstFile, srcFile)
 
-	return nil
+	return err
 }
 
 func TestGetChangedFiles(t *testing.T) {
 
 	testData := "testdata"
 
-	t.Run("Checking the recognition of current changed state of the work directory, without commiting.", func(t *testing.T) {
+	t.Run("Detect uncommitted changes", func(t *testing.T) {
 		// Creating a temporary directory to run the tests on.
 		tempDir, err := os.MkdirTemp("", "git-test-*")
 		require.NoError(t, err, "Could Not create a temporary directory")
@@ -71,6 +72,7 @@ func TestGetChangedFiles(t *testing.T) {
 		cli := &Cli{RootDirectory: tempDir}
 		// Copying the test-data directory containing assets for the tests to be run on.
 		err = copyDirectory(testData, tempDir)
+		require.NoError(t, err, "Failed to copy test data directory")
 		// Initializing the temporary directory as a git repo.
 		repo, err := git.PlainInit(tempDir, false)
 		require.NoError(t, err)
@@ -81,13 +83,14 @@ func TestGetChangedFiles(t *testing.T) {
 		_, err = worktree.Add(".")
 		require.NoError(t, err)
 
-		_, err = worktree.Commit("Initial commit", &git.CommitOptions{
+		lastCommit, err := worktree.Commit("Initial commit", &git.CommitOptions{
 			Author: &object.Signature{
 				Name:  "Test User",
 				Email: "test@example.com",
 				When:  time.Now(),
 			},
 		})
+		require.NoError(t, err, "Failed to commit the initial commit")
 
 		fp := filepath.Join(tempDir, "test2.txt")
 
@@ -98,16 +101,27 @@ func TestGetChangedFiles(t *testing.T) {
 		require.NoError(t, err, "could not open file for editing")
 
 		changedFiles, err := cli.GetChangedFiles("")
-		require.NoError(t, err, "Couldn't fetch the changed files")
-		assert.Contains(t, changedFiles, fp)
+		require.Error(t, fmt.Errorf("compare hash is required"), err)
+		assert.Empty(t, changedFiles)
 
+		// test unstaged files
+		changedFiles, err = cli.GetChangedFiles(lastCommit.String())
+		require.NoError(t, err)
+		assert.Equal(t, changedFiles, []string{fp})
+
+		// test staged files
+		_, err = worktree.Add(".")
+		require.NoError(t, err)
+		changedFiles, err = cli.GetChangedFiles(lastCommit.String())
+		require.NoError(t, err)
+		assert.Equal(t, changedFiles, []string{fp})
 	})
 
 	t.Run("Checking the recognition of an added file between two commits", func(t *testing.T) {
 		// Creating a temporary directory to run the tests on.
 		tempDir, err := os.MkdirTemp("", "git-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		//defer os.RemoveAll(tempDir)
 
 		cli := &Cli{RootDirectory: tempDir}
 		// Copying the test-data directory containing assets for the tests to be run on.
@@ -126,13 +140,14 @@ func TestGetChangedFiles(t *testing.T) {
 		require.NoError(t, err)
 
 		// Creating initial commit with all files.
-		commit, err := worktree.Commit("Initial commit", &git.CommitOptions{
+		initialCommit, err := worktree.Commit("Initial commit", &git.CommitOptions{
 			Author: &object.Signature{
 				Name:  "Test User",
 				Email: "test@example.com",
 				When:  time.Now(),
 			},
 		})
+		require.NoError(t, err)
 
 		// Creating a new file to test file addition detection.
 		filePath := filepath.Join(tempDir, "test3.txt")
@@ -142,6 +157,7 @@ func TestGetChangedFiles(t *testing.T) {
 
 		// Adding the new file to git staging area.
 		_, err = worktree.Add("test3.txt")
+		require.NoError(t, err)
 
 		// Creating a second commit with the new file.
 		_, err = worktree.Commit("Add a new file", &git.CommitOptions{
@@ -153,13 +169,9 @@ func TestGetChangedFiles(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Getting the hash of the initial commit for comparison.
-		obj, err := repo.CommitObject(commit)
-		initialHash := obj.Hash.String()
-		require.NoError(t, err)
-
 		// Checking if the new file is detected in the changes.
-		changedFiles, err := cli.GetChangedFiles(initialHash)
+		changedFiles, err := cli.GetChangedFiles(initialCommit.String())
+		require.NoError(t, err)
 		assert.Equal(t, 1, len(changedFiles))
 	})
 
@@ -193,6 +205,7 @@ func TestGetChangedFiles(t *testing.T) {
 				When:  time.Now(),
 			},
 		})
+		require.NoError(t, err)
 
 		// Getting the hash of the initial commit for comparison.
 		obj, err := repo.CommitObject(commit)
@@ -278,6 +291,7 @@ func TestGetChangedFiles(t *testing.T) {
 
 		// Adding the renamed file to git staging area.
 		_, err = worktree.Add(".")
+		require.NoError(t, err)
 
 		// Creating a second commit with the renamed file.
 		_, err = worktree.Commit("Rename file", &git.CommitOptions{
@@ -327,6 +341,7 @@ func TestGetChangedFiles(t *testing.T) {
 				When:  time.Now(),
 			},
 		})
+		require.NoError(t, err)
 
 		// Creating a new file to test file addition detection.
 		filePath := filepath.Join(tempDir, "test3.txt")
@@ -336,6 +351,7 @@ func TestGetChangedFiles(t *testing.T) {
 
 		// Adding the new file to git staging area.
 		_, err = worktree.Add("test3.txt")
+		require.NoError(t, err)
 
 		// Creating a second commit with the new file.
 		_, err = worktree.Commit("Add a new file", &git.CommitOptions{
@@ -359,6 +375,7 @@ func TestGetChangedFiles(t *testing.T) {
 
 		// Checking if both committed and uncommitted changes are detected.
 		changedFiles, err := cli.GetChangedFiles(initialHash)
+		require.NoError(t, err)
 
 		assert.Contains(t, changedFiles, filePath)
 		assert.Contains(t, changedFiles, createdFileName)
