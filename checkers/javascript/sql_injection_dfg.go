@@ -1,17 +1,19 @@
 package javascript
 
 import (
+	"fmt"
+
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
 )
 
-var SQLInjection = &analysis.Analyzer{
+var SQLInjectionDFG = &analysis.Analyzer{
 	Name:        "sql_injection",
 	Language:    analysis.LangJs,
 	Description: "Using raw SQL queries with unvalidated input can lead to SQL injection vulnerabilities",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityCritical,
-	Run:         detectSQLInjection,
+	// Run:         detectSQLInjection,
 }
 
 // DataFlowNode represents a node in our data flow graph
@@ -31,7 +33,7 @@ var sanitizerFunctions = map[string]bool{
 	"mysql_real_escape_string": true,
 }
 
-func detectSQLInjection(pass *analysis.Pass) (interface{}, error) {
+func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 	// Map of vulnerable function names to watch for
 	vulnerableFunctions := map[string]bool{
 		"query":             true,
@@ -188,8 +190,9 @@ func detectSQLInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		// Check if the argument is vulnerable using data flow analysis
-		if isVulnerableWithDataFlow(firstArg, pass.FileContext.Source, dataFlowGraph) {
-			pass.Report(pass, node, "Potential SQL injection vulnerability detected, use parameterized queries instead")
+		if IsVulnerableWithDataFlow(firstArg, pass.FileContext.Source, dataFlowGraph) {
+			pass.Report(pass, node, "Found SQL-Injection attempt")
+			return
 		}
 	})
 
@@ -310,10 +313,14 @@ func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataF
 	for i := 0; i < int(node.NamedChildCount()); i++ {
 		child := node.NamedChild(i)
 		if child != nil && child.Type() == "template_substitution" {
-			// Get the expression inside ${}
+			// Get the ression inside ${}
 			exprNode := child.NamedChild(0)
+			fmt.Printf("Expression inside template: %v\n", exprNode)
 			if exprNode != nil && exprNode.Type() == "identifier" {
 				varName := exprNode.Content(sourceCode)
+
+				fmt.Printf("Variable name: %v\n", varName)
+
 				if sourceNode, exists := dataFlowGraph[varName]; exists {
 					dfNode.Sources = append(dfNode.Sources, sourceNode)
 					if sourceNode.Tainted {
@@ -381,7 +388,7 @@ func propagateTaint(dataFlowGraph map[string]*DataFlowNode) {
 }
 
 // Check if a node is vulnerable using data flow analysis
-func isVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGraph map[string]*DataFlowNode) bool {
+func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGraph map[string]*DataFlowNode) bool {
 	if node == nil {
 		return false
 	}
@@ -400,8 +407,8 @@ func isVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 		left := node.ChildByFieldName("left")
 		right := node.ChildByFieldName("right")
 
-		return isVulnerableWithDataFlow(left, sourceCode, dataFlowGraph) ||
-			isVulnerableWithDataFlow(right, sourceCode, dataFlowGraph)
+		return IsVulnerableWithDataFlow(left, sourceCode, dataFlowGraph) ||
+			IsVulnerableWithDataFlow(right, sourceCode, dataFlowGraph)
 
 	case "template_string":
 		// Check each substitution
@@ -409,7 +416,7 @@ func isVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 			child := node.NamedChild(i)
 			if child != nil && child.Type() == "template_substitution" {
 				exprNode := child.NamedChild(0)
-				if isVulnerableWithDataFlow(exprNode, sourceCode, dataFlowGraph) {
+				if IsVulnerableWithDataFlow(exprNode, sourceCode, dataFlowGraph) {
 					return true
 				}
 			}
@@ -427,7 +434,7 @@ func isVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 		if args != nil {
 			for i := 0; i < int(args.NamedChildCount()); i++ {
 				arg := args.NamedChild(i)
-				if isVulnerableWithDataFlow(arg, sourceCode, dataFlowGraph) {
+				if IsVulnerableWithDataFlow(arg, sourceCode, dataFlowGraph) {
 					return true
 				}
 			}
