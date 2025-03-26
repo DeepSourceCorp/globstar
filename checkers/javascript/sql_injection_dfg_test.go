@@ -119,37 +119,38 @@ func TestSQLInjection(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		// t.Run(tt.name, func(t *testing.T) {
-		// 	parseResult := parseJsCode(t, []byte(tt.code))
-		// 	var reportedVulns []struct {
-		// 		Pass *ana.Pass
-		// 		Node *sitter.Node
-		// 		Msg  string
-		// 	}
-		// 	pass := &ana.Pass{
-		// 		Analyzer:    SQLInjection,
-		// 		FileContext: parseResult,
-		// 		Report: func(p *ana.Pass, n *sitter.Node, msg string) {
-		// 			reportedVulns = append(reportedVulns, struct {
-		// 				Pass *ana.Pass
-		// 				Node *sitter.Node
-		// 				Msg  string
-		// 			}{p, n, msg})
-		// 		},
-		// 	}
+		t.Run(tt.name, func(t *testing.T) {
+			parseResult := parseJsCode(t, []byte(tt.code))
+			var reportedVulns []struct {
+				Pass *ana.Pass
+				Node *sitter.Node
+				Msg  string
+			}
+			pass := &ana.Pass{
+				Analyzer:    SQLInjection,
+				FileContext: parseResult,
+				Report: func(p *ana.Pass, n *sitter.Node, msg string) {
+					reportedVulns = append(reportedVulns, struct {
+						Pass *ana.Pass
+						Node *sitter.Node
+						Msg  string
+					}{p, n, msg})
+				},
+			}
 
-		// 	_, err := detectSQLInjection(pass)
+			_, err := detectSQLInjection(pass)
 
-		// 	require.NoError(t, err)
+			require.NoError(t, err)
 
-		// 	t.Logf("detectedVulnerabilities: %v\n", len(reportedVulns))
-		// 	if tt.wantVuln {
-		// 		assert.Greater(t, len(reportedVulns), 0, "Expected to detect sql injection vulnerability")
-		// 	} else {
-		// 		assert.Equal(t, 0, len(reportedVulns), "Unexpected Sql injection vuln. reported")
-		// 	}
+			t.Logf("detectedVulnerabilities: %v\n", len(reportedVulns))
+			if tt.wantVuln {
+				assert.Greater(t, len(reportedVulns), 0, "Expected to detect sql injection vulnerability")
+			} else {
+				assert.Equal(t, 0, len(reportedVulns), "Unexpected Sql injection vuln. reported")
+			}
 
-		// })
+		})
+
 		t.Run(tt.name+" DFG", func(t *testing.T) {
 			parseResult := parseJsCode(t, []byte(tt.code))
 			var reportedVulns []struct {
