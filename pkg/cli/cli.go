@@ -28,6 +28,7 @@ type Cli struct {
 	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
 	Checkers []analysis.Checker
 	Config   *config.Config
+	CmpHash  string
 }
 
 func (c *Cli) loadConfig() error {
@@ -143,12 +144,21 @@ or you can write your own in the .globstar directory of any repository.`,
 to run only the built-in checkers, and --checkers=all to run both.`,
 						Aliases: []string{"c"},
 					},
+
+					&cli.StringFlag{
+						Name:    "new-since-rev",
+						Usage:   "Specify which commit to compare the head with to get changed file for analysis. Use --new-since-rev={commit-hash}",
+						Aliases: []string{"new"},
+					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					ignorePattern := cmd.String("ignore")
 					if err := c.Config.AddExcludePatterns(ignorePattern); err != nil {
 						return err
 					}
+
+					commitHash := cmd.String("new-since-rev")
+					c.CmpHash = commitHash
 
 					checkers := cmd.String("checkers")
 					if checkers == "local" {
@@ -159,6 +169,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 						return c.RunCheckers(true, true)
 					}
 					return fmt.Errorf("invalid value for --checkers flag, must be one of 'local', 'builtin' or 'all', got %s", checkers)
+
 				},
 			},
 			{
@@ -386,6 +397,20 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	}
 
 	result := checkResult{}
+
+	changedFileMap := map[string]struct{}{}
+	if c.CmpHash != "" {
+		filesToAnalyze, err := c.GetChangedFiles(c.CmpHash)
+		if err != nil {
+			return err
+		}
+
+		//Creating a map instead of slices to enhance performance of large codebases.
+		for _, file := range filesToAnalyze {
+			changedFileMap[file] = struct{}{}
+		}
+	}
+
 	err := filepath.Walk(c.RootDirectory, func(path string, d fs.FileInfo, err error) error {
 		if err != nil {
 			// skip this path
@@ -407,6 +432,15 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 
 		if c.Config.ShouldExcludePath(path) {
 			return nil
+		}
+
+		// Only run if the incremental flag is provided.
+		if c.CmpHash != "" {
+			// Skip the path if it's not included in the changed files.
+			_, isChanged := changedFileMap[path]
+			if !isChanged {
+				return nil
+			}
 		}
 
 		language := analysis.LanguageFromFilePath(path)
@@ -442,7 +476,17 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	}
 
 	if len(goAnalyzers) > 0 {
-		goIssues, err := goAnalysis.RunAnalyzers(c.RootDirectory, goAnalyzers, nil)
+		goIssues, err := goAnalysis.RunAnalyzers(
+			c.RootDirectory,
+			goAnalyzers,
+			func(filename string) bool {
+				if c.CmpHash != "" {
+					_, isChanged := changedFileMap[filename]
+					return isChanged
+				}
+				return true
+			},
+		)
 		if err != nil {
 			return fmt.Errorf("failed to run Go-based analyzers: %w", err)
 		}
