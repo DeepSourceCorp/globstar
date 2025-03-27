@@ -232,6 +232,10 @@ func isEventSubscript(node *sitter.Node, source []byte) bool {
 		return false
 	}
 
+	if isRequestCall(node, source) {
+		return false
+	}
+
 	valIdNode := node
 
 	// when there are more than 1 subscript accesses, we need to go down the tree
