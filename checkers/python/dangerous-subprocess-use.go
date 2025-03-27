@@ -47,7 +47,7 @@ func checkDangerousSubprocessUse(pass *analysis.Pass) (interface{}, error) {
 			}
 		}
 	})
-	
+
 	// tainted data present in list
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() == "call" && isFunctionSubprocess(node, pass.FileContext.Source) {
@@ -57,7 +57,7 @@ func checkDangerousSubprocessUse(pass *analysis.Pass) (interface{}, error) {
 				taintedListNode := argNode.NamedChild(0)
 				shellBoolNode := argNode.NamedChild(1)
 
-				if isShellTrue(shellBoolNode, pass.FileContext.Source) && isEventTaintedListNode(taintedListNode, pass.FileContext.Source, eventVars){
+				if isShellTrue(shellBoolNode, pass.FileContext.Source) && isEventTaintedListNode(taintedListNode, pass.FileContext.Source, eventVars) {
 					pass.Report(pass, node, "Unsanitized event data in subprocess with shell=True enables command injection")
 				}
 			}
@@ -68,7 +68,7 @@ func checkDangerousSubprocessUse(pass *analysis.Pass) (interface{}, error) {
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() == "call" && isFunctionSubprocess(node, pass.FileContext.Source) {
 			argNode := node.ChildByFieldName("arguments")
-				
+
 			if argNode != nil && argNode.NamedChildCount() >= 4 {
 				argumentsNode := getNamedChildren(argNode, 0)
 				eventBool := false
@@ -92,36 +92,6 @@ func checkDangerousSubprocessUse(pass *analysis.Pass) (interface{}, error) {
 	})
 
 	return nil, nil
-}
-
-
-// get all the children nodes of a node
-func getNamedChildren(node *sitter.Node, startIdx int) []*sitter.Node {
-	var namedChildren []*sitter.Node
-	childrenCount := node.NamedChildCount()
-	
-	for i := startIdx; i < int(childrenCount); i++ {
-		namedChildren = append(namedChildren, node.NamedChild(i))
-	}
-
-	return namedChildren
-}
-
-func isEventTaintedNode(node *sitter.Node, source []byte) bool {
-	switch node.Type() {
-	case "call":
-		argsNode := node.ChildByFieldName("arguments")
-
-		if argsNode.Type() != "argument_list" {
-			return false
-		}
-
-		subscriptNode := argsNode.NamedChild(0)
-		if subscriptNode.Type() == "subscript" && strings.Contains(subscriptNode.Content(source), "event") {
-			return true
-		}
-	}
-	return false
 }
 
 func isShlexSanitized(code string) bool {
