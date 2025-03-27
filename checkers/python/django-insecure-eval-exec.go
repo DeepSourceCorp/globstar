@@ -1,6 +1,7 @@
 package python
 
 import (
+	"regexp"
 	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -62,7 +63,9 @@ func checkDjangoInsecureEvalExec(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		funcNode := node.ChildByFieldName("function")
-		if !strings.Contains(funcNode.Content(pass.FileContext.Source), "eval") && !strings.Contains(funcNode.Content(pass.FileContext.Source), "exec") && !strings.Contains(funcNode.Content(pass.FileContext.Source), "os.system"){
+		funcPattern := `\b(eval|exec)\b`
+		re := regexp.MustCompile(funcPattern)
+		if !re.MatchString(funcNode.Content(pass.FileContext.Source)) && !strings.Contains(funcNode.Content(pass.FileContext.Source), "os.system") {
 			return
 		}
 
@@ -119,7 +122,7 @@ func isBase64Decoded(node *sitter.Node, source []byte, reqVarMap map[string]bool
 			if byteArgsNode.NamedChildCount() == 0 {
 				return false
 			}
-			
+
 			byteArgs := getNamedChildren(byteArgsNode, 0)
 			for _, arg := range byteArgs {
 				if isStringFormatted(arg, source, reqVarMap, userFmtStringVarMap) || isRequestCall(arg, source) || hasUserDataVar(arg, source, reqVarMap, userFmtStringVarMap) {
@@ -154,7 +157,7 @@ func isStringFormatted(node *sitter.Node, source []byte, reqVarMap map[string]bo
 		}
 		strObjectNode := funcNode.ChildByFieldName("object")
 		funcAttribute := funcNode.Content(source)
-		if !strings.HasSuffix(funcAttribute, ".format") && strObjectNode.Type() != "string" {
+		if !strings.HasSuffix(funcAttribute, ".format") || strObjectNode.Type() != "string" {
 			return false
 		}
 
@@ -223,46 +226,6 @@ func hasUserDataVar(node *sitter.Node, source []byte, reqVarMap map[string]bool,
 		if argName == key {
 			return true
 		}
-	}
-
-	return false
-}
-
-func isRequestCall(node *sitter.Node, source []byte) bool {
-	switch node.Type() {
-	case "call":
-		funcNode := node.ChildByFieldName("function")
-		if funcNode.Type() != "attribute" {
-			return false
-		}
-		objectNode := funcNode.ChildByFieldName("object")
-		if !strings.Contains(objectNode.Content(source), "request") {
-			return false
-		}
-
-		attributeNode := funcNode.ChildByFieldName("attribute")
-		if attributeNode.Type() != "identifier" {
-			return false
-		}
-
-		if !strings.Contains(attributeNode.Content(source), "get") {
-			return false
-		}
-
-		return true
-
-	case "subscript":
-		valueNode := node.ChildByFieldName("value")
-		if valueNode.Type() != "attribute" {
-			return false
-		}
-
-		objNode := valueNode.ChildByFieldName("object")
-		if objNode.Type() != "identifier" && objNode.Content(source) != "request" {
-			return false
-		}
-
-		return true
 	}
 
 	return false
