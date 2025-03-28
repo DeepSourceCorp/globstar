@@ -58,6 +58,11 @@ func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.YamlCh
 	return checkersMap, err
 }
 
+type Analyzer struct {
+	TestDir   string
+	Analyzers []*goAnalysis.Analyzer
+}
+
 func LoadGoCheckers() []*goAnalysis.Analyzer {
 	analyzers := []*goAnalysis.Analyzer{}
 
@@ -65,11 +70,6 @@ func LoadGoCheckers() []*goAnalysis.Analyzer {
 		analyzers = append(analyzers, analyzer.Analyzers...)
 	}
 	return analyzers
-}
-
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
 }
 
 func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
