@@ -1,11 +1,11 @@
-package main
+package golang
 
 import (
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"jwt"
 )
 
 // CustomClaims defines the JWT claims structure.
@@ -14,7 +14,7 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func main() {
+func test() {
 	// Create claims with username and expiration time
 	claims := CustomClaims{
 		Username: "example_user",
