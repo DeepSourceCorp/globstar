@@ -1,3 +1,4 @@
+//registry:exclude
 // scope resolution implementation for JS and TS files
 package javascript
 
