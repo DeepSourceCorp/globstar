@@ -1,5 +1,6 @@
-//globstar:registry-exclude
 // scope resolution implementation for JS and TS files
+//
+//globstar:registry-exclude
 package javascript
 
 import (

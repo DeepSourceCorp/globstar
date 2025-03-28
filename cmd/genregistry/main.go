@@ -1,24 +1,24 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"context"
-	"path/filepath"
+	"fmt"
 	"github.com/urfave/cli/v3"
-	
+	"os"
+	"path/filepath"
+
 	"globstar.dev/checkers/discover"
 )
 
 func main() {
-	app := &cli.Command {
-		Name: "gen-registry",
+	app := &cli.Command{
+		Name:  "gen-registry",
 		Usage: "Tool to dynamically generate checker registry",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name: "dir",
-				Aliases: []string{"d"},
-				Usage: "Path to checker containing directory",
+				Name:     "dir",
+				Aliases:  []string{"d"},
+				Usage:    "Path to checker containing directory",
 				Required: true,
 			},
 		},
@@ -44,7 +44,7 @@ func main() {
 		},
 	}
 
-	if err :=  app.Run(context.Background(), os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "could not run gen-registry: %v", err)
 	}
 }
