@@ -5,20 +5,37 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strings"
 )
 
 func DiscoverGoCheckers(dir string) ([]string, error) {
 	goCheckers := []string{}
 	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, dir, nil, parser.AllErrors&parser.SkipObjectResolution)
+	pkgs, err := parser.ParseDir(fset, dir, nil, parser.AllErrors&parser.SkipObjectResolution|parser.ParseComments)
 	if err != nil {
 		return goCheckers, err
 	}
 
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Files {
+			isExcluded := false
+			if len(file.Comments) > 0 {
+				firstCommentGroup := file.Comments[0]
+				for _, comment := range firstCommentGroup.List {
+					if strings.TrimSpace(comment.Text) == "//globstar:registry-exclude" {
+						isExcluded = true
+						break
+					}
+				}
+			}
+
+			// skip this checker since exclude directive comment exists
+			if isExcluded {
+				continue
+			}
 			globstarPkgName := ""
 			for _, imp := range file.Imports {
+				// check for registry exclude comment in checker file
 				if imp.Path.Value == `"globstar.dev/analysis"` {
 					if imp.Name == nil {
 						globstarPkgName = "analysis"

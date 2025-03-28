@@ -1,11 +1,12 @@
-package main
+package golang
 
 import (
 	"crypto/rand"
 	"fmt"
-	// <expect-error> import "math/rand"
-	"math/rand"
+
 	"math/big"
+	// <expect-error> import "math/rand"
+	mathrand "math/rand"
 	"time"
 )
 
@@ -15,7 +16,7 @@ func unsafeRandomExample(n int) {
 	// -------------------------
 	// Weak random number generator
 	mathrand.Seed(time.Now().UnixNano())
-	randomNumber := rand.Intn(n)     // Not suitable for cryptographic purposes
+	randomNumber := mathrand.Intn(n) // Not suitable for cryptographic purposes
 	fmt.Printf("Unsafe random number (math/rand): %d\n", randomNumber)
 }
 

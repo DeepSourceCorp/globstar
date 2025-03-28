@@ -1,10 +1,10 @@
-package main
+package golang
 
 import (
-	// <expect-error> usage of cgi package
-	"net/http/cgi"
 	"fmt"
 	"net/http"
+	// <expect-error> usage of cgi package
+	"net/http/cgi"
 )
 
 func cgi_test() {

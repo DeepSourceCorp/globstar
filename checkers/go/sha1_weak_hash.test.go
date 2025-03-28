@@ -1,4 +1,4 @@
-package main
+package golang
 
 import (
 	"crypto/sha1"   // Insecure: Weak hash function (SHA-1)
@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func main() {
+func testSha1WeakHash() {
 	data := "sensitive_data"
 
 	// Insecure: Using SHA-1 (considered broken and vulnerable to collision attacks)
@@ -43,6 +43,6 @@ func hashWithSHA256(data string) []byte {
 // More Secure: SHA-512 hashing (for higher security needs)
 func hashWithSHA512(data string) []byte {
 	hasher := sha512.New()
-	 hashBytes := hasher.Write([]byte(data))
-	return hashBytes
+	_, _ = hasher.Write([]byte(data))
+	return hasher.Sum([]byte{})
 }
