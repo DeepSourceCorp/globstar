@@ -7,6 +7,20 @@ import (
 	"globstar.dev/analysis"
 )
 
+// Identify sources of user input (entry points)
+var userInputSources = map[string]bool{
+	"req.body":                true,
+	"req.params":              true,
+	"req.query":               true,
+	"request.body":            true,
+	"request.params":          true,
+	"request.query":           true,
+	"document.getElementById": true,
+	"$_GET":                   true,
+	"$_POST":                  true,
+	"process.argv":            true,
+	"req.users":               true,
+}
 var SQLInjectionDFG = &analysis.Analyzer{
 	Name:        "sql_injection",
 	Language:    analysis.LangJs,
@@ -14,6 +28,7 @@ var SQLInjectionDFG = &analysis.Analyzer{
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityCritical,
 	Run:         detectSQLInjectionDFG,
+	Requires:    []*analysis.Analyzer{ScopeAnalyzer},
 }
 
 // DataFlowNode represents a node in our data flow graph
@@ -23,6 +38,8 @@ type DataFlowNode struct {
 	Sources        []*DataFlowNode
 	Sanitized      bool
 	SanitizedPaths map[string]bool // Track which paths have been sanitized
+	Scope          *analysis.Scope
+	Variable       *analysis.Variable // Tracking variable instead of the varName helps in handling scope
 }
 
 // Map to track function calls that sanitize inputs
@@ -34,6 +51,7 @@ var sanitizerFunctions = map[string]bool{
 }
 
 func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
+
 	// Map of vulnerable function names to watch for
 	vulnerableFunctions := map[string]bool{
 		"query":             true,
@@ -46,26 +64,30 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 	}
 
 	// Map to track variable definitions and their data flow nodes
-	dataFlowGraph := make(map[string]*DataFlowNode)
+	dataFlowGraph := make(map[*analysis.Variable]*DataFlowNode)
 
-	// Identify sources of user input (entry points)
-	userInputSources := map[string]bool{
-		"req.body":                true,
-		"req.params":              true,
-		"req.query":               true,
-		"request.body":            true,
-		"request.params":          true,
-		"request.query":           true,
-		"document.getElementById": true,
-		"$_GET":                   true,
-		"$_POST":                  true,
-		"process.argv":            true,
+	scopeResult, err := buildScopeTree(pass)
+	if err != nil {
+		return nil, fmt.Errorf("could not build ScopeTree")
 	}
+
+	scopeTree := scopeResult.(*analysis.ScopeTree)
 
 	// First pass: build initial data flow graph
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node == nil {
 			return
+		}
+
+		currentScope := scopeTree.GetScope(node)
+		if currentScope == nil {
+			return
+		}
+
+		if currentScope.Variables != nil {
+			for _, v := range currentScope.Variables {
+				fmt.Printf("var name: %v\n", v.Name)
+			}
 		}
 
 		// Track variable declarations and assignments
@@ -74,6 +96,7 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 
 			if node.Type() == "variable_declarator" {
 				nameNode = node.ChildByFieldName("name")
+
 				valueNode = node.ChildByFieldName("value")
 			} else { // assignment_expression
 				nameNode = node.ChildByFieldName("left")
@@ -83,6 +106,8 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 			if nameNode != nil && nameNode.Type() == "identifier" && valueNode != nil {
 				varName := nameNode.Content(pass.FileContext.Source)
 
+				variable := currentScope.Lookup(varName)
+
 				// Create or update data flow node
 				dfNode := &DataFlowNode{
 					Node:           valueNode,
@@ -90,6 +115,8 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 					Sources:        []*DataFlowNode{},
 					Sanitized:      false,
 					SanitizedPaths: make(map[string]bool),
+					Scope:          currentScope,
+					Variable:       variable,
 				}
 
 				// Check if the value is a source of user input
@@ -100,7 +127,8 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 					case "identifier":
 						// If value is another variable, link to its data flow node
 						sourceVarName := valueNode.Content(pass.FileContext.Source)
-						if sourceNode, exists := dataFlowGraph[sourceVarName]; exists {
+						currVar := currentScope.Lookup(sourceVarName)
+						if sourceNode, exists := dataFlowGraph[currVar]; exists {
 							dfNode.Sources = append(dfNode.Sources, sourceNode)
 							dfNode.Tainted = sourceNode.Tainted
 							dfNode.Sanitized = sourceNode.Sanitized
@@ -120,21 +148,27 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 						}
 
 						// Track data flow through function arguments
-						handleCallExpressionDataFlow(valueNode, dfNode, dataFlowGraph, pass.FileContext.Source)
+						handleCallExpressionDataFlow(valueNode, dfNode, dataFlowGraph, pass.FileContext.Source, currentScope)
 
 					case "binary_expression":
 						// Handle string concatenation data flow
-						handleBinaryExpressionDataFlow(valueNode, dfNode, dataFlowGraph, pass.FileContext.Source)
+						handleBinaryExpressionDataFlow(valueNode, dfNode, dataFlowGraph, pass.FileContext.Source, currentScope)
 
 					case "template_string":
 						// Handle template literals data flow
-						handleTemplateStringDataFlow(valueNode, dfNode, dataFlowGraph, pass.FileContext.Source)
+						handleTemplateStringDataFlow(valueNode, dfNode, dataFlowGraph, pass.FileContext.Source, currentScope)
 					}
 				}
 
-				dataFlowGraph[varName] = dfNode
+				dataFlowGraph[variable] = dfNode
+
 			}
 		}
+
+		if node.Type() == "function_declarator" {
+			fmt.Println("hola")
+		}
+
 	})
 
 	// Propagate taint through the data flow graph
@@ -145,6 +179,7 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 		if node == nil || node.Type() != "call_expression" {
 			return
 		}
+		currentScope := scopeTree.GetScope(node)
 
 		funcNode := node.ChildByFieldName("function")
 		if funcNode == nil {
@@ -190,7 +225,7 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		// Check if the argument is vulnerable using data flow analysis
-		if IsVulnerableWithDataFlow(firstArg, pass.FileContext.Source, dataFlowGraph) {
+		if IsVulnerableWithDataFlow(firstArg, pass.FileContext.Source, dataFlowGraph, currentScope) {
 			pass.Report(pass, node, "Found SQL-Injection attempt")
 			return
 		}
@@ -258,8 +293,34 @@ func isSanitizerCall(node *sitter.Node, sourceCode []byte) (bool, string) {
 	return sanitizerFunctions[funcName], path
 }
 
+func handleFunctionCall(node *sitter.Node, dataFlowGraph map[*analysis.Variable]*DataFlowNode, scope *analysis.Scope, sourceCode []byte) {
+	args := node.ChildByFieldName("arguments")
+	if args == nil {
+		return
+	}
+
+	// Match arguments to parameters and propagate taint
+	for i := 0; i < int(args.NamedChildCount()); i++ {
+		arg := args.NamedChild(i)
+		if arg.Type() == "identifier" {
+			argName := arg.Content(sourceCode)
+			if argVar := scope.Lookup(argName); argVar != nil {
+				if argNode, exists := dataFlowGraph[argVar]; exists && argNode.Tainted {
+					// Propagate taint to corresponding parameter
+					// This is simplified - you'd need to match with actual parameter
+					if paramVar := scope.Lookup(argName); paramVar != nil {
+						if paramNode, exists := dataFlowGraph[paramVar]; exists {
+							paramNode.Tainted = true
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 // Handle data flow through binary expressions (like string concatenation)
-func handleBinaryExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[string]*DataFlowNode, sourceCode []byte) {
+func handleBinaryExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[*analysis.Variable]*DataFlowNode, sourceCode []byte, scope *analysis.Scope) {
 	if node == nil || node.Type() != "binary_expression" {
 		return
 	}
@@ -273,38 +334,44 @@ func handleBinaryExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dat
 		// Check left side
 		if left != nil && left.Type() == "identifier" {
 			leftVarName := left.Content(sourceCode)
-			if sourceNode, exists := dataFlowGraph[leftVarName]; exists {
-				dfNode.Sources = append(dfNode.Sources, sourceNode)
-				if sourceNode.Tainted {
-					dfNode.Tainted = true
+			if variable := scope.Lookup(leftVarName); variable != nil {
+				if sourceNode, exists := dataFlowGraph[variable]; exists {
+					dfNode.Sources = append(dfNode.Sources, sourceNode)
+					if sourceNode.Tainted {
+						dfNode.Tainted = true
+					}
 				}
 			}
+
 		}
 
 		// Check right side
 		if right != nil && right.Type() == "identifier" {
 			rightVarName := right.Content(sourceCode)
-			if sourceNode, exists := dataFlowGraph[rightVarName]; exists {
-				dfNode.Sources = append(dfNode.Sources, sourceNode)
-				if sourceNode.Tainted {
-					dfNode.Tainted = true
+			if variable := scope.Lookup(rightVarName); variable != nil {
+				if sourceNode, exists := dataFlowGraph[variable]; exists {
+					dfNode.Sources = append(dfNode.Sources, sourceNode)
+					if sourceNode.Tainted {
+						dfNode.Tainted = true
+					}
 				}
 			}
+
 		}
 
 		// Recursively process nested expressions
 		if left != nil && left.Type() == "binary_expression" {
-			handleBinaryExpressionDataFlow(left, dfNode, dataFlowGraph, sourceCode)
+			handleBinaryExpressionDataFlow(left, dfNode, dataFlowGraph, sourceCode, scope)
 		}
 
 		if right != nil && right.Type() == "binary_expression" {
-			handleBinaryExpressionDataFlow(right, dfNode, dataFlowGraph, sourceCode)
+			handleBinaryExpressionDataFlow(right, dfNode, dataFlowGraph, sourceCode, scope)
 		}
 	}
 }
 
 // Handle data flow through template strings
-func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[string]*DataFlowNode, sourceCode []byte) {
+func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[*analysis.Variable]*DataFlowNode, sourceCode []byte, scope *analysis.Scope) {
 	if node == nil || node.Type() != "template_string" {
 		return
 	}
@@ -318,22 +385,24 @@ func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataF
 			fmt.Printf("Expression inside template: %v\n", exprNode)
 			if exprNode != nil && exprNode.Type() == "identifier" {
 				varName := exprNode.Content(sourceCode)
+				if variable := scope.Lookup(varName); variable != nil {
+					fmt.Printf("Variable name: %v\n", varName)
 
-				fmt.Printf("Variable name: %v\n", varName)
-
-				if sourceNode, exists := dataFlowGraph[varName]; exists {
-					dfNode.Sources = append(dfNode.Sources, sourceNode)
-					if sourceNode.Tainted {
-						dfNode.Tainted = true
+					if sourceNode, exists := dataFlowGraph[variable]; exists {
+						dfNode.Sources = append(dfNode.Sources, sourceNode)
+						if sourceNode.Tainted {
+							dfNode.Tainted = true
+						}
 					}
 				}
+
 			}
 		}
 	}
 }
 
 // Handle data flow through function arguments
-func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[string]*DataFlowNode, sourceCode []byte) {
+func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[*analysis.Variable]*DataFlowNode, sourceCode []byte, scope *analysis.Scope) {
 	if node == nil || node.Type() != "call_expression" {
 		return
 	}
@@ -352,18 +421,21 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataF
 
 		if arg.Type() == "identifier" {
 			argName := arg.Content(sourceCode)
-			if sourceNode, exists := dataFlowGraph[argName]; exists {
-				dfNode.Sources = append(dfNode.Sources, sourceNode)
-				if sourceNode.Tainted {
-					dfNode.Tainted = true
+			if variable := scope.Lookup(argName); variable != nil {
+				if sourceNode, exists := dataFlowGraph[variable]; exists {
+					dfNode.Sources = append(dfNode.Sources, sourceNode)
+					if sourceNode.Tainted {
+						dfNode.Tainted = true
+					}
 				}
 			}
+
 		}
 	}
 }
 
 // Propagate taint through the data flow graph
-func propagateTaint(dataFlowGraph map[string]*DataFlowNode) {
+func propagateTaint(dataFlowGraph map[*analysis.Variable]*DataFlowNode) {
 	// Repeat until no changes are made
 	changed := true
 	for changed {
@@ -388,7 +460,7 @@ func propagateTaint(dataFlowGraph map[string]*DataFlowNode) {
 }
 
 // Check if a node is vulnerable using data flow analysis
-func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGraph map[string]*DataFlowNode) bool {
+func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGraph map[*analysis.Variable]*DataFlowNode, scope *analysis.Scope) bool {
 	if node == nil {
 		return false
 	}
@@ -397,9 +469,15 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 	case "identifier":
 		// Look up in the data flow graph
 		varName := node.Content(sourceCode)
-		if dfNode, exists := dataFlowGraph[varName]; exists {
-			// Node is vulnerable if it's tainted and not sanitized
-			return dfNode.Tainted && !dfNode.Sanitized
+		currentScope := scope
+		for currentScope != nil {
+			if variable := currentScope.Lookup(varName); variable != nil {
+				if dfNode, exists := dataFlowGraph[variable]; exists {
+					// Node is vulnerable if it's tainted and not sanitized
+					return dfNode.Tainted && !dfNode.Sanitized
+				}
+			}
+			currentScope = currentScope.Upper
 		}
 
 	case "binary_expression":
@@ -407,8 +485,8 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 		left := node.ChildByFieldName("left")
 		right := node.ChildByFieldName("right")
 
-		return IsVulnerableWithDataFlow(left, sourceCode, dataFlowGraph) ||
-			IsVulnerableWithDataFlow(right, sourceCode, dataFlowGraph)
+		return IsVulnerableWithDataFlow(left, sourceCode, dataFlowGraph, scope) ||
+			IsVulnerableWithDataFlow(right, sourceCode, dataFlowGraph, scope)
 
 	case "template_string":
 		// Check each substitution
@@ -416,7 +494,7 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 			child := node.NamedChild(i)
 			if child != nil && child.Type() == "template_substitution" {
 				exprNode := child.NamedChild(0)
-				if IsVulnerableWithDataFlow(exprNode, sourceCode, dataFlowGraph) {
+				if IsVulnerableWithDataFlow(exprNode, sourceCode, dataFlowGraph, scope) {
 					return true
 				}
 			}
@@ -434,7 +512,7 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 		if args != nil {
 			for i := 0; i < int(args.NamedChildCount()); i++ {
 				arg := args.NamedChild(i)
-				if IsVulnerableWithDataFlow(arg, sourceCode, dataFlowGraph) {
+				if IsVulnerableWithDataFlow(arg, sourceCode, dataFlowGraph, scope) {
 					return true
 				}
 			}
