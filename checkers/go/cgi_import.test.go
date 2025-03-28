@@ -1,9 +1,9 @@
 package golang
 
 import (
-	// <expect-error> usage of cgi package
 	"fmt"
 	"net/http"
+	// <expect-error> usage of cgi package
 	"net/http/cgi"
 )
 

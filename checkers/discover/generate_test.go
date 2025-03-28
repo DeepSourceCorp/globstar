@@ -64,11 +64,6 @@ import (
 	goAnalysis "globstar.dev/analysis"
 )
 
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
-}
-
 var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
@@ -100,11 +95,6 @@ import (
 	"globstar.dev/checkers/python"
 	goAnalysis "globstar.dev/analysis"
 )
-
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
-}
 
 var AnalyzerRegistry = []Analyzer{
 	{
@@ -140,11 +130,6 @@ import (
 	"globstar.dev/checkers/python"
 	goAnalysis "globstar.dev/analysis"
 )
-
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
-}
 
 var AnalyzerRegistry = []Analyzer{
 	{
@@ -186,11 +171,6 @@ import (
 	goAnalysis "globstar.dev/analysis"
 )
 
-type Analyzer struct {
-	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
-}
-
 var AnalyzerRegistry = []Analyzer{
 	{
 		TestDir:   "checkers/javascript/testdata", // relative to the repository root
@@ -201,7 +181,7 @@ var AnalyzerRegistry = []Analyzer{
 		},
 	},
 	{
-		TestDir: "checkers/python/testdata",
+		TestDir: "checkers/python/testdata", // relative to the repository root
 		Analyzers: []*goAnalysis.Analyzer{
 			python.DjangoSQLInjection,
 			python.DjangoCSVWriterInjection,
