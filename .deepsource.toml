@@ -4,11 +4,8 @@ test_patterns = ["**/*_test.go"]
 
 exclude_patterns = [
   "docs/**",
-  "checkers/**"
+  "**/testdata/**"
 ]
-
-[[analyzers]]
-name = "test-coverage"
 
 [[analyzers]]
 name = "secrets"
