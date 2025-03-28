@@ -4,7 +4,7 @@ test_patterns = ["**/*_test.go"]
 
 exclude_patterns = [
   "docs/**",
-  "checkers/**"
+  "**/testdata/**"
 ]
 
 [[analyzers]]
