@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/pkg/config"
@@ -263,100 +263,6 @@ func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bo
 	return true
 }
 
-// utility function to check if a node or its line has a skipcq comment
-// Format for the skipcq directive:
-// `// skipcq: <language>:<checker_name>`
-func HasSkipCQComment(source []byte, node *sitter.Node, checker YamlChecker) bool {
-	startPoint := node.StartPoint()
-	lineNumber := int(startPoint.Row)
-
-	lines := strings.Split(string(source), "\n")
-	if lineNumber >= len(lines) {
-		return false
-	}
-
-	nodeLine := lines[lineNumber]
-
-	// check for inline skipcq comment
-	if strings.Contains(nodeLine, "// skipcq") && !strings.Contains(nodeLine, "// skipcq:") ||
-		strings.Contains(nodeLine, "# skipcq") && !strings.Contains(nodeLine, "# skipcq:") ||
-		strings.Contains(nodeLine, "/* skipcq") && !strings.Contains(nodeLine, "/* skipcq:") {
-
-		return true
-	}
-
-	// check for specific checker
-	if containsSkipForChecker(nodeLine, checker) {
-		return true
-	}
-
-	// check for skipcq comment on previous line
-	if lineNumber > 0 {
-		previousLine := strings.TrimSpace(lines[lineNumber-1])
-
-		if strings.Contains(previousLine, "// skipcq") && !strings.Contains(previousLine, "// skipcq:") ||
-			strings.Contains(previousLine, "# skipcq") && !strings.Contains(previousLine, "# skipcq:") ||
-			strings.Contains(previousLine, "/* skipcq") && !strings.Contains(previousLine, "/* skipcq:") {
-
-			return true
-		}
-
-		if containsSkipForChecker(previousLine, checker) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// checks if a line contains skipcq directive for a specific checker
-func containsSkipForChecker(line string, checker YamlChecker) bool {
-	// extract the name of the checker
-	checkerName := checker.Name()
-	checkerLang := checker.Language()
-
-	// TODO: There must be a more sophisticated way to get the language name
-	languageExtension := GetExtFromLanguage(checkerLang)
-	// remove leading dot
-	if len(languageExtension) > 0 && languageExtension[0] == '.' {
-		languageExtension = languageExtension[1:]
-	}
-
-	fullCheckerID := languageExtension + ":" + checkerName
-
-	var directive string
-	var found bool
-
-	commentFormats := []struct {
-		prefix string
-	}{
-		{"// skipcq:"},
-		{"# skipcq:"},
-		{"/* skipcq:"},
-	}
-
-	for _, format := range commentFormats {
-		if idx := strings.Index(line, format.prefix); idx != -1 {
-			directive = line[idx+len(format.prefix):]
-
-			// remove unwanted whitespace
-			directive = strings.TrimSpace(directive)
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return false
-	}
-
-	if directive == fullCheckerID {
-		return true
-	}
-
-	return false
-
-}
 
 func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
 	qc := sitter.NewQueryCursor()
@@ -374,7 +280,7 @@ func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Quer
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
 			// TODO: explain why captureName == checker.Name()
-			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) && !HasSkipCQComment(ana.ParseResult.Source, capture.Node, checker) {
+			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) {
 				checker.OnMatch(ana, query, capture.Node, m.Captures)
 			}
 		}
@@ -405,4 +311,46 @@ func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 		issues = append(issues, analyzer.Analyze()...)
 	}
 	return issues, nil
+}
+
+func (ana *Analyzer) ContainsSkipcq(issue *Issue) bool {
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(issue.Filepath)
+	pattern := fmt.Sprintf(`^%s\s+<skipcq>\s*$`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+	issueNode := issue.Node
+	nodeStartLine := int(issueNode.StartPoint().Row)
+	previousLine := nodeStartLine - 1
+
+	query, err := sitter.NewQuery([]byte("(comment) @pragma"), ana.Language.Grammar())
+
+	if err != nil {
+		return false
+	}
+
+	cursor := sitter.NewQueryCursor()
+	cursor.Exec(query, ana.ParseResult.Ast)
+
+	for {
+		m, ok := cursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range m.Captures {
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName != "pragma" {
+				continue
+			}
+			commentNode := capture.Node
+			commentLine := int(commentNode.StartPoint().Row)
+
+			if commentLine == nodeStartLine || commentLine == previousLine {
+				commentText := commentNode.Content(ana.ParseResult.Source)
+				if skipRegexp.MatchString(commentText) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

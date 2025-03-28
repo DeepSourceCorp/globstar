@@ -97,16 +97,28 @@ func (r *patternCheckerImpl) OnMatch(
 			)
 		}
 	}
-
-	ana.Report(&Issue{
-		Range:    matchedNode.Range(),
-		Node:     matchedNode,
-		Message:  message,
+	raisedIssue := &Issue{
+		Range: matchedNode.Range(),
+		Node: matchedNode,
+		Message: message,
 		Filepath: ana.ParseResult.FilePath,
 		Category: r.Category(),
 		Severity: r.Severity(),
-		Id:       &r.issueId,
-	})
+		Id: &r.issueId,
+	}
+	if !ana.ContainsSkipcq(raisedIssue) {
+		ana.Report(raisedIssue)
+	}
+
+	// ana.Report(&Issue{
+	// 	Range:    matchedNode.Range(),
+	// 	Node:     matchedNode,
+	// 	Message:  message,
+	// 	Filepath: ana.ParseResult.FilePath,
+	// 	Category: r.Category(),
+	// 	Severity: r.Severity(),
+	// 	Id:       &r.issueId,
+	// })
 }
 
 func (r *patternCheckerImpl) Name() string {

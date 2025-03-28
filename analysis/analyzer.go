@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"regexp"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -145,12 +146,21 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 	}
 
 	reportFunc := func(pass *Pass, node *sitter.Node, message string) {
-		raisedIssues = append(raisedIssues, &Issue{
-			Id:       &pass.Analyzer.Name,
-			Node:     node,
-			Message:  message,
+		raisedIssue := &Issue{
+			Id: &pass.Analyzer.Name,
+			Node: node,
+			Message: message,
 			Filepath: pass.FileContext.FilePath,
-		})
+		}
+		if !ContainsSkipcq(pass, raisedIssue) {
+			raisedIssues = append(raisedIssues, raisedIssue)
+		}
+		// raisedIssues = append(raisedIssues, &Issue{
+		// 	Id:       &pass.Analyzer.Name,
+		// 	Node:     node,
+		// 	Message:  message,
+		// 	Filepath: pass.FileContext.FilePath,
+		// })
 	}
 
 	for lang, analyzers := range langAnalyzerMap {
@@ -222,4 +232,47 @@ func reportText(issues []*Issue) ([]byte, error) {
 		output = append(output, []byte("\n")...)
 	}
 	return output, nil
+}
+
+func ContainsSkipcq(pass *Pass, issue *Issue) bool {
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(issue.Filepath)
+	pattern := fmt.Sprintf(`^%s\s+<skipcq>\s*$`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+	issueNode := issue.Node
+	nodeStartline := int(issueNode.StartPoint().Row)
+	previousLine := nodeStartline - 1
+
+	query, err := sitter.NewQuery([]byte("(comment) @pragma"), pass.Analyzer.Language.Grammar())
+
+	if err != nil {
+		return false
+	}
+
+	cursor := sitter.NewQueryCursor()
+	cursor.Exec(query, pass.FileContext.Ast)
+
+	for {
+		m, ok := cursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range m.Captures {
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName != "pragma" {
+				continue
+			}
+
+			commentNode := capture.Node
+			commentLine := int(commentNode.StartPoint().Row)
+
+			if commentLine == nodeStartline || commentLine == previousLine {
+				commentText := commentNode.Content(pass.FileContext.Source)
+				if skipRegexp.MatchString(commentText) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
