@@ -50,6 +50,16 @@ func TestDiscoverGoCheckers(t *testing.T) {
 				err:        fmt.Errorf("open fixtures/invalid: no such file or directory"),
 			},
 		},
+		{
+			dir: filepath.Join(cwd, "fixtures", "exclude"),
+			want: struct {
+				goCheckers []string
+				err        error
+			}{
+				goCheckers: []string{},
+				err:        nil,
+			},
+		},
 	}
 
 	for _, tt := range tests {
