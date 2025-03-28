@@ -1,4 +1,4 @@
-//registry:exclude
+//globstar:registry-exclude
 package exclude
 
 import (

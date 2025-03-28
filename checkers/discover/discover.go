@@ -22,7 +22,7 @@ func DiscoverGoCheckers(dir string) ([]string, error) {
 			if len(file.Comments) > 0 {
 				firstCommentGroup := file.Comments[0]
 				for _, comment := range firstCommentGroup.List {
-					if strings.TrimSpace(comment.Text) == "//registry:exclude" {
+					if strings.TrimSpace(comment.Text) == "//globstar:registry-exclude" {
 						isExcluded = true
 						break
 					}
