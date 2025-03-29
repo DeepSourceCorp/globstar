@@ -155,12 +155,6 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 		if !ContainsSkipcq(pass, raisedIssue) {
 			raisedIssues = append(raisedIssues, raisedIssue)
 		}
-		// raisedIssues = append(raisedIssues, &Issue{
-		// 	Id:       &pass.Analyzer.Name,
-		// 	Node:     node,
-		// 	Message:  message,
-		// 	Filepath: pass.FileContext.FilePath,
-		// })
 	}
 
 	for lang, analyzers := range langAnalyzerMap {

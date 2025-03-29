@@ -109,16 +109,6 @@ func (r *patternCheckerImpl) OnMatch(
 	if !ana.ContainsSkipcq(raisedIssue) {
 		ana.Report(raisedIssue)
 	}
-
-	// ana.Report(&Issue{
-	// 	Range:    matchedNode.Range(),
-	// 	Node:     matchedNode,
-	// 	Message:  message,
-	// 	Filepath: ana.ParseResult.FilePath,
-	// 	Category: r.Category(),
-	// 	Severity: r.Severity(),
-	// 	Id:       &r.issueId,
-	// })
 }
 
 func (r *patternCheckerImpl) Name() string {
