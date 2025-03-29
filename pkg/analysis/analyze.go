@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/pkg/config"
@@ -262,6 +263,7 @@ func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bo
 	return true
 }
 
+
 func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()
@@ -309,4 +311,46 @@ func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 		issues = append(issues, analyzer.Analyze()...)
 	}
 	return issues, nil
+}
+
+func (ana *Analyzer) ContainsSkipcq(issue *Issue) bool {
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(issue.Filepath)
+	pattern := fmt.Sprintf(`^%s\s+<skipcq>\s*$`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+	issueNode := issue.Node
+	nodeStartLine := int(issueNode.StartPoint().Row)
+	previousLine := nodeStartLine - 1
+
+	query, err := sitter.NewQuery([]byte("(comment) @pragma"), ana.Language.Grammar())
+
+	if err != nil {
+		return false
+	}
+
+	cursor := sitter.NewQueryCursor()
+	cursor.Exec(query, ana.ParseResult.Ast)
+
+	for {
+		m, ok := cursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range m.Captures {
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName != "pragma" {
+				continue
+			}
+			commentNode := capture.Node
+			commentLine := int(commentNode.StartPoint().Row)
+
+			if commentLine == nodeStartLine || commentLine == previousLine {
+				commentText := commentNode.Content(ana.ParseResult.Source)
+				if skipRegexp.MatchString(commentText) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
