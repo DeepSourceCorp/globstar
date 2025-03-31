@@ -66,10 +66,9 @@ func GenerateAnalyzer(checkerDir, dest string) error {
 	return nil
 }
 
-
 // define the templates to be used in the registry.go
 const (
-    headerTemplate = `// AUTOMATICALLY GENERATED: DO NOT EDIT
+	headerTemplate = `// AUTOMATICALLY GENERATED: DO NOT EDIT
 
 package checkers
 
@@ -81,7 +80,7 @@ import (
 
 var AnalyzerRegistry = []Analyzer{`
 
-    entryTemplate = `
+	entryTemplate = `
 	{
         TestDir:   "%[1]s/testdata", // relative to the repository root
         Analyzers: []*goAnalysis.Analyzer{%[2]s
@@ -89,9 +88,8 @@ var AnalyzerRegistry = []Analyzer{`
     },
 `
 
-    footerTemplate = "}\n"
+	footerTemplate = "}\n"
 )
-
 
 func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
 	var builder strings.Builder
