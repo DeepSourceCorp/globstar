@@ -38,7 +38,8 @@ func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier"
+	// addition of function_declaration and formal_parameters necessary for functional scope handling.
+	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier" || typ == "formal_parameters" || typ == "function_declaration"
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -149,6 +150,43 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 
 	case "formal_parameters":
 		// TODO
+
+		for i := 0; i < int(node.NamedChildCount()); i++ {
+			param := node.NamedChild(i)
+			if param == nil {
+				continue
+			}
+			// Handle different parameter types (required, optional, rest, patterns)
+			// Simple identifier parameter: function foo(x)
+			// Required parameter often wraps identifier: function foo(x: number)
+			var identifier *sitter.Node
+			if param.Type() == "identifier" {
+				identifier = param
+			} else if param.Type() == "required_parameter" || param.Type() == "optional_parameter" {
+				// Look for pattern which might be identifier or destructuring
+				pattern := param.ChildByFieldName("pattern")
+				if pattern != nil && pattern.Type() == "identifier" {
+					identifier = pattern
+				}
+				// TODO: Handle destructuring patterns within parameters if needed by calling scanDecl
+			} else if param.Type() == "assignment_pattern" {
+				// Parameter with default value: function foo(x = 1)
+				left := param.ChildByFieldName("left")
+				if left != nil && left.Type() == "identifier" {
+					identifier = left
+				}
+				// TODO: Handle destructuring patterns within parameters if needed by calling scanDecl
+			}
+			// TODO: Handle rest parameter (...)+
+			if identifier != nil {
+				declaredVars = append(declaredVars, &Variable{
+					Kind:     VarKindParameter,
+					Name:     identifier.Content(ts.source),
+					DeclNode: param, // Use the parameter node itself (or identifier) as DeclNode
+				})
+			}
+			// Add handling for destructuring patterns here if necessary using scanDecl
+		}
 
 	case "import_specifier":
 		// import { <name> } from ...

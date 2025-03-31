@@ -89,4 +89,43 @@ func Test_BuildScopeTree(t *testing.T) {
 			assert.Equal(t, "call_expression", extnameRefs[1].Node.Parent().Type())
 		}
 	})
+
+	t.Run("handles function declaration with parameters", func(t *testing.T) {
+		source := `
+		function greet(name, age = 18) {
+			let greeting = "Hello";
+			return greeting + " " + name;	
+		}
+		greet("Alice")
+		`
+
+		parsed := parseFile(t, source)
+		require.NotNil(t, parsed)
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		// Checking function declaration
+
+		funcVariable, exists := scopeTree.Root.Variables["greet"] // tagged as an Identifier
+		require.True(t, exists)
+		require.NotNil(t, funcVariable)
+
+		funcScope := scopeTree.Root.Children[0]
+		require.NotNil(t, funcScope)
+
+		nameVar, exists := funcScope.Variables["name"]
+		require.True(t, exists)
+		require.Equal(t, VarKindParameter, nameVar.Kind)
+
+		ageVar, exists := funcScope.Variables["age"]
+		require.True(t, exists)
+		require.Equal(t, VarKindParameter, ageVar.Kind)
+
+		// existence of function body
+
+		bodyScope := funcScope.Children[0]
+		require.NotNil(t, bodyScope)
+
+		greetingVar, exists := bodyScope.Variables["greeting"]
+		require.True(t, exists)
+		require.Equal(t, VarKindVariable, greetingVar.Kind)
+	})
 }
