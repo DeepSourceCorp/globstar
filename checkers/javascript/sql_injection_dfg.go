@@ -40,6 +40,14 @@ type DataFlowNode struct {
 	SanitizedPaths map[string]bool // Track which paths have been sanitized
 	Scope          *analysis.Scope
 	Variable       *analysis.Variable // Tracking variable instead of the varName helps in handling scope
+	FuncDef        *FunctionDefinition
+}
+
+type FunctionDefinition struct {
+	Node       *sitter.Node
+	Parameters []*analysis.Variable
+	Body       *sitter.Node
+	Scope      *analysis.Scope
 }
 
 // Map to track function calls that sanitize inputs
@@ -50,25 +58,27 @@ var sanitizerFunctions = map[string]bool{
 	"mysql_real_escape_string": true,
 }
 
-func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
+// Map of vulnerable function names to watch for
+var vulnerableFunctions = map[string]bool{
+	"query":             true,
+	"raw":               true,
+	"$queryRawUnsafe":   true,
+	"$executeRawUnsafe": true,
+	"execute":           true,
+	"db.query":          true,
+	"connection.query":  true,
+}
 
-	// Map of vulnerable function names to watch for
-	vulnerableFunctions := map[string]bool{
-		"query":             true,
-		"raw":               true,
-		"$queryRawUnsafe":   true,
-		"$executeRawUnsafe": true,
-		"execute":           true,
-		"db.query":          true,
-		"connection.query":  true,
-	}
+var functionDefinitions = make(map[string]*FunctionDefinition)
+
+func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 
 	// Map to track variable definitions and their data flow nodes
 	dataFlowGraph := make(map[*analysis.Variable]*DataFlowNode)
 
 	scopeResult, err := buildScopeTree(pass)
 	if err != nil {
-		return nil, fmt.Errorf("could not build ScopeTree")
+		return nil, fmt.Errorf("failed to build the scope tree \n")
 	}
 
 	scopeTree := scopeResult.(*analysis.ScopeTree)
@@ -84,12 +94,6 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if currentScope.Variables != nil {
-			for _, v := range currentScope.Variables {
-				fmt.Printf("var name: %v\n", v.Name)
-			}
-		}
-
 		// Track variable declarations and assignments
 		if node.Type() == "variable_declarator" || node.Type() == "assignment_expression" {
 			var nameNode, valueNode *sitter.Node
@@ -101,13 +105,13 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 			} else { // assignment_expression
 				nameNode = node.ChildByFieldName("left")
 				valueNode = node.ChildByFieldName("right")
+				// fmt.Printf("%v = %v\n", nameNode.Content(pass.FileContext.Source), valueNode.Content(pass.FileContext.Source))
 			}
 
 			if nameNode != nil && nameNode.Type() == "identifier" && valueNode != nil {
 				varName := nameNode.Content(pass.FileContext.Source)
 
 				variable := currentScope.Lookup(varName)
-
 				// Create or update data flow node
 				dfNode := &DataFlowNode{
 					Node:           valueNode,
@@ -165,10 +169,37 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 			}
 		}
 
-		if node.Type() == "function_declarator" {
-			fmt.Println("hola")
-		}
+		if node.Type() == "function_declaration" {
+			funcNameNode := node.ChildByFieldName("name")
+			if funcNameNode == nil {
+				return
+			}
+			funcName := funcNameNode.Content(pass.FileContext.Source)
 
+			funcDef := &FunctionDefinition{
+				Node:  node,
+				Body:  node.ChildByFieldName("body"),
+				Scope: currentScope,
+			}
+
+			params := node.ChildByFieldName("parameters")
+			if params != nil {
+				for i := 0; i < int(params.NamedChildCount()); i++ {
+					param := params.NamedChild(i)
+					if param.Type() == "identifier" {
+						paramName := param.Content(pass.FileContext.Source)
+						paramVar := currentScope.Lookup(paramName)
+						if paramVar != nil {
+							funcDef.Parameters = append(funcDef.Parameters, paramVar)
+						}
+
+					}
+				}
+
+			}
+
+			functionDefinitions[funcName] = funcDef
+		}
 	})
 
 	// Propagate taint through the data flow graph
@@ -209,6 +240,12 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 
 		// Check if this is a function that executes raw SQL
 		if !vulnerableFunctions[funcName] {
+			fmt.Println(funcName)
+			if IsVulnerableWithDataFlow(node, pass.FileContext.Source, dataFlowGraph, currentScope) {
+				pass.Report(pass, node, "Found SQL-Injection attempt")
+				return
+			}
+
 			return
 		}
 
@@ -293,32 +330,6 @@ func isSanitizerCall(node *sitter.Node, sourceCode []byte) (bool, string) {
 	return sanitizerFunctions[funcName], path
 }
 
-func handleFunctionCall(node *sitter.Node, dataFlowGraph map[*analysis.Variable]*DataFlowNode, scope *analysis.Scope, sourceCode []byte) {
-	args := node.ChildByFieldName("arguments")
-	if args == nil {
-		return
-	}
-
-	// Match arguments to parameters and propagate taint
-	for i := 0; i < int(args.NamedChildCount()); i++ {
-		arg := args.NamedChild(i)
-		if arg.Type() == "identifier" {
-			argName := arg.Content(sourceCode)
-			if argVar := scope.Lookup(argName); argVar != nil {
-				if argNode, exists := dataFlowGraph[argVar]; exists && argNode.Tainted {
-					// Propagate taint to corresponding parameter
-					// This is simplified - you'd need to match with actual parameter
-					if paramVar := scope.Lookup(argName); paramVar != nil {
-						if paramNode, exists := dataFlowGraph[paramVar]; exists {
-							paramNode.Tainted = true
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 // Handle data flow through binary expressions (like string concatenation)
 func handleBinaryExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataFlowGraph map[*analysis.Variable]*DataFlowNode, sourceCode []byte, scope *analysis.Scope) {
 	if node == nil || node.Type() != "binary_expression" {
@@ -382,11 +393,11 @@ func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, dataF
 		if child != nil && child.Type() == "template_substitution" {
 			// Get the ression inside ${}
 			exprNode := child.NamedChild(0)
-			fmt.Printf("Expression inside template: %v\n", exprNode)
+			// fmt.Printf("Expression inside template: %v\n", exprNode)
 			if exprNode != nil && exprNode.Type() == "identifier" {
 				varName := exprNode.Content(sourceCode)
 				if variable := scope.Lookup(varName); variable != nil {
-					fmt.Printf("Variable name: %v\n", varName)
+					// fmt.Printf("Variable name: %v\n", varName)
 
 					if sourceNode, exists := dataFlowGraph[variable]; exists {
 						dfNode.Sources = append(dfNode.Sources, sourceNode)
@@ -464,7 +475,7 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 	if node == nil {
 		return false
 	}
-
+	fmt.Println(node.Type())
 	switch node.Type() {
 	case "identifier":
 		// Look up in the data flow graph
@@ -501,6 +512,18 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 		}
 
 	case "call_expression":
+		funcNode := node.ChildByFieldName("function")
+		fmt.Println(funcNode.Content(sourceCode))
+		if funcNode != nil && funcNode.Type() == "identifier" {
+			funcName := funcNode.Content(sourceCode)
+			args := node.ChildByFieldName("arguments")
+			if args != nil {
+				if analyzeUserDefinedFunction(funcName, args, sourceCode, dataFlowGraph, scope) {
+					return true
+				}
+			}
+		}
+
 		// Check if this is a sanitizer function
 		isSanitized, _ := isSanitizerCall(node, sourceCode)
 		if isSanitized {
@@ -516,6 +539,77 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 					return true
 				}
 			}
+		}
+	}
+
+	return false
+}
+
+func analyzeUserDefinedFunction(funcName string, args *sitter.Node, sourceCode []byte, dataFlowGraph map[*analysis.Variable]*DataFlowNode, scope *analysis.Scope) bool {
+	funcDef, exists := functionDefinitions[funcName]
+	if !exists {
+		return false
+	}
+
+	// Create a map of parameter to argument taint status
+	paramTaint := make(map[*analysis.Variable]bool)
+
+	// Match arguments to parameters
+	for i := 0; i < int(args.NamedChildCount()) && i < len(funcDef.Parameters); i++ {
+		arg := args.NamedChild(i)
+		param := funcDef.Parameters[i]
+
+		// Check if argument is tainted
+		if arg.Type() == "identifier" {
+			argName := arg.Content(sourceCode)
+			if variable := scope.Lookup(argName); variable != nil {
+				if sourceNode, exists := dataFlowGraph[variable]; exists {
+					paramTaint[param] = sourceNode.Tainted
+				}
+			}
+		}
+	}
+
+	// Analyze function body with parameter taint information
+	return analyzeNodeForVulnerabilities(funcDef.Body, sourceCode, dataFlowGraph, funcDef.Scope, paramTaint)
+}
+
+func analyzeNodeForVulnerabilities(node *sitter.Node, sourceCode []byte, dataFlowGraph map[*analysis.Variable]*DataFlowNode, scope *analysis.Scope, paramTaint map[*analysis.Variable]bool) bool {
+	if node == nil {
+		return false
+	}
+
+	switch node.Type() {
+	case "call_expression":
+		funcNode := node.ChildByFieldName("function")
+		if funcNode != nil {
+			funcName := funcNode.Content(sourceCode)
+			if vulnerableFunctions[funcName] {
+				// Check if any tainted parameter is used in the arguments
+				args := node.ChildByFieldName("arguments")
+				if args != nil {
+					for i := 0; i < int(args.NamedChildCount()); i++ {
+						arg := args.NamedChild(i)
+						if arg.Type() == "identifier" {
+							argName := arg.Content(sourceCode)
+							if variable := scope.Lookup(argName); variable != nil {
+								if tainted, exists := paramTaint[variable]; exists && tainted {
+									return true
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Recursively analyze children
+	for i := 0; i < int(node.NamedChildCount()); i++ {
+		child := node.NamedChild(i)
+		fmt.Println(child.Content(sourceCode))
+		if analyzeNodeForVulnerabilities(child, sourceCode, dataFlowGraph, scope, paramTaint) {
+			return true
 		}
 	}
 
