@@ -20,6 +20,7 @@ var userInputSources = map[string]bool{
 	"$_POST":                  true,
 	"process.argv":            true,
 	"req.users":               true,
+	"req.user.id":             true,
 }
 var SQLInjectionDFG = &analysis.Analyzer{
 	Name:        "sql_injection",
@@ -207,65 +208,75 @@ func detectSQLInjectionDFG(pass *analysis.Pass) (interface{}, error) {
 
 	// Second pass: detect SQL injection vulnerabilities using the data flow graph
 	analysis.Preorder(pass, func(node *sitter.Node) {
-		if node == nil || node.Type() != "call_expression" {
+		if node == nil {
 			return
 		}
 		currentScope := scopeTree.GetScope(node)
 
-		funcNode := node.ChildByFieldName("function")
-		if funcNode == nil {
-			return
-		}
+		switch node.Type() {
+		case "call_expression":
+			funcNode := node.ChildByFieldName("function")
+			if funcNode == nil {
+				return
+			}
 
-		// Get the function name
-		var funcName string
-		if funcNode.Type() == "member_expression" {
-			propertyNode := funcNode.ChildByFieldName("property")
-			if propertyNode != nil {
-				funcName = propertyNode.Content(pass.FileContext.Source)
+			// Get the function name
+			var funcName string
+			if funcNode.Type() == "member_expression" {
+				propertyNode := funcNode.ChildByFieldName("property")
+				if propertyNode != nil {
+					funcName = propertyNode.Content(pass.FileContext.Source)
 
-				// Also check for object.method pattern (e.g., db.query)
-				objectNode := funcNode.ChildByFieldName("object")
-				if objectNode != nil && objectNode.Type() == "identifier" {
-					objectName := objectNode.Content(pass.FileContext.Source)
-					compositeFunc := objectName + "." + funcName
-					if vulnerableFunctions[compositeFunc] {
-						funcName = compositeFunc
+					// Also check for object.method pattern (e.g., db.query)
+					objectNode := funcNode.ChildByFieldName("object")
+					if objectNode != nil && objectNode.Type() == "identifier" {
+						objectName := objectNode.Content(pass.FileContext.Source)
+						compositeFunc := objectName + "." + funcName
+						if vulnerableFunctions[compositeFunc] {
+							funcName = compositeFunc
+						}
 					}
 				}
+			} else if funcNode.Type() == "identifier" {
+				funcName = funcNode.Content(pass.FileContext.Source)
 			}
-		} else if funcNode.Type() == "identifier" {
-			funcName = funcNode.Content(pass.FileContext.Source)
-		}
 
-		// Check if this is a function that executes raw SQL
-		if !vulnerableFunctions[funcName] {
-			fmt.Println(funcName)
-			if IsVulnerableWithDataFlow(node, pass.FileContext.Source, dataFlowGraph, currentScope) {
+			// Check if this is a function that executes raw SQL
+			if !vulnerableFunctions[funcName] {
+				if IsVulnerableWithDataFlow(node, pass.FileContext.Source, dataFlowGraph, currentScope) {
+					pass.Report(pass, node, "Found SQL-Injection attempt")
+					return
+				}
+
+				return
+			}
+
+			// Get the arguments of the function
+			args := node.ChildByFieldName("arguments")
+			if args == nil || args.NamedChildCount() == 0 {
+				return
+			}
+
+			// Get the first argument (SQL query)
+			firstArg := args.NamedChild(0)
+			if firstArg == nil {
+				return
+			}
+
+			// Check if the argument is vulnerable using data flow analysis
+			if IsVulnerableWithDataFlow(firstArg, pass.FileContext.Source, dataFlowGraph, currentScope) {
 				pass.Report(pass, node, "Found SQL-Injection attempt")
 				return
 			}
 
-			return
+		case "if_statement":
+			// fmt.Println(node.Content(pass.FileContext.Source))
+			if IsVulnerableWithDataFlow(node, pass.FileContext.Source, dataFlowGraph, currentScope) {
+				pass.Report(pass, node, "Found SQL-Injection attempt")
+				return
+			}
 		}
 
-		// Get the arguments of the function
-		args := node.ChildByFieldName("arguments")
-		if args == nil || args.NamedChildCount() == 0 {
-			return
-		}
-
-		// Get the first argument (SQL query)
-		firstArg := args.NamedChild(0)
-		if firstArg == nil {
-			return
-		}
-
-		// Check if the argument is vulnerable using data flow analysis
-		if IsVulnerableWithDataFlow(firstArg, pass.FileContext.Source, dataFlowGraph, currentScope) {
-			pass.Report(pass, node, "Found SQL-Injection attempt")
-			return
-		}
 	})
 
 	return nil, nil
@@ -475,7 +486,6 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 	if node == nil {
 		return false
 	}
-	fmt.Println(node.Type())
 	switch node.Type() {
 	case "identifier":
 		// Look up in the data flow graph
@@ -513,7 +523,6 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 
 	case "call_expression":
 		funcNode := node.ChildByFieldName("function")
-		fmt.Println(funcNode.Content(sourceCode))
 		if funcNode != nil && funcNode.Type() == "identifier" {
 			funcName := funcNode.Content(sourceCode)
 			args := node.ChildByFieldName("arguments")
@@ -540,6 +549,64 @@ func IsVulnerableWithDataFlow(node *sitter.Node, sourceCode []byte, dataFlowGrap
 				}
 			}
 		}
+	case "if_statement":
+		condition := node.ChildByFieldName("condition")
+		for i := 0; i < int(node.NamedChildCount()); i++ {
+			if IsVulnerableWithDataFlow(condition, sourceCode, dataFlowGraph, scope) {
+				return true
+			}
+		}
+
+		consequence := node.ChildByFieldName("consequence")
+		if analyzeBlockForVulnerabilities(consequence, sourceCode, dataFlowGraph, scope) {
+			return true
+		}
+
+		alternative := node.ChildByFieldName("alternative")
+		if alternative != nil && analyzeBlockForVulnerabilities(alternative, sourceCode, dataFlowGraph, scope) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func analyzeBlockForVulnerabilities(node *sitter.Node, sourceCode []byte, dataFlowGraph map[*analysis.Variable]*DataFlowNode, scope *analysis.Scope) bool {
+	if node == nil {
+		return false
+	}
+	switch node.Type() {
+	case "statement_block":
+		// Analyze each statement in the block
+		for i := 0; i < int(node.NamedChildCount()); i++ {
+			stmt := node.NamedChild(i)
+			switch stmt.Type() {
+			case "lexical_declaration":
+				// for i := 0; i < int(stmt.NamedChildCount()); i++ {
+				// 	fmt.Println(stmt.Child(i).Content(sourceCode))
+				// }
+				declarators := analysis.ChildrenOfType(stmt, "variable_declarator")
+				for _, declarator := range declarators {
+					// Get the name node of the declarator
+					nameNode := declarator.ChildByFieldName("name")
+					nameVar := scope.Lookup(nameNode.Content(sourceCode))
+					if nameVar != nil {
+						// fmt.Println(dataFlowGraph[nameVar].Tained)
+						// if IsVulnerableWithDataFlow(nameNode, sourceCode, dataFlowGraph, scope) {
+						// 	fmt.Println("Tainted.")
+						// 	return true
+						// }
+					}
+				}
+			}
+
+		}
+	case "expression_statement":
+		expr := node.NamedChild(0)
+		return IsVulnerableWithDataFlow(expr, sourceCode, dataFlowGraph, scope)
+
+	default:
+		return IsVulnerableWithDataFlow(node, sourceCode, dataFlowGraph, scope)
 	}
 
 	return false
@@ -607,7 +674,6 @@ func analyzeNodeForVulnerabilities(node *sitter.Node, sourceCode []byte, dataFlo
 	// Recursively analyze children
 	for i := 0; i < int(node.NamedChildCount()); i++ {
 		child := node.NamedChild(i)
-		fmt.Println(child.Content(sourceCode))
 		if analyzeNodeForVulnerabilities(child, sourceCode, dataFlowGraph, scope, paramTaint) {
 			return true
 		}
