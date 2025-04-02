@@ -30,6 +30,7 @@ var ScopeNodes = []string{
 	"for_statement",
 	"for_in_statement",
 	"for_of_statement",
+	"program",
 }
 
 func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {

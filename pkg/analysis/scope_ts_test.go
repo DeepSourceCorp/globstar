@@ -103,12 +103,14 @@ func Test_BuildScopeTree(t *testing.T) {
 		require.NotNil(t, parsed)
 		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
 		// Checking function declaration
-
+		t.Log(scopeTree.Root.Variables)
+		funcVar := scopeTree.Root.Lookup("greet")
+		require.NotNil(t, funcVar)
 		funcVariable, exists := scopeTree.Root.Variables["greet"] // tagged as an Identifier
 		require.True(t, exists)
 		require.NotNil(t, funcVariable)
 
-		funcScope := scopeTree.Root.Children[0]
+		funcScope := scopeTree.GetScope(funcVar.DeclNode)
 		require.NotNil(t, funcScope)
 
 		nameVar, exists := funcScope.Variables["name"]
