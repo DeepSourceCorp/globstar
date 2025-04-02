@@ -1,0 +1,21 @@
+language: javascript
+name: graphql-upload
+message: "Using graphql upload library can cause CSRF attacks"
+category: security
+severity: warning
+
+pattern: >
+  (call_expression
+    function: (member_expression) @funcCall
+    arguments: (arguments
+      (_)*
+      (call_expression
+        function: (identifier) @gqlupload)
+      (_)*
+    )
+    (#eq? @funcCall "app.use")
+    (#eq? @gqlupload "graphqlUploadExpress")) @graphql-upload
+
+
+description: >
+  The Apollo GraphQL server using graphql-upload library enables file uploads via multipart/form-data POSTs, creating CSRF vulnerabilities. This occurs because multipart/form-data requests bypass same-origin protections. If graphql-upload is necessary for your application, implement CSRF protection measures to secure your server.

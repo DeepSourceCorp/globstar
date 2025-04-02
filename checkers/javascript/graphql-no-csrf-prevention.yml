@@ -1,0 +1,19 @@
+language: javascript
+name: graphql-no-csrf-prevention
+message: "Apollo GraphQL server vulnerable to CSRF attacks due to `csrfPrevention: false` setting"
+category: security
+severity: error
+
+pattern: >
+  (new_expression
+    constructor: (identifier) @apolloServer (#eq? @apolloServer "ApolloServer")
+    arguments: (arguments
+      (object
+        (_)*
+        (pair
+          key: (property_identifier) @csrf (#eq? @csrf "csrfPrevention")
+          value: (false))
+        (_)*)
+      )) @graphql-no-csrf-prevention
+
+description: Apollo GraphQL server has disabled CSRF protection by setting 'csrfPrevention' to false, making the server vulnerable to Cross-Site Request Forgery attacks. This configuration allows malicious websites to make unauthorized requests using authenticated users' credentials.

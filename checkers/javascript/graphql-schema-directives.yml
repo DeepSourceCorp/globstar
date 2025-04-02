@@ -1,0 +1,22 @@
+language: javascript
+name: graphql-schema-directives
+message: "Apollo GraphQL using deprecated 'schemaDirectives' that silently fail in v3+, potentially exposing endpoints."
+category: security
+severity: error
+
+pattern: >
+  (new_expression
+    constructor: (identifier) @apolloServer (#eq? @apolloServer "ApolloServer")
+    arguments: (arguments
+      (object
+        (_)*
+        (pair
+          key: (property_identifier) @schema
+          value: (_))
+        (_)*
+      )
+    )
+    (#eq? @schema "schemaDirectives")) @graphql-schema-directives
+
+description: >
+  Apollo GraphQL's 'schemaDirectives' option works in v2 but silently fails in v3+, potentially exposing authenticated endpoints and disabling security controls. This silent failure creates security risks as configured directives provide no protection. Refer to v3/v4 documentation to properly implement custom directives.
