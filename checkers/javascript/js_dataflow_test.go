@@ -17,6 +17,10 @@ func parseJsCode(t *testing.T, source []byte) *ana.ParseResult {
 }
 
 func TestSQLInjection(t *testing.T) {
+
+	// TODO:
+	// - Update test-cases to handle dataflow implementation instead of sql-injection cases.
+	// - Add other edge-cases including function blocks, Class Blocks etc.
 	tests := []struct {
 		name     string
 		code     string
