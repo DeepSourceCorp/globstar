@@ -177,7 +177,11 @@ func (st *ScopeTree) GetScope(node *sitter.Node) *Scope {
 func MakeScopeTree(lang Language, ast *sitter.Node, source []byte) *ScopeTree {
 	switch lang {
 	case LangPy:
-		return nil
+		builder := &PyScopeBuilder{
+			ast: ast,
+			source: source,
+		}
+		return BuildScopeTree(builder, ast, source)
 	case LangTs, LangJs, LangTsx:
 		builder := &TsScopeBuilder{
 			ast:    ast,
