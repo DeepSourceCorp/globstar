@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_item" || typ == "parameters"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_item" || typ == "parameters" || typ == "function_definition"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -101,6 +101,22 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 		lhs := node.ChildByFieldName("left")
 		return py.scanDecl(lhs, node, declaredVars)
 
+	case "function_definition":
+		name := node.ChildByFieldName("name")
+		// skipcq: TCV-001
+		if name == nil {
+			break
+		}
+
+		declaredVars = append(declaredVars, &Variable{
+			Kind:     VarKindFunction,
+			Name:     name.Content(py.source),
+			DeclNode: node,
+		})
+
+	case "parameters":
+		declaredVars = py.variableFromFunctionParams(node, declaredVars)
+
 	case "aliased_import":
 		// import <name> as <alias>
 		aliasName := node.ChildByFieldName("name")
@@ -138,7 +154,7 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 
 		parentType := parent.Type()
 
-		if parentType == "assignment" && parent.ChildByFieldName("left") == node  {
+		if parentType == "assignment" && parent.ChildByFieldName("left") == node {
 			return
 		}
 
@@ -161,6 +177,14 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		}
 
 		if parentType == "aliased_import" {
+			return
+		}
+
+		if parentType == "function_definition" {
+			return
+		}
+
+		if parentType == "paramaters" || parentType == "default_parameter" || parentType == "typed_default_parameter" {
 			return
 		}
 
@@ -218,4 +242,91 @@ func isModuleName(dottedNameNode *sitter.Node) bool {
 	moduleNameChildren := ChildrenWithFieldName(importNode, "module_name")
 
 	return slices.Contains(moduleNameChildren, dottedNameNode)
+}
+
+func (py *PyScopeBuilder) variableFromFunctionParams(node *sitter.Node, decls []*Variable) []*Variable {
+	childrenCount := node.NamedChildCount()
+	for i := 0; i < int(childrenCount); i++ {
+		param := node.NamedChild(i)
+
+		if param == nil {
+			continue
+		}
+
+		// handle the parameter types:
+		// identifier, typed_parameter, default_parameter, typed_default_parameter
+		if param.Type() == "identifier" {
+			decls = append(decls, &Variable{
+				Kind:     VarKindParameter,
+				Name:     param.Content(py.source),
+				DeclNode: param,
+			})
+		} else if param.Type() == "typed_parameter" || param.Type() == "list_splat_pattern" || param.Type() == "dictionary_splat_pattern" {
+			idNode := FirstChildOfType(param, "identifier")
+			if idNode != nil {
+				decls = append(decls, &Variable{
+					Kind:     VarKindParameter,
+					Name:     idNode.Content(py.source),
+					DeclNode: param,
+				})
+			}
+		} else if param.Type() == "default_parameter" || param.Type() == "typed_default_parameter" {
+			name := ChildWithFieldName(param, "name")
+			if name != nil {
+				if name.Type() == "identifier" {
+					decls = append(decls, &Variable{
+						Kind:     VarKindParameter,
+						Name:     name.Content(py.source),
+						DeclNode: param,
+					})
+				} else if name.Type() == "tuple_pattern" {
+					childrenIds := ChildrenOfType(name, "identifier")
+					childrenListSplat := ChildrenOfType(name, "list_splat_pattern")
+
+					for _, id := range childrenIds {
+						decls = append(decls, &Variable{
+							Kind:     VarKindParameter,
+							Name:     id.Content(py.source),
+							DeclNode: param,
+						})
+					}
+
+					for _, listSplatPat := range childrenListSplat {
+						splatId := FirstChildOfType(listSplatPat, "identifier")
+						if splatId != nil {
+							decls = append(decls, &Variable{
+								Kind:     VarKindParameter,
+								Name:     listSplatPat.Content(py.source),
+								DeclNode: param,
+							})
+						}
+					}
+				}
+			}
+		} else if param.Type() == "tuple_pattern" {
+			childrenIds := ChildrenOfType(param, "identifier")
+			childrenListSplat := ChildrenOfType(param, "list_splat_pattern")
+
+			for _, id := range childrenIds {
+				decls = append(decls, &Variable{
+					Kind:     VarKindParameter,
+					Name:     id.Content(py.source),
+					DeclNode: param,
+				})
+			}
+
+			for _, listSplatPat := range childrenListSplat {
+				splatId := FirstChildOfType(listSplatPat, "identifier")
+				if splatId != nil {
+					decls = append(decls, &Variable{
+						Kind:     VarKindParameter,
+						Name:     listSplatPat.Content(py.source),
+						DeclNode: param,
+					})
+				}
+			}
+		}
+	}
+
+	return decls
 }
