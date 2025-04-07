@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	// "fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -190,6 +191,32 @@ func Test_PyBuildScopeTree(t *testing.T) {
 		eRefs := varE.Refs
 		require.Equal(t, 1, len(eRefs))
 		assert.Equal(t, "call", eRefs[0].Node.Parent().Parent().Type())
+	})
+
+	t.Run("supports classes", func(t *testing.T) {
+		source := `
+			class MyClass:
+				def __init__(self, name):
+					self.name = name
+
+				def print_name(self):
+					print(self.name)
+			`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		{
+			varClass, exists := globalScope.Variables["MyClass"]
+			require.NotNil(t, varClass)
+			require.True(t, exists)
+			assert.Equal(t, VarKindClass, varClass.Kind)
+		}
+
 	})
 
 }
