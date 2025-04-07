@@ -21,7 +21,7 @@ func checkNanInjection(pass *analysis.Pass) (interface{}, error) {
 	reqVarMap := make(map[string]bool)
 
 	// get the variable name from the Flask decorated route function
-	analysis.Preorder(pass,func(node *sitter.Node) {
+	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "decorated_definition" {
 			return
 		}
@@ -41,7 +41,7 @@ func checkNanInjection(pass *analysis.Pass) (interface{}, error) {
 		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
 			return
 		}
-		
+
 		defNode := node.ChildByFieldName("definition")
 		if defNode.Type() != "function_definition" {
 			return
