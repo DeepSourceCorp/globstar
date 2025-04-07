@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -172,6 +172,16 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				})
 			}
 		}
+
+	case "class_definition":
+		name := node.ChildByFieldName("name")
+		if name != nil && name.Type() == "identifier" {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindClass,
+				Name:     name.Content(py.source),
+				DeclNode: node,
+			})
+		}
 	}
 
 	return declaredVars
@@ -224,6 +234,10 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		// works for patterns with an `as` clause
 		// eg. with <value> as <name>, except <exception> as <name>
 		if parentType == "as_pattern_target" {
+			return
+		}
+
+		if parentType == "class_definition" {
 			return
 		}
 
