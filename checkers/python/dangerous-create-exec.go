@@ -30,6 +30,10 @@ func dangerousCreateExec(pass *analysis.Pass) (interface{}, error) {
 		left := node.ChildByFieldName("left")
 		right := node.ChildByFieldName("right")
 
+		if right == nil {
+			return
+		}
+
 		if left.Type() == "identifier" && isEventSource(right, pass.FileContext.Source) {
 			eventVars[left.Content(pass.FileContext.Source)] = true
 		}
