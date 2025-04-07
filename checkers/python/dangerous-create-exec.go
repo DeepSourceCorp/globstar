@@ -66,7 +66,7 @@ func dangerousCreateExec(pass *analysis.Pass) (interface{}, error) {
 
 			if argNode != nil && argNode.NamedChildCount() >= 2 {
 				eventvarNode := argNode.NamedChild(1)
-				
+
 				if eventvarNode.Type() != "subscript" {
 					return
 				}
@@ -106,7 +106,7 @@ func dangerousCreateExec(pass *analysis.Pass) (interface{}, error) {
 		if node.Type() == "call" && isFunctionNamed(node, pass.FileContext.Source) {
 			argNode := node.ChildByFieldName("arguments")
 
-			if argNode != nil  && argNode.NamedChildCount() >= 4 {
+			if argNode != nil && argNode.NamedChildCount() >= 4 {
 				shellNode := argNode.NamedChild(1)
 				eventNode := argNode.NamedChild(3)
 
@@ -162,7 +162,7 @@ func dangerousCreateExec(pass *analysis.Pass) (interface{}, error) {
 				if listNode.Type() != "list" {
 					return
 				}
-				
+
 				shellNode := listNode.NamedChild(0)
 				eventNode := listNode.NamedChild(2)
 
@@ -174,7 +174,7 @@ func dangerousCreateExec(pass *analysis.Pass) (interface{}, error) {
 				eventVarSubscript := eventNode.ChildByFieldName("value")
 
 				if isShell(shellString) && eventVarSubscript.Content(pass.FileContext.Source) == "event" {
-					pass.Report(pass, node, "Detected passing tainted data from `event` parameter directly to an exec method which can cause command injection vulnerabilities")	
+					pass.Report(pass, node, "Detected passing tainted data from `event` parameter directly to an exec method which can cause command injection vulnerabilities")
 				}
 			}
 		}
