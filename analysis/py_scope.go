@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_item" || typ == "parameters" || typ == "function_definition"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -139,6 +139,22 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 			})
 		}
 
+	case "with_statement":
+		clause := FirstChildOfType(node, "with_clause")
+		item := FirstChildOfType(clause, "with_item")
+
+		value := item.ChildByFieldName("value")
+		alias := value.ChildByFieldName("alias")
+		if alias != nil {
+			id := FirstChildOfType(alias, "identifier")
+			if id != nil {
+				declaredVars = append(declaredVars, &Variable{
+					Kind:     VarKindVariable,
+					Name:     id.Content(py.source),
+					DeclNode: node,
+				})
+			}
+		}
 	}
 
 	return declaredVars
@@ -184,7 +200,11 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 			return
 		}
 
-		if parentType == "paramaters" || parentType == "default_parameter" || parentType == "typed_default_parameter" {
+		if parentType == "parameters" || parentType == "default_parameter" || parentType == "typed_default_parameter" {
+			return
+		}
+
+		if parentType == "as_pattern_target" {
 			return
 		}
 
