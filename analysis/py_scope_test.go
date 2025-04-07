@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	// "fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -140,6 +139,31 @@ func Test_PyBuildScopeTree(t *testing.T) {
 			bRefs := varB.Refs
 			require.Equal(t, 1, len(bRefs))
 			assert.Equal(t, "binary_operator", bRefs[0].Node.Parent().Type())
+		}
+	})
+
+	t.Run("supports with statements", func(t *testing.T) {
+		source := `
+			with open("file.txt", 'r') as f:
+				print(f.read(5))
+			`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		{
+			varF, exists := globalScope.Variables["f"]
+			require.NotNil(t, varF)
+			require.True(t, exists)
+
+			assert.Equal(t, VarKindVariable, varF.Kind)
+			fRefs := varF.Refs
+			require.Equal(t, 1, len(fRefs))
+			assert.Equal(t, "call", fRefs[0].Node.Parent().Parent().Type())
 		}
 	})
 
