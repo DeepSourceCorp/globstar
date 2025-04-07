@@ -18,8 +18,7 @@ var DjangoRequestDataWrite *analysis.Analyzer = &analysis.Analyzer{
 }
 
 func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
-	reqVarMap := make(map[string]bool)
-	intermVarMap := make(map[string]bool)
+	userDataVarMap := make(map[string]bool)
 
 	// get var names for data received from `request` calls
 	analysis.Preorder(pass, func(node *sitter.Node) {
@@ -35,7 +34,7 @@ func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		if isRequestCall(rightNode, pass.FileContext.Source) {
-			reqVarMap[leftNode.Content(pass.FileContext.Source)] = true
+			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -52,8 +51,8 @@ func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if isUserTainted(rightNode, pass.FileContext.Source, intermVarMap, reqVarMap) {
-			intermVarMap[leftNode.Content(pass.FileContext.Source)] = true
+		if isUserTainted(rightNode, pass.FileContext.Source, userDataVarMap) {
+			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -79,7 +78,7 @@ func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
 
 		argNodes := getNamedChildren(argListNode, 0)
 		for _, arg := range argNodes {
-			if isUserTaintedDataWrite(arg, pass.FileContext.Source, intermVarMap, reqVarMap) {
+			if isUserTaintedDataWrite(arg, pass.FileContext.Source, userDataVarMap) {
 				pass.Report(pass, node, "User-controlled data written to a file may enable log tampering, forced rotation, or disk exhaustion—sanitize input before writing")
 			}
 		}
@@ -89,10 +88,10 @@ func checkDjangoRequestDataWrite(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
-func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqVarMap map[string]bool) bool {
+func isUserTaintedDataWrite(node *sitter.Node, source []byte, userDataVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
-		if isInFunc(node, source, intermVarMap, reqVarMap) {
+		if isInFunc(node, source, userDataVarMap) {
 			return true
 		}
 		functionNode := node.ChildByFieldName("function")
@@ -111,7 +110,7 @@ func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqV
 
 		argsNode := getNamedChildren(argListNode, 0)
 		for _, arg := range argsNode {
-			if arg.Type() == "identifier" && reqVarMap[arg.Content(source)] {
+			if arg.Type() == "identifier" && userDataVarMap[arg.Content(source)] {
 				return true
 			} else if arg.Type() == "call" && isRequestCall(arg, source) {
 				return true
@@ -126,7 +125,7 @@ func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqV
 		for _, strnode := range stringChildrenNodes {
 			if strnode.Type() == "interpolation" {
 				exprnode := strnode.ChildByFieldName("expression")
-				if exprnode.Type() == "identifier" && reqVarMap[exprnode.Content(source)] {
+				if exprnode.Type() == "identifier" && userDataVarMap[exprnode.Content(source)] {
 					return true
 				} else if exprnode.Type() == "call" && isRequestCall(exprnode, source) {
 					return true
@@ -137,7 +136,7 @@ func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqV
 	case "binary_operator":
 		binOpStr := node.Content(source)
 
-		for reqvar := range reqVarMap {
+		for reqvar := range userDataVarMap {
 			pattern := `\b` + reqvar + `\b`
 			re := regexp.MustCompile(pattern)
 
@@ -152,7 +151,7 @@ func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqV
 		} else if rightNode.Type() == "tuple" {
 			targsNode := getNamedChildren(rightNode, 0)
 			for _, targ := range targsNode {
-				if targ.Type() == "identifier" && reqVarMap[targ.Content(source)] {
+				if targ.Type() == "identifier" && userDataVarMap[targ.Content(source)] {
 					return true
 				} else if targ.Type() == "call" && isRequestCall(targ, source) {
 					return true
@@ -161,7 +160,7 @@ func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqV
 		}
 
 	case "identifier":
-		return reqVarMap[node.Content(source)] || intermVarMap[node.Content(source)]
+		return userDataVarMap[node.Content(source)]
 
 	case "subscript":
 		return isRequestCall(node, source)
@@ -170,7 +169,7 @@ func isUserTaintedDataWrite(node *sitter.Node, source []byte, intermVarMap, reqV
 	return false
 }
 
-func isInFunc(node *sitter.Node, source []byte, intermVarMap, reqvarmap map[string]bool) bool {
+func isInFunc(node *sitter.Node, source []byte, userDataVarMap map[string]bool) bool {
 	if node.Type() != "call" {
 		return false
 	}
@@ -184,7 +183,7 @@ func isInFunc(node *sitter.Node, source []byte, intermVarMap, reqvarmap map[stri
 	argNodes := getNamedChildren(argListNode, 0)
 
 	for _, arg := range argNodes {
-		if isUserTainted(arg, source, intermVarMap, reqvarmap) {
+		if isUserTainted(arg, source, userDataVarMap) {
 			return true
 		}
 	}
