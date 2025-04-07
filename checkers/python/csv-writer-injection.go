@@ -182,7 +182,6 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 
 	case "binary_operator":
 		binaryOpStr := node.Content(source)
-		// fmt.Println(">>>", binaryOpStr)
 		for key := range userDataVarMap {
 			pattern := `\b` + key + `\b`
 			re := regexp.MustCompile(pattern)
