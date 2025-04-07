@@ -58,19 +58,19 @@ func checkInsecureUrllibFtp(pass *analysis.Pass) (interface{}, error) {
 			if rightNode.Type() != "string" && rightNode.Type() != "call" {
 				return
 			}
-			
+
 			varContent := rightNode.Content(pass.FileContext.Source)
 
 			// disallow string formatting checks in URLs for now
 			if varContent[0] == 'f' {
 				return
 			}
-			
+
 			// check if ftp url is stored in a variable
 			if isFtpUrl(trimQuotes(varContent)) {
 				urlVarMap[leftNode.Content(pass.FileContext.Source)] = true
 			}
-			
+
 			// check if OpenerDirector instance is created
 			if strings.Contains(varContent, "OpenerDirector") || strings.Contains(varContent, "Request") || strings.Contains(varContent, "URLopener") {
 				odVarMap[leftNode.Content(pass.FileContext.Source)] = true
