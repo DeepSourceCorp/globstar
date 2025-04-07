@@ -29,6 +29,7 @@ const (
 	VarKindFunction
 	VarKindVariable
 	VarKindParameter
+	VarKindClass
 )
 
 type Variable struct {
@@ -144,7 +145,7 @@ func buildScopeTree(
 	if builder.NodeCreatesScope(node) {
 		nextScope = NewScope(scope)
 		scopeOfNode[node] = nextScope
-
+		scope.AstNode = node
 		if scope != nil {
 			scope.Children = append(scope.Children, nextScope)
 		} else {
