@@ -1,0 +1,15 @@
+language: py
+name: html-magic-method
+message: Detected the usage of `__html__` magic method
+category: security
+
+pattern: |
+  (function_definition
+    name: (identifier) @html
+  (#eq? @html "__html__")) @html-magic-method
+
+filters:
+  - pattern-inside: (class_definition)
+
+description:
+  The __html__ method marks a value as safe, bypassing HTML escaping and risking XSS. Use mark_safe() instead for clearer intent when rendering raw HTML.
