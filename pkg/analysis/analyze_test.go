@@ -16,14 +16,14 @@ func parseTestFile(t *testing.T, filename string, source string, language Langua
 }
 
 func TestSkipCq(t *testing.T) {
-	tests := []struct{
-		name string
-		source string
+	tests := []struct {
+		name     string
+		source   string
 		language Language
-		want bool
+		want     bool
 	}{
 		{
-			name: "skipcq comment on same line",
+			name:     "skipcq comment on same line",
 			language: LangPy,
 			source: `
 				def someFunc(a, b):
@@ -32,7 +32,7 @@ func TestSkipCq(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "skipcq comment on previous line",
+			name:     "skipcq comment on previous line",
 			language: LangPy,
 			source: `
 				if True:
@@ -42,21 +42,20 @@ func TestSkipCq(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "skipcq comment not present",
+			name:     "skipcq comment not present",
 			language: LangPy,
 			source: `
 				assert a == b
 			`,
 			want: false,
 		},
-
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed := parseTestFile(t, "no-assert.test.py", tt.source, tt.language)
 			analyzer := &Analyzer{
-				Language: tt.language,
+				Language:    tt.language,
 				ParseResult: parsed,
 			}
 
@@ -81,7 +80,7 @@ func TestSkipCq(t *testing.T) {
 
 			issue := &Issue{
 				Filepath: "no-assert.test.py",
-				Node: assertNode,
+				Node:     assertNode,
 			}
 
 			res := analyzer.ContainsSkipcq(issue)

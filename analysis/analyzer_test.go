@@ -26,29 +26,28 @@ func mockChecker(pass *Pass) (interface{}, error) {
 	return nil, nil
 }
 
-
 func TestSkipCqComment(t *testing.T) {
 	tests := []struct {
-		name string
+		name     string
 		filename string
-		source string
+		source   string
 		language Language
-		checker func(*Pass) (any, error)
-		want bool
+		checker  func(*Pass) (any, error)
+		want     bool
 	}{
 		{
-			name: "skipcq on same line",
+			name:     "skipcq on same line",
 			filename: "no-assert.test.py",
 			source: `
 				def someFunc(a, b):
 					assert a == b # <skipcq>
 			`,
 			language: LangPy,
-			checker: mockChecker,
-			want: true,
+			checker:  mockChecker,
+			want:     true,
 		},
 		{
-			name: "skipcq on previous line",
+			name:     "skipcq on previous line",
 			filename: "no-assert.test.py",
 			source: `
 				if True:
@@ -56,18 +55,18 @@ func TestSkipCqComment(t *testing.T) {
 					assert a == 10
 			`,
 			language: LangPy,
-			checker: mockChecker,
-			want: true,
+			checker:  mockChecker,
+			want:     true,
 		},
 		{
-			name: "skipcq comment not present",
+			name:     "skipcq comment not present",
 			filename: "no-assert.test.py",
 			source: `
 				assert 1 == 2
 			`,
 			language: LangPy,
-			checker: mockChecker,
-			want: false,
+			checker:  mockChecker,
+			want:     false,
 		},
 	}
 
@@ -75,21 +74,21 @@ func TestSkipCqComment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed := parseTestFile(t, tt.filename, tt.source, tt.language)
 			analyzer := &Analyzer{
-				Name: "no-assert",
+				Name:        "no-assert",
 				Description: "analyzer for testing",
-				Category: CategorySecurity,
-				Severity: SeverityWarning,
-				Language: tt.language,
-				Requires: []*Analyzer{},
-				Run: tt.checker,
+				Category:    CategorySecurity,
+				Severity:    SeverityWarning,
+				Language:    tt.language,
+				Requires:    []*Analyzer{},
+				Run:         tt.checker,
 			}
 
 			var reportNode *sitter.Node
 
 			pass := &Pass{
-				Analyzer: analyzer,
+				Analyzer:    analyzer,
 				FileContext: parsed,
-				Files: []*ParseResult{parsed},
+				Files:       []*ParseResult{parsed},
 				Report: func(p *Pass, n *sitter.Node, msg string) {
 					reportNode = n
 				},
@@ -101,9 +100,9 @@ func TestSkipCqComment(t *testing.T) {
 
 			issue := &Issue{
 				Filepath: "no-assert.test.py",
-				Node: reportNode,
+				Node:     reportNode,
 			}
-			
+
 			result := ContainsSkipcq(pass, issue)
 			assert.Equal(t, tt.want, result)
 		})

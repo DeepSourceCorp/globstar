@@ -263,7 +263,6 @@ func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bo
 	return true
 }
 
-
 func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()

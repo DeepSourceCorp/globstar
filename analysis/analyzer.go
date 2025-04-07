@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"regexp"
+	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -147,9 +147,9 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 
 	reportFunc := func(pass *Pass, node *sitter.Node, message string) {
 		raisedIssue := &Issue{
-			Id: &pass.Analyzer.Name,
-			Node: node,
-			Message: message,
+			Id:       &pass.Analyzer.Name,
+			Node:     node,
+			Message:  message,
 			Filepath: pass.FileContext.FilePath,
 		}
 		if !ContainsSkipcq(pass, raisedIssue) {
