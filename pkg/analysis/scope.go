@@ -29,6 +29,7 @@ const (
 	VarKindFunction
 	VarKindVariable
 	VarKindParameter
+	VarKindClass
 )
 
 type Variable struct {
