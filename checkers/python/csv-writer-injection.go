@@ -40,7 +40,7 @@ func checkCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 	})
 
 	// get the variable name from the Flask decorated route function
-	analysis.Preorder(pass,func(node *sitter.Node) {
+	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "decorated_definition" {
 			return
 		}
@@ -197,7 +197,6 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 	case "subscript":
 		return isRequestCall(node, source)
 	}
-
 
 	return false
 }
