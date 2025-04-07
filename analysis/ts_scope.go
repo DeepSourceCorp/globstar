@@ -32,6 +32,9 @@ var ScopeNodes = []string{
 	"for_of_statement",
 	"program",
 	"arrow_function",
+	"class_body",
+	// "class_declaration",
+	"method_definition",
 }
 
 func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
@@ -40,7 +43,7 @@ func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier" || typ == "formal_parameters" || typ == "function_declaration"
+	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier" || typ == "formal_parameters" || typ == "function_declaration" || typ == "method_definition" || typ == "class_declaration"
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -156,9 +159,7 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 			if param == nil {
 				continue
 			}
-			// Handle different parameter types (required, optional, rest, patterns)
-			// Simple identifier parameter: function foo(x)
-			// Required parameter often wraps identifier: function foo(x: number)
+
 			var identifier *sitter.Node
 			if param.Type() == "identifier" {
 				identifier = param
@@ -201,6 +202,26 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				Kind:     VarKindImport,
 				Name:     defaultImport.Content(ts.source),
 				DeclNode: defaultImport,
+			})
+		}
+
+	case "class_declaration":
+		className := node.ChildByFieldName("name")
+		if className != nil {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindClass,
+				Name:     className.Content(ts.source),
+				DeclNode: className,
+			})
+		}
+
+	case "method_definition":
+		methodName := node.ChildByFieldName("name")
+		if methodName != nil {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindFunction,
+				Name:     methodName.Content(ts.source),
+				DeclNode: methodName,
 			})
 		}
 	}
