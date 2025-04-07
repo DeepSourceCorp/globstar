@@ -167,4 +167,29 @@ func Test_PyBuildScopeTree(t *testing.T) {
 		}
 	})
 
+	t.Run("supports exception statements", func(t *testing.T) {
+		source := `
+			try:
+				result = 10 / 2
+			except ZeroDivisionError as e:
+				print(e)
+			`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		varE, exists := globalScope.Variables["e"]
+		require.NotNil(t, varE)
+		require.True(t, exists)
+
+		assert.Equal(t, VarKindError, varE.Kind)
+		eRefs := varE.Refs
+		require.Equal(t, 1, len(eRefs))
+		assert.Equal(t, "call", eRefs[0].Node.Parent().Parent().Type())
+	})
+
 }

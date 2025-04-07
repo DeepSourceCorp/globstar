@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -155,6 +155,23 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				})
 			}
 		}
+
+	case "try_statement":
+		exceptClause := FirstChildOfType(node, "except_clause")
+		asPattern := FirstChildOfType(exceptClause, "as_pattern")
+
+		if asPattern != nil {
+			alias := asPattern.ChildByFieldName("alias")
+			id := FirstChildOfType(alias, "identifier")
+
+			if id != nil {
+				declaredVars = append(declaredVars, &Variable{
+					Kind:     VarKindError,
+					Name:     id.Content(py.source),
+					DeclNode: node,
+				})
+			}
+		}
 	}
 
 	return declaredVars
@@ -204,6 +221,8 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 			return
 		}
 
+		// works for patterns with an `as` clause
+		// eg. with <value> as <name>, except <exception> as <name>
 		if parentType == "as_pattern_target" {
 			return
 		}
