@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -66,6 +67,16 @@ type Pass struct {
 	ResultCache map[*Analyzer]map[*ParseResult]any
 }
 
+// for caching the skipcq comments
+type SkipComment struct {
+	// the line number for the skipcq comment
+	CommentLine int
+	// the entire text of the skipcq comment
+	CommentText string
+	// (optional) name of the checker for targetted skip
+	CheckerId string
+}
+
 func walkTree(node *sitter.Node, f func(*sitter.Node)) {
 	f(node)
 
@@ -112,6 +123,8 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 	}
 
 	trees := make(map[Language][]*ParseResult)
+	fileSkipInfo := make(map[string][]*SkipComment)
+
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // continue to the next file
@@ -136,6 +149,8 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 			return nil
 		}
 
+		fileSkipInfo[file.FilePath] = GatherSkipInfo(file)
+
 		trees[file.Language] = append(trees[file.Language], file)
 
 		return nil
@@ -145,12 +160,17 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 	}
 
 	reportFunc := func(pass *Pass, node *sitter.Node, message string) {
-		raisedIssues = append(raisedIssues, &Issue{
+		raisedIssue := &Issue{
 			Id:       &pass.Analyzer.Name,
 			Node:     node,
 			Message:  message,
 			Filepath: pass.FileContext.FilePath,
-		})
+		}
+
+		skipLines := fileSkipInfo[pass.FileContext.FilePath]
+		if !ContainsSkipcq(skipLines, raisedIssue) {
+			raisedIssues = append(raisedIssues, raisedIssue)
+		}
 	}
 
 	for lang, analyzers := range langAnalyzerMap {
@@ -222,4 +242,94 @@ func reportText(issues []*Issue) ([]byte, error) {
 		output = append(output, []byte("\n")...)
 	}
 	return output, nil
+}
+
+// cache all the skipcq comments from an ast
+func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
+	var skipLines []*SkipComment
+
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
+	pattern := fmt.Sprintf(`^%s\s+skipcq(?::\s*([A-Za-z0-9_-]+))?`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+
+	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.
+		Grammar())
+
+	if err != nil {
+		return skipLines
+	}
+
+	cursor := sitter.NewQueryCursor()
+	cursor.Exec(query, fileContext.Ast)
+
+	// gather all skipcq comment lines in a single pass
+	for {
+		m, ok := cursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range m.Captures {
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName != "skipcq" {
+				continue
+			}
+
+			commentNode := capture.Node
+			commentLine := int(commentNode.StartPoint().Row)
+			commentText := commentNode.Content(fileContext.Source)
+
+			// look for checker names
+			matches := skipRegexp.FindStringSubmatch(commentText)
+			var checkerId string
+			if matches != nil {
+				if len(matches) > 1 {
+					checkerId = matches[1]
+				}
+			}
+
+			if skipRegexp.MatchString(commentText) {
+				skipLines = append(skipLines, &SkipComment{
+					CommentLine: commentLine,
+					CommentText: commentText,
+					CheckerId: checkerId, // will be empty for generic skipcq
+				})
+			}
+		}
+	}
+
+	return skipLines
+}
+
+func ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
+	if len(skipLines) == 0 {
+		return false
+	}
+
+	issueNode := issue.Node
+	nodeLine := int(issueNode.StartPoint().Row)
+	prevLine := nodeLine - 1
+
+	var checkerId string
+	if issue.Id != nil {
+		checkerId = *issue.Id
+	}
+
+	for _, comment := range skipLines {
+		if comment.CommentLine != nodeLine && comment.CommentLine != prevLine {
+			continue
+		}
+
+		if comment.CheckerId != "" {
+			// targetted skipcq
+			if checkerId == comment.CheckerId {
+				return true
+			}
+		} else {
+			// generic skipcq
+			return true
+		}
+	}
+
+	return false
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/pkg/config"
@@ -91,6 +92,34 @@ type Analyzer struct {
 	// when leaving that node.
 	exitCheckersForNode map[string][]Checker
 	issuesRaised        []*Issue
+}
+
+type SkipComment struct {
+	// the line number for the skipcq comment
+	CommentLine int
+	// the entire text of the skipcq comment
+	CommentText string
+	// (optional) name of the checker for targetted skip
+	CheckerId string
+}
+
+// package level cache to store comments for each file
+var fileSkipComment = make(map[string][]*SkipComment)
+
+func InitializeSkipComments(analyzers []*Analyzer) {
+	fileSkipComments := make(map[string][]*SkipComment)
+
+	processedPaths := make(map[string]bool)
+
+	for _, analyzer := range analyzers {
+		filepath := analyzer.ParseResult.FilePath
+		if processedPaths[filepath] {
+			continue
+		}
+
+		processedPaths[filepath] = true
+		fileSkipComments[filepath] = GatherSkipInfo(analyzer.ParseResult)
+	}
 }
 
 func FromFile(filePath string, baseCheckers []Checker) (*Analyzer, error) {
@@ -304,9 +333,99 @@ func (ana *Analyzer) Report(issue *Issue) {
 }
 
 func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
+	InitializeSkipComments(analyzers)
+
 	issues := []*Issue{}
 	for _, analyzer := range analyzers {
 		issues = append(issues, analyzer.Analyze()...)
 	}
 	return issues, nil
+}
+
+func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
+	var skipLines []*SkipComment
+
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
+	pattern := fmt.Sprintf(`^%s\s+skipcq(?::\s*([A-Za-z0-9_-]+))?`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+
+	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.Grammar())
+
+	if err != nil {
+		return skipLines
+	}
+
+	cursor := sitter.NewQueryCursor()
+	cursor.Exec(query, fileContext.Ast)
+
+	// gather all skipcq comment lines in a single pass
+	for {
+		m, ok := cursor.NextMatch()
+		if !ok {
+			break
+		}
+
+		for _, capture := range m.Captures {
+			captureName := query.CaptureNameForId(capture.Index)
+			if captureName != "skipcq" {
+				continue
+			}
+
+			commentNode := capture.Node
+			commentLine := int(commentNode.StartPoint().Row)
+			commentText := commentNode.Content(fileContext.Source)
+
+			// look for checker names
+			matches := skipRegexp.FindStringSubmatch(commentText)
+			var checkerId string
+			if matches != nil {
+				if len(matches) > 1 {
+					checkerId = matches[1]
+				}
+			}
+
+			if skipRegexp.MatchString(commentText) {
+				skipLines = append(skipLines, &SkipComment{
+					CommentLine: commentLine,
+					CommentText: commentText,
+					CheckerId: checkerId, // will be empty for generic skipcq
+				})
+			}
+		}
+	}
+
+	return skipLines
+}
+
+func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
+	if len(skipLines) == 0 {
+		return false
+	}
+
+	issueNode := issue.Node
+	nodeLine := int(issueNode.StartPoint().Row)
+	prevLine := nodeLine - 1
+
+	var checkerId string
+
+	if issue.Id != nil {
+		checkerId = *issue.Id
+	}
+
+	for _, comment := range skipLines {
+		if comment.CommentLine != nodeLine && comment.CommentLine != prevLine {
+			continue
+		}
+
+		if comment.CheckerId != "" {
+			// targetted skipcq
+			if checkerId == comment.CheckerId {
+				return true
+			}
+		} else {
+			return true // generic skipcq
+		}
+	}
+
+	return false
 }

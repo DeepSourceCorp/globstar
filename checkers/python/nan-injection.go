@@ -2,22 +2,64 @@ package python
 
 import (
 	"regexp"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/analysis"
 )
 
-var DjangoNanInjection *analysis.Analyzer = &analysis.Analyzer{
-	Name:        "django-nan-injection",
+var NanInjection *analysis.Analyzer = &analysis.Analyzer{
+	Name:        "nan-injection",
 	Language:    analysis.LangPy,
 	Description: "User input is directly cast to `bool()`, `float()`, or `complex()`, allowing an attacker to inject Python's `NaN`. This can lead to undefined behavior, especially in comparisons. To mitigate this, either use a different type for casting or explicitly check for all capitalizations of 'nan' before conversion.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
-	Run:         checkDjangoNanInjection,
+	Run:         checkNanInjection,
 }
 
-func checkDjangoNanInjection(pass *analysis.Pass) (interface{}, error) {
+func checkNanInjection(pass *analysis.Pass) (interface{}, error) {
 	reqVarMap := make(map[string]bool)
+
+	// get the variable name from the Flask decorated route function
+	analysis.Preorder(pass, func(node *sitter.Node) {
+		if node.Type() != "decorated_definition" {
+			return
+		}
+
+		decNode := node.NamedChild(0)
+		if decNode.Type() != "decorator" {
+			return
+		}
+		callNode := decNode.NamedChild(0)
+		if callNode.Type() != "call" {
+			return
+		}
+		funcNode := callNode.ChildByFieldName("function")
+		if funcNode.Type() != "attribute" {
+			return
+		}
+		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
+			return
+		}
+
+		defNode := node.ChildByFieldName("definition")
+		if defNode.Type() != "function_definition" {
+			return
+		}
+
+		paramsNode := defNode.ChildByFieldName("parameters")
+		if paramsNode.NamedChildCount() == 0 {
+			return
+		}
+		if paramsNode.Type() != "parameters" {
+			return
+		}
+		allparamNodes := getNamedChildren(paramsNode, 0)
+		for _, p := range allparamNodes {
+			reqVarMap[p.Content(pass.FileContext.Source)] = true
+		}
+	})
+
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "assignment" {
 			return
@@ -62,7 +104,7 @@ func checkDjangoNanInjection(pass *analysis.Pass) (interface{}, error) {
 			} else if bodyNode.Type() == "expression_statement" {
 				exprNode := bodyNode.NamedChild(0)
 				if isInsecureTypeCast(exprNode, pass.FileContext.Source, reqVarMap) && !ifConditionPresent {
-					pass.Report(pass, bodyNode, "aaaaa")
+					pass.Report(pass, bodyNode, "Directly type-casting user data could cause potential NaN injection vulnerabilities that can cause undefined behavior")
 				}
 			}
 		}

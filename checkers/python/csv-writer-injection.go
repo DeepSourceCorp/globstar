@@ -8,16 +8,16 @@ import (
 	"globstar.dev/analysis"
 )
 
-var DjangoCsvWriterInjection *analysis.Analyzer = &analysis.Analyzer{
-	Name:        "django-csv-writer-injection",
+var CsvWriterInjection *analysis.Analyzer = &analysis.Analyzer{
+	Name:        "csv-writer-injection",
 	Language:    analysis.LangPy,
 	Description: "Using the built-in csv module with user input can allow attackers to inject malicious formulas into CSV files. When opened in a spreadsheet, these formulas may execute scripts that steal data or install malware. To mitigate this risk, use defusedcsv, a drop-in replacement that helps prevent formula injection.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
-	Run:         checkDjangoCsvWriterInjection,
+	Run:         checkCsvWriterInjection,
 }
 
-func checkDjangoCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
+func checkCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 	writerVarMap := make(map[string]bool)
 	userDataVarMap := make(map[string]bool)
 
@@ -36,6 +36,37 @@ func checkDjangoCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 
 		if isCsvWriter(rightNode, pass.FileContext.Source) {
 			writerVarMap[leftNode.Content(pass.FileContext.Source)] = true
+		}
+	})
+
+	// get the variable name from the Flask decorated route function
+	analysis.Preorder(pass, func(node *sitter.Node) {
+		if node.Type() != "decorated_definition" {
+			return
+		}
+		decNode := node.NamedChild(0)
+		if decNode.Type() != "decorator" {
+			return
+		}
+		callNode := node.NamedChild(0)
+		if callNode.Type() != "call" {
+			return
+		}
+		funcNode := callNode.ChildByFieldName("function")
+		if funcNode.Type() != "attribute" {
+			return
+		}
+		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
+			return
+		}
+		defNode := node.ChildByFieldName("definition")
+		paramsNode := defNode.ChildByFieldName("parameters")
+		if paramsNode.Type() != "parameters" {
+			return
+		}
+		allparamNodes := getNamedChildren(paramsNode, 0)
+		for _, p := range allparamNodes {
+			userDataVarMap[p.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -107,7 +138,7 @@ func checkDjangoCsvWriterInjection(pass *analysis.Pass) (interface{}, error) {
 func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
-		if isRequestCall(node, source) && !strings.Contains(node.Content(source), "build_absolute_url") {
+		if isRequestCall(node, source) && !strings.Contains(node.Content(source), "build_absolute_uri") {
 			return true
 		}
 
@@ -151,7 +182,6 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 
 	case "binary_operator":
 		binaryOpStr := node.Content(source)
-
 		for key := range userDataVarMap {
 			pattern := `\b` + key + `\b`
 			re := regexp.MustCompile(pattern)
@@ -163,6 +193,9 @@ func isUSerData(node *sitter.Node, source []byte, userDataVarMap map[string]bool
 
 	case "identifier":
 		return isRequestCall(node, source) || userDataVarMap[node.Content(source)]
+
+	case "subscript":
+		return isRequestCall(node, source)
 	}
 
 	return false

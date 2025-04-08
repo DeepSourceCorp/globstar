@@ -8,19 +8,18 @@ import (
 	"globstar.dev/analysis"
 )
 
-var DjangoSSRFInjection *analysis.Analyzer = &analysis.Analyzer{
-	Name:        "django-ssrf-injection",
+var SSRFInjection *analysis.Analyzer = &analysis.Analyzer{
+	Name:        "ssrf-injection",
 	Language:    analysis.LangPy,
 	Description: "User-supplied data is used in a server-side request, potentially leading to SSRF. Mitigate by validating schemes and hosts against an allowlist, avoiding direct response forwarding, and enforcing authentication and transport-layer security in the proxied request.",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
-	Run:         checkDjangoSSRFInjection,
+	Run:         checkSSRFInjection,
 }
 
-func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
+func checkSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 	requestMethodName := make(map[string]bool)
-	reqDataVarMap := make(map[string]bool)
-	intermVarMap := make(map[string]bool)
+	userDataVarMap := make(map[string]bool)
 
 	// get the request methods imported
 	analysis.Preorder(pass, func(node *sitter.Node) {
@@ -44,6 +43,37 @@ func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 	})
 
+	// get the variable name from the Flask decorated route function
+	analysis.Preorder(pass, func(node *sitter.Node) {
+		if node.Type() != "decorated_definition" {
+			return
+		}
+		decNode := node.NamedChild(0)
+		if decNode.Type() != "decorator" {
+			return
+		}
+		callNode := decNode.NamedChild(0)
+		if callNode.Type() != "call" {
+			return
+		}
+		funcNode := callNode.ChildByFieldName("function")
+		if funcNode.Type() != "attribute" {
+			return
+		}
+		if !strings.HasSuffix(funcNode.Content(pass.FileContext.Source), ".route") {
+			return
+		}
+		defNode := node.ChildByFieldName("definition")
+		paramsNode := defNode.ChildByFieldName("parameters")
+		if paramsNode.Type() != "parameters" {
+			return
+		}
+		allparamNodes := getNamedChildren(paramsNode, 0)
+		for _, p := range allparamNodes {
+			userDataVarMap[p.Content(pass.FileContext.Source)] = true
+		}
+	})
+
 	// get the var names for request calls
 	analysis.Preorder(pass, func(node *sitter.Node) {
 		if node.Type() != "assignment" {
@@ -58,7 +88,7 @@ func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		if isRequestCall(rightNode, pass.FileContext.Source) {
-			reqDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
+			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -75,8 +105,8 @@ func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 			return
 		}
 
-		if isUserTainted(rightNode, pass.FileContext.Source, intermVarMap, reqDataVarMap) {
-			intermVarMap[leftNode.Content(pass.FileContext.Source)] = true
+		if isUserTainted(rightNode, pass.FileContext.Source, userDataVarMap) {
+			userDataVarMap[leftNode.Content(pass.FileContext.Source)] = true
 		}
 	})
 
@@ -94,10 +124,10 @@ func checkDjangoSSRFInjection(pass *analysis.Pass) (interface{}, error) {
 		if argListNode.Type() != "argument_list" {
 			return
 		}
-
+		// fmt.Println(userDataVarMap)
 		argsNode := getNamedChildren(argListNode, 0)
 		for _, arg := range argsNode {
-			if isUserTainted(arg, pass.FileContext.Source, intermVarMap, reqDataVarMap) {
+			if isUserTainted(arg, pass.FileContext.Source, userDataVarMap) {
 				pass.Report(pass, node, "Unvalidated user input detected in Server-Side Request - potential SSRF vulnerability")
 			}
 		}
@@ -128,7 +158,7 @@ func isImportedRequestMethod(node *sitter.Node, source []byte, reqMethodMap map[
 	return isReqMethod
 }
 
-func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map[string]bool) bool {
+func isUserTainted(node *sitter.Node, source []byte, userDataVarMap map[string]bool) bool {
 	switch node.Type() {
 	case "call":
 		functionNode := node.ChildByFieldName("function")
@@ -147,7 +177,7 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 
 		argsNode := getNamedChildren(argListNode, 0)
 		for _, arg := range argsNode {
-			if arg.Type() == "identifier" && reqVarMap[arg.Content(source)] {
+			if arg.Type() == "identifier" && userDataVarMap[arg.Content(source)] {
 				return true
 			} else if arg.Type() == "call" && isRequestCall(arg, source) {
 				return true
@@ -162,7 +192,7 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 		for _, strnode := range stringChildrenNodes {
 			if strnode.Type() == "interpolation" {
 				exprnode := strnode.ChildByFieldName("expression")
-				if exprnode.Type() == "identifier" && reqVarMap[exprnode.Content(source)] {
+				if exprnode.Type() == "identifier" && userDataVarMap[exprnode.Content(source)] {
 					return true
 				} else if exprnode.Type() == "call" && isRequestCall(exprnode, source) {
 					return true
@@ -173,7 +203,7 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 	case "binary_operator":
 		binOpStr := node.Content(source)
 
-		for reqvar := range reqVarMap {
+		for reqvar := range userDataVarMap {
 			pattern := `\b` + reqvar + `\b`
 			re := regexp.MustCompile(pattern)
 
@@ -188,7 +218,7 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 		} else if rightNode.Type() == "tuple" {
 			targsNode := getNamedChildren(rightNode, 0)
 			for _, targ := range targsNode {
-				if targ.Type() == "identifier" && reqVarMap[targ.Content(source)] {
+				if targ.Type() == "identifier" && userDataVarMap[targ.Content(source)] {
 					return true
 				} else if targ.Type() == "call" && isRequestCall(targ, source) {
 					return true
@@ -197,7 +227,7 @@ func isUserTainted(node *sitter.Node, source []byte, intermVarMap, reqVarMap map
 		}
 
 	case "identifier":
-		return reqVarMap[node.Content(source)] || intermVarMap[node.Content(source)]
+		return userDataVarMap[node.Content(source)]
 
 	case "subscript":
 		return isRequestCall(node, source)
@@ -213,17 +243,7 @@ func isRequestCall(node *sitter.Node, source []byte) bool {
 		if funcNode.Type() != "attribute" {
 			return false
 		}
-		objectNode := funcNode.ChildByFieldName("object")
-		if !strings.Contains(objectNode.Content(source), "request") {
-			return false
-		}
-
-		attributeNode := funcNode.ChildByFieldName("attribute")
-		if attributeNode.Type() != "identifier" {
-			return false
-		}
-
-		if !strings.Contains(attributeNode.Content(source), "get") {
+		if !strings.HasPrefix(funcNode.Content(source), "request") && !strings.HasPrefix(funcNode.Content(source), "flask.request.") {
 			return false
 		}
 
@@ -235,8 +255,7 @@ func isRequestCall(node *sitter.Node, source []byte) bool {
 			return false
 		}
 
-		objNode := valueNode.ChildByFieldName("object")
-		if objNode.Type() != "identifier" && objNode.Content(source) != "request" {
+		if !strings.HasPrefix(valueNode.Content(source), "request.") && !strings.HasPrefix(valueNode.Content(source), "flask.request.") {
 			return false
 		}
 

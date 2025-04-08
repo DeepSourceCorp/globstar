@@ -97,16 +97,21 @@ func (r *patternCheckerImpl) OnMatch(
 			)
 		}
 	}
-
-	ana.Report(&Issue{
-		Range:    matchedNode.Range(),
-		Node:     matchedNode,
-		Message:  message,
+	raisedIssue := &Issue{
+		Range: matchedNode.Range(),
+		Node: matchedNode,
+		Message: message,
 		Filepath: ana.ParseResult.FilePath,
 		Category: r.Category(),
 		Severity: r.Severity(),
-		Id:       &r.issueId,
-	})
+		Id: &r.issueId,
+	}
+
+	filepath := ana.ParseResult.FilePath
+	skipComments := fileSkipComment[filepath]
+	if !ana.ContainsSkipcq(skipComments, raisedIssue) {
+		ana.Report(raisedIssue)
+	}
 }
 
 func (r *patternCheckerImpl) Name() string {

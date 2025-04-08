@@ -1,0 +1,32 @@
+language: py
+name: flask-avoid-direct-app-run
+message: Top level `app.run()` is ignored by Flask - consider putting it inside a guard
+category: security
+severity: warning
+
+pattern: >
+  (call
+    function: (attribute
+      object: (identifier) @appname
+      attribute: (identifier) @method)
+    (#eq? @appname "app")
+    (#eq? @method "run")) @flask-avoid-direct-app-run
+  
+filters:
+  - pattern-not-inside: >
+      (if_statement
+        condition: (comparison_operator
+          (identifier) @name (#eq? @name "__name__")
+          (string
+            (string_start)
+            (string_content) @main (#eq? @main "__main__")
+            (string_end)
+          )
+        )
+      )
+  - pattern-not-inside: >
+      (function_definition)
+
+
+description: >
+  Directly calling `app.run()` at the top level of a Flask application creates a security vulnerability because the command is ignored when imported as a module, potentially leading to unintended execution and broken access control issues.
