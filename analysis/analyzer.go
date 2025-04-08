@@ -292,7 +292,7 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 				skipLines = append(skipLines, &SkipComment{
 					CommentLine: commentLine,
 					CommentText: commentText,
-					CheckerId: checkerId, // will be empty for generic skipcq
+					CheckerId:   checkerId, // will be empty for generic skipcq
 				})
 			}
 		}
