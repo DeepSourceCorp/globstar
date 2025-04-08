@@ -28,30 +28,33 @@ func mockChecker(pass *Pass) (interface{}, error) {
 
 func TestSkipCqComment(t *testing.T) {
 	tests := []struct {
-		name     string
-		filename string
-		source   string
-		language Language
-		checker  func(*Pass) (any, error)
-		want     bool
+		name      string
+		checkerId string
+		filename  string
+		source    string
+		language  Language
+		checker   func(*Pass) (any, error)
+		want      bool
 	}{
 		{
-			name:     "skipcq on same line",
-			filename: "no-assert.test.py",
+			name:      "skipcq on same line",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
 			source: `
 				def someFunc(a, b):
-					assert a == b # <skipcq>
+					assert a == b # skipcq
 			`,
 			language: LangPy,
 			checker:  mockChecker,
 			want:     true,
 		},
 		{
-			name:     "skipcq on previous line",
-			filename: "no-assert.test.py",
+			name:      "skipcq on previous line",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
 			source: `
 				if True:
-					# <skipcq>
+					# skipcq
 					assert a == 10
 			`,
 			language: LangPy,
@@ -59,8 +62,35 @@ func TestSkipCqComment(t *testing.T) {
 			want:     true,
 		},
 		{
-			name:     "skipcq comment not present",
-			filename: "no-assert.test.py",
+			name:      "skipcq with target checker name",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
+			language:  LangPy,
+			source: `
+				if a >= 20:
+					# skipcq: no-assert
+					assert a < 30
+			`,
+			want: true,
+		},
+		{
+			name:      "skipcq with mismatched target name",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
+			language:  LangPy,
+			source: `
+				try:
+					# skipcq: sql-injection
+					assert a == b
+				except AssertionError as e:
+					print(e)
+			`,
+			want: false,
+		},
+		{
+			name:      "skipcq comment not present",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
 			source: `
 				assert 1 == 2
 			`,
@@ -74,7 +104,7 @@ func TestSkipCqComment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed := parseTestFile(t, tt.filename, tt.source, tt.language)
 			analyzer := &Analyzer{
-				Name:        "no-assert",
+				Name:        tt.checkerId,
 				Description: "analyzer for testing",
 				Category:    CategorySecurity,
 				Severity:    SeverityWarning,
@@ -99,11 +129,14 @@ func TestSkipCqComment(t *testing.T) {
 			require.NotNil(t, reportNode, "checker should return a non-nil node for assert")
 
 			issue := &Issue{
+				Id:       &tt.checkerId,
 				Filepath: "no-assert.test.py",
 				Node:     reportNode,
 			}
 
-			result := ContainsSkipcq(pass, issue)
+			skipLines := GatherSkipInfo(parsed)
+
+			result := ContainsSkipcq(skipLines, issue)
 			assert.Equal(t, tt.want, result)
 		})
 	}

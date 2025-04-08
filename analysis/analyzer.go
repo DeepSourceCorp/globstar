@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -67,6 +68,12 @@ type Pass struct {
 	ResultCache map[*Analyzer]map[*ParseResult]any
 }
 
+// for caching the skipcq comments
+type SkipComment struct {
+	CommentLine int
+	CommentText string
+}
+
 func walkTree(node *sitter.Node, f func(*sitter.Node)) {
 	f(node)
 
@@ -113,6 +120,8 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 	}
 
 	trees := make(map[Language][]*ParseResult)
+	fileSkipInfo := make(map[string][]*SkipComment)
+
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // continue to the next file
@@ -137,6 +146,8 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 			return nil
 		}
 
+		fileSkipInfo[file.FilePath] = GatherSkipInfo(file)
+
 		trees[file.Language] = append(trees[file.Language], file)
 
 		return nil
@@ -152,7 +163,9 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 			Message:  message,
 			Filepath: pass.FileContext.FilePath,
 		}
-		if !ContainsSkipcq(pass, raisedIssue) {
+
+		skipLines := fileSkipInfo[pass.FileContext.FilePath]
+		if !ContainsSkipcq(skipLines, raisedIssue) {
 			raisedIssues = append(raisedIssues, raisedIssue)
 		}
 	}
@@ -228,23 +241,25 @@ func reportText(issues []*Issue) ([]byte, error) {
 	return output, nil
 }
 
-func ContainsSkipcq(pass *Pass, issue *Issue) bool {
-	commentIdentifier := GetEscapedCommentIdentifierFromPath(issue.Filepath)
-	pattern := fmt.Sprintf(`^%s\s+<skipcq>\s*$`, commentIdentifier)
-	skipRegexp := regexp.MustCompile(pattern)
-	issueNode := issue.Node
-	nodeStartline := int(issueNode.StartPoint().Row)
-	previousLine := nodeStartline - 1
+// cache all the skipcq comments from an ast
+func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
+	var skipLines []*SkipComment
 
-	query, err := sitter.NewQuery([]byte("(comment) @pragma"), pass.Analyzer.Language.Grammar())
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
+	pattern := fmt.Sprintf(`^%s\s+skipcq(:\s*[^$]*)?$`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+
+	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.
+		Grammar())
 
 	if err != nil {
-		return false
+		return skipLines
 	}
 
 	cursor := sitter.NewQueryCursor()
-	cursor.Exec(query, pass.FileContext.Ast)
+	cursor.Exec(query, fileContext.Ast)
 
+	// gather all skipcq comment lines in a single pass
 	for {
 		m, ok := cursor.NextMatch()
 		if !ok {
@@ -253,20 +268,60 @@ func ContainsSkipcq(pass *Pass, issue *Issue) bool {
 
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
-			if captureName != "pragma" {
+			if captureName != "skipcq" {
 				continue
 			}
 
 			commentNode := capture.Node
 			commentLine := int(commentNode.StartPoint().Row)
+			commentText := commentNode.Content(fileContext.Source)
 
-			if commentLine == nodeStartline || commentLine == previousLine {
-				commentText := commentNode.Content(pass.FileContext.Source)
-				if skipRegexp.MatchString(commentText) {
-					return true
-				}
+			if skipRegexp.MatchString(commentText) {
+				skipLines = append(skipLines, &SkipComment{
+					CommentLine: commentLine,
+					CommentText: commentText,
+				})
 			}
 		}
 	}
+
+	return skipLines
+}
+
+func ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
+	if len(skipLines) == 0 {
+		return false
+	}
+
+	issueNode := issue.Node
+	nodeLine := int(issueNode.StartPoint().Row)
+	prevLine := nodeLine - 1
+
+	var checkerId string
+	if issue.Id != nil {
+		checkerId = *issue.Id
+	}
+
+	for _, comment := range skipLines {
+		if comment.CommentLine != nodeLine && comment.CommentLine != prevLine {
+			continue
+		}
+
+		// check if targeted skipcq or not
+		if strings.Contains(comment.CommentText, "skipcq:") {
+			// split to get the checker id
+			parts := strings.Split(comment.CommentText, "skipcq:")
+			if len(parts) > 1 {
+				checkerTarget := strings.TrimSpace(parts[1])
+				if checkerTarget == checkerId {
+					return true
+				}
+			}
+		} else {
+			// its a generic skipcq, skip anyway
+			return true
+		}
+	}
+
 	return false
 }

@@ -106,7 +106,10 @@ func (r *patternCheckerImpl) OnMatch(
 		Severity: r.Severity(),
 		Id: &r.issueId,
 	}
-	if !ana.ContainsSkipcq(raisedIssue) {
+
+	filepath := ana.ParseResult.FilePath
+	skipComments := fileSkipComment[filepath]
+	if !ana.ContainsSkipcq(skipComments, raisedIssue) {
 		ana.Report(raisedIssue)
 	}
 }

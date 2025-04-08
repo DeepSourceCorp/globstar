@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/pkg/config"
@@ -92,6 +93,30 @@ type Analyzer struct {
 	// when leaving that node.
 	exitCheckersForNode map[string][]Checker
 	issuesRaised        []*Issue
+}
+
+type SkipComment struct {
+	CommentLine int
+	CommentText string
+}
+
+// package level cache to store comments for each file
+var fileSkipComment = make(map[string][]*SkipComment)
+
+func InitializeSkipComments(analyzers []*Analyzer) {
+	fileSkipComments := make(map[string][]*SkipComment)
+
+	processedPaths := make(map[string]bool)
+
+	for _, analyzer := range analyzers {
+		filepath := analyzer.ParseResult.FilePath
+		if processedPaths[filepath] {
+			continue
+		}
+
+		processedPaths[filepath] = true
+		fileSkipComments[filepath] = GatherSkipInfo(analyzer.ParseResult)
+	}
 }
 
 func FromFile(filePath string, baseCheckers []Checker) (*Analyzer, error) {
@@ -305,6 +330,8 @@ func (ana *Analyzer) Report(issue *Issue) {
 }
 
 func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
+	InitializeSkipComments(analyzers)
+
 	issues := []*Issue{}
 	for _, analyzer := range analyzers {
 		issues = append(issues, analyzer.Analyze()...)
@@ -312,23 +339,23 @@ func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 	return issues, nil
 }
 
-func (ana *Analyzer) ContainsSkipcq(issue *Issue) bool {
-	commentIdentifier := GetEscapedCommentIdentifierFromPath(issue.Filepath)
-	pattern := fmt.Sprintf(`^%s\s+<skipcq>\s*$`, commentIdentifier)
-	skipRegexp := regexp.MustCompile(pattern)
-	issueNode := issue.Node
-	nodeStartLine := int(issueNode.StartPoint().Row)
-	previousLine := nodeStartLine - 1
+func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
+	var skipLines []*SkipComment
 
-	query, err := sitter.NewQuery([]byte("(comment) @pragma"), ana.Language.Grammar())
+	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
+	pattern := fmt.Sprintf(`^%s\s+skipcq(:\s*[^$]*)?$`, commentIdentifier)
+	skipRegexp := regexp.MustCompile(pattern)
+
+	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.Grammar())
 
 	if err != nil {
-		return false
+		return skipLines
 	}
 
 	cursor := sitter.NewQueryCursor()
-	cursor.Exec(query, ana.ParseResult.Ast)
+	cursor.Exec(query, fileContext.Ast)
 
+	// gather all skipcq comment lines in a single pass
 	for {
 		m, ok := cursor.NextMatch()
 		if !ok {
@@ -337,19 +364,61 @@ func (ana *Analyzer) ContainsSkipcq(issue *Issue) bool {
 
 		for _, capture := range m.Captures {
 			captureName := query.CaptureNameForId(capture.Index)
-			if captureName != "pragma" {
+			if captureName != "skipcq" {
 				continue
 			}
+
 			commentNode := capture.Node
 			commentLine := int(commentNode.StartPoint().Row)
+			commentText := commentNode.Content(fileContext.Source)
 
-			if commentLine == nodeStartLine || commentLine == previousLine {
-				commentText := commentNode.Content(ana.ParseResult.Source)
-				if skipRegexp.MatchString(commentText) {
-					return true
-				}
+			if skipRegexp.MatchString(commentText) {
+				skipLines = append(skipLines, &SkipComment{
+					CommentLine: commentLine,
+					CommentText: commentText,
+				})
 			}
 		}
 	}
+
+	return skipLines
+}
+
+func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
+	if len(skipLines) == 0 {
+		return false
+	}
+
+	issueNode := issue.Node
+	nodeLine := int(issueNode.StartPoint().Row)
+	prevLine := nodeLine - 1
+
+	var checkerId string
+
+	if issue.Id != nil {
+		checkerId = *issue.Id
+	}
+
+	for _, comment := range skipLines {
+		if comment.CommentLine != nodeLine && comment.CommentLine != prevLine {
+			continue
+		}
+
+		// check if targeted skipcq comment
+		if strings.Contains(comment.CommentText, "skipcq:") {
+			// split to get the checker id
+			parts := strings.Split(comment.CommentText, "skipcq:")
+			if len(parts) > 1 {
+				checkerTarget := strings.TrimSpace(parts[1])
+				if checkerTarget == checkerId {
+					return true
+				}
+			}
+		} else {
+			// its a generic skipcq
+			return true
+		}
+	}
+
 	return false
 }
