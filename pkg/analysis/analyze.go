@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"globstar.dev/pkg/config"
@@ -96,8 +95,12 @@ type Analyzer struct {
 }
 
 type SkipComment struct {
+	// the line number for the skipcq comment
 	CommentLine int
+	// the entire text of the skipcq comment
 	CommentText string
+	// (optional) name of the checker for targetted skip
+	CheckerId string
 }
 
 // package level cache to store comments for each file
@@ -343,7 +346,7 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 	var skipLines []*SkipComment
 
 	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
-	pattern := fmt.Sprintf(`^%s\s+skipcq(:\s*[^$]*)?$`, commentIdentifier)
+	pattern := fmt.Sprintf(`^%s\s+skipcq(?::\s*([A-Za-z0-9_-]+))?`, commentIdentifier)
 	skipRegexp := regexp.MustCompile(pattern)
 
 	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.Grammar())
@@ -372,10 +375,20 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 			commentLine := int(commentNode.StartPoint().Row)
 			commentText := commentNode.Content(fileContext.Source)
 
+			// look for checker names
+			matches := skipRegexp.FindStringSubmatch(commentText)
+			var checkerId string
+			if matches != nil {
+				if len(matches) > 1 {
+					checkerId = matches[1]
+				}
+			}
+
 			if skipRegexp.MatchString(commentText) {
 				skipLines = append(skipLines, &SkipComment{
 					CommentLine: commentLine,
 					CommentText: commentText,
+					CheckerId: checkerId, // will be empty for generic skipcq
 				})
 			}
 		}
@@ -404,19 +417,13 @@ func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool
 			continue
 		}
 
-		// check if targeted skipcq comment
-		if strings.Contains(comment.CommentText, "skipcq:") {
-			// split to get the checker id
-			parts := strings.Split(comment.CommentText, "skipcq:")
-			if len(parts) > 1 {
-				checkerTarget := strings.TrimSpace(parts[1])
-				if checkerTarget == checkerId {
-					return true
-				}
+		if comment.CheckerId != "" {
+			// targetted skipcq
+			if checkerId == comment.CheckerId {
+				return true
 			}
 		} else {
-			// its a generic skipcq
-			return true
+			return true // generic skipcq
 		}
 	}
 
