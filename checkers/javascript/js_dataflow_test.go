@@ -40,8 +40,98 @@ func TestDataFlowAnalysis(t *testing.T) {
 			FileContext: parseResult,
 		}
 
-		_, err := createDataFlowGraph(pass)
+		dfgStruct, err := createDataFlowGraph(pass)
 		assert.NoError(t, err)
 
+		dfg := dfgStruct.(*DataFlowGraph)
+
+		flowGraph := dfg.Graph
+		assert.NotNil(t, flowGraph)
+
+		scopeTree := dfg.ScopeTree
+		assert.NotNil(t, scopeTree)
+
+		aVar := scopeTree.Root.Children[0].Lookup("a")
+		assert.NotNil(t, aVar)
+
+		funcVar := scopeTree.Root.Children[0].Lookup("f")
+		assert.NotNil(t, funcVar)
+
+		funcScope := scopeTree.GetScope(funcVar.DeclNode.ChildByFieldName("body"))
+		assert.NotNil(t, funcScope)
+
+		aFuncVar := funcScope.Lookup("a")
+		assert.NotNil(t, aFuncVar)
+
+		// no re-assignment of a inside the function body.
+		assert.Equal(t, aVar, aFuncVar)
+
 	})
+
+	t.Run("variable_data_flow_through_multiple_functions", func(t *testing.T) {
+		source := `
+			var a = 10
+			function f(x){
+				a = x * 2	
+				return a;
+			}
+
+			f(a)
+			console.log(a)
+
+			function g(x) {
+				var a = x * 2;
+				return a;
+			}
+
+			g(a)
+			console.log(a)
+			`
+		parseResult := parseJsCode(t, []byte(source))
+
+		pass := &ana.Pass{
+			Analyzer:    DataFlowAnalyzer,
+			FileContext: parseResult,
+		}
+
+		dfgStruct, err := createDataFlowGraph(pass)
+		assert.NoError(t, err)
+
+		dfg := dfgStruct.(*DataFlowGraph)
+
+		flowGraph := dfg.Graph
+		assert.NotNil(t, flowGraph)
+
+		scopeTree := dfg.ScopeTree
+		assert.NotNil(t, scopeTree)
+
+		aVar := scopeTree.Root.Children[0].Lookup("a")
+		assert.NotNil(t, aVar)
+
+		f1Var := scopeTree.Root.Children[0].Lookup("f")
+		assert.NotNil(t, f1Var)
+
+		f1Scope := scopeTree.GetScope(f1Var.DeclNode.ChildByFieldName("body"))
+		assert.NotNil(t, f1Scope)
+
+		aF1Var := f1Scope.Lookup("a")
+		assert.NotNil(t, aF1Var)
+
+		// no re-assignment of a inside the function body.
+		assert.Equal(t, aVar, aF1Var)
+
+		f2Var := scopeTree.Root.Children[0].Lookup("g")
+		assert.NotNil(t, f2Var)
+
+		f2Scope := scopeTree.GetScope(f2Var.DeclNode.ChildByFieldName("body"))
+		assert.NotNil(t, f2Scope)
+
+		aF2Var := f2Scope.Lookup("a")
+		assert.NotNil(t, aF2Var)
+
+		// reassignment of `a` inside of g(x) causes it to be a different variable inside aF2Var
+		assert.NotEqual(t, aVar, aF2Var)
+
+	})
+
 }
