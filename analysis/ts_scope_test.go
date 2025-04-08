@@ -141,31 +141,31 @@ func TestExportHandling(t *testing.T) {
 		source string
 		checks func(t *testing.T, scopeTree *ScopeTree)
 	}{
-		// {
-		// 	name: "named_exports",
-		// 	source: `
-		//         const foo = 123;
-		//         const bar = 456;
-		//         export { foo, bar as baz };
-		//     `,
-		// 	checks: func(t *testing.T, scopeTree *ScopeTree) {
-		// 		globalScope := scopeTree.Root.Children[0]
+		{
+			name: "named_exports",
+			source: `
+		        const foo = 123;
+		        const bar = 456;
+		        export { foo, bar as baz };
+		    `,
+			checks: func(t *testing.T, scopeTree *ScopeTree) {
+				globalScope := scopeTree.Root.Children[0]
 
-		// 		fooVar := globalScope.Lookup("foo")
-		// 		require.NotNil(t, fooVar, "foo should be defined")
-		// 		assert.True(t, fooVar.Exported, "foo should be marked as exported")
+				fooVar := globalScope.Lookup("foo")
+				require.NotNil(t, fooVar, "foo should be defined")
+				assert.True(t, fooVar.Exported, "foo should be marked as exported")
 
-		// 		barVar := globalScope.Lookup("bar")
-		// 		require.NotNil(t, barVar, "bar should be defined")
-		// 		assert.True(t, barVar.Exported, "bar should be marked as exported")
-		// 	},
-		// },
+				barVar := globalScope.Lookup("bar")
+				require.NotNil(t, barVar, "bar should be defined")
+				assert.True(t, barVar.Exported, "bar should be marked as exported")
+			},
+		},
 		{
 			name: "direct_export_declaration",
 			source: `
 		        export const x = 10;
-		        // export function hello() {}
-		        // export class MyClass {}
+		        export function hello() {}
+		        export class MyClass {}
 		    `,
 			checks: func(t *testing.T, scopeTree *ScopeTree) {
 				globalScope := scopeTree.Root.Children[0]
