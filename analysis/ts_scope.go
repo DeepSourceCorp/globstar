@@ -43,7 +43,14 @@ func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier" || typ == "formal_parameters" || typ == "function_declaration" || typ == "method_definition" || typ == "class_declaration"
+	return typ == "variable_declarator" ||
+		typ == "import_clause" ||
+		typ == "import_specifier" ||
+		typ == "formal_parameters" ||
+		typ == "function_declaration" ||
+		typ == "method_definition" ||
+		typ == "class_declaration" ||
+		typ == "export_statement"
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -224,6 +231,7 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				DeclNode: methodName,
 			})
 		}
+
 	}
 
 	return declaredVars
@@ -290,6 +298,7 @@ func (ts *TsScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		}
 		variable.Refs = append(variable.Refs, ref)
 	}
+
 }
 
 func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
@@ -310,6 +319,61 @@ func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
 			}
 
 			variable.Refs = append(variable.Refs, ref)
+		}
+	}
+	if node.Type() == "export_statement" {
+		// Handle named exports: export { foo, bar as baz };
+		namedExports := ChildrenOfType(node, "export_specifier")
+		for _, exportSpec := range namedExports {
+			name := exportSpec.ChildByFieldName("name")
+			if name == nil {
+				continue
+			}
+
+			varName := name.Content(ts.source)
+			variable := scope.Lookup(varName)
+			if variable != nil {
+				variable.Exported = true
+			}
+		}
+
+		// Handle direct exports: export const foo = 123;
+		declaration := node.ChildByFieldName("declaration")
+		if declaration != nil {
+			if declaration.Type() == "variable_declaration" {
+				// Handle variable declarations: export const foo = 123, bar = 456;
+				declarators := ChildrenOfType(declaration, "variable_declarator")
+				for _, declarator := range declarators {
+					name := declarator.ChildByFieldName("name")
+					if name != nil && name.Type() == "identifier" {
+						varName := name.Content(ts.source)
+						variable := scope.Lookup(varName)
+						if variable != nil {
+							variable.Exported = true
+						}
+					}
+				}
+			} else if declaration.Type() == "function_declaration" || declaration.Type() == "class_declaration" {
+				// Handle direct function/class exports: export function foo() {}
+				name := declaration.ChildByFieldName("name")
+				if name != nil {
+					varName := name.Content(ts.source)
+					variable := scope.Lookup(varName)
+					if variable != nil {
+						variable.Exported = true
+					}
+				}
+			}
+		}
+
+		// Handle default exports: export default foo;
+		defaultExport := node.ChildByFieldName("source")
+		if defaultExport != nil && defaultExport.Type() == "identifier" {
+			varName := defaultExport.Content(ts.source)
+			variable := scope.Lookup(varName)
+			if variable != nil {
+				variable.Exported = true
+			}
 		}
 	}
 }

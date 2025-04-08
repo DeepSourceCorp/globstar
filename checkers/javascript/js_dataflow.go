@@ -36,7 +36,8 @@ type FunctionDefinition struct {
 }
 
 type DataFlowGraph struct {
-	Graph map[*analysis.Variable]*DataFlowNode
+	Graph     map[*analysis.Variable]*DataFlowNode
+	ScopeTree *analysis.ScopeTree
 }
 
 var functionDefinitions = make(map[string]*FunctionDefinition)
@@ -45,17 +46,18 @@ var functionDefinitions = make(map[string]*FunctionDefinition)
 
 func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 
-	// Map to track variable definitions and their data flow nodes
-	dataFlowGraph := &DataFlowGraph{
-		Graph: make(map[*analysis.Variable]*DataFlowNode),
-	}
-
-	scopeTree := pass.ResultOf[ScopeAnalyzer].(*analysis.ScopeTree)
-	if scopeTree == nil {
+	scopeResult, err := buildScopeTree(pass)
+	if err != nil {
 		return nil, fmt.Errorf("failed to build the scope tree \n")
 	}
 
-	// scopeTree := scopeResult.(*analysis.ScopeTree)
+	scopeTree := scopeResult.(*analysis.ScopeTree)
+
+	// Map to track variable definitions and their data flow nodes
+	dataFlowGraph := &DataFlowGraph{
+		Graph:     make(map[*analysis.Variable]*DataFlowNode),
+		ScopeTree: scopeTree,
+	}
 
 	// First pass: build initial data flow graph
 	analysis.Preorder(pass, func(node *sitter.Node) {

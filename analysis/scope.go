@@ -40,6 +40,8 @@ type Variable struct {
 	DeclNode *sitter.Node
 	// Refs is a list of references to this variable throughout the file
 	Refs []*Reference
+	// Exported tracks if the variable is valid to be exported
+	Exported bool
 }
 
 // ScopeBuilder is an interface that has to be implemented
