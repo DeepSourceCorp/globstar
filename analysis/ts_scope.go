@@ -2,6 +2,7 @@
 package analysis
 
 import (
+	"fmt"
 	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -323,30 +324,44 @@ func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
 	}
 	if node.Type() == "export_statement" {
 		// Handle named exports: export { foo, bar as baz };
-		namedExports := ChildrenOfType(node, "export_specifier")
-		for _, exportSpec := range namedExports {
-			name := exportSpec.ChildByFieldName("name")
-			if name == nil {
+		fmt.Println(node)
+		exportClause := ChildrenOfType(node, "export_clause")
+
+		for _, clause := range exportClause {
+			var varName string
+			exportSpecifier := ChildrenOfType(clause, "export_specifier")
+			if len(exportSpecifier) == 0 {
 				continue
 			}
-
-			varName := name.Content(ts.source)
-			variable := scope.Lookup(varName)
-			if variable != nil {
-				variable.Exported = true
+			for _, specifier := range exportSpecifier {
+				name := specifier.ChildByFieldName("name")
+				if name == nil {
+					continue
+				}
+				if name.Type() == "identifier" {
+					varName = name.Content(ts.source)
+				}
+				variable := scope.Lookup(varName)
+				if variable != nil {
+					variable.Exported = true
+				}
 			}
+
 		}
 
 		// Handle direct exports: export const foo = 123;
 		declaration := node.ChildByFieldName("declaration")
 		if declaration != nil {
-			if declaration.Type() == "variable_declaration" {
+			if declaration.Type() == "lexical_declaration" {
 				// Handle variable declarations: export const foo = 123, bar = 456;
 				declarators := ChildrenOfType(declaration, "variable_declarator")
+				// fmt.Println(declarators)
 				for _, declarator := range declarators {
 					name := declarator.ChildByFieldName("name")
 					if name != nil && name.Type() == "identifier" {
 						varName := name.Content(ts.source)
+
+						// fmt.Println("variable name", varName)
 						variable := scope.Lookup(varName)
 						if variable != nil {
 							variable.Exported = true
