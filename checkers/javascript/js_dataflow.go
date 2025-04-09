@@ -47,6 +47,7 @@ type ClassDefinition struct {
 type DataFlowGraph struct {
 	Graph     map[*analysis.Variable]*DataFlowNode
 	ScopeTree *analysis.ScopeTree
+	FuncDefs  map[string]*FunctionDefinition
 }
 
 var functionDefinitions = make(map[string]*FunctionDefinition)
@@ -66,6 +67,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 	dataFlowGraph := &DataFlowGraph{
 		Graph:     make(map[*analysis.Variable]*DataFlowNode),
 		ScopeTree: scopeTree,
+		FuncDefs:  make(map[string]*FunctionDefinition),
 	}
 
 	// First pass: build initial data flow graph
@@ -75,6 +77,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		currentScope := scopeTree.GetScope(node)
+		// fmt.Println(currentScope.Variables)
 		if currentScope == nil {
 			return
 		}
@@ -85,24 +88,28 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 
 			if node.Type() == "variable_declarator" {
 				nameNode = node.ChildByFieldName("name")
-
 				valueNode = node.ChildByFieldName("value")
 			} else { // assignment_expression
 				nameNode = node.ChildByFieldName("left")
 				valueNode = node.ChildByFieldName("right")
 			}
 
-			if nameNode != nil && nameNode.Type() == "identifier" && valueNode != nil {
-				varName := nameNode.Content(pass.FileContext.Source)
+			// fmt.Println(node)
 
+			if nameNode != nil && nameNode.Type() == "identifier" && valueNode != nil {
+				var dfNode *DataFlowNode
+				varName := nameNode.Content(pass.FileContext.Source)
 				variable := currentScope.Lookup(varName)
-				// Create data flow node
-				dfNode := &DataFlowNode{
-					Node:     valueNode,
-					Sources:  []*DataFlowNode{},
-					Scope:    currentScope,
-					Variable: variable,
+				// fmt.Println(variable)
+				if variable != nil {
+					dfNode = &DataFlowNode{
+						Node:     nameNode,
+						Sources:  []*DataFlowNode{},
+						Scope:    currentScope,
+						Variable: variable,
+					}
 				}
+				// Create data flow node
 
 				switch valueNode.Type() {
 				case "identifier":
@@ -260,6 +267,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 		}
 
 	})
+	dataFlowGraph.FuncDefs = functionDefinitions
 
 	return dataFlowGraph, nil
 }

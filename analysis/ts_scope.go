@@ -51,7 +51,7 @@ func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 		typ == "function_declaration" ||
 		typ == "method_definition" ||
 		typ == "class_declaration" ||
-		typ == "export_statement"
+		typ == "export_statement" || typ == "assignment_expression"
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -145,6 +145,10 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 	switch node.Type() {
 	case "variable_declarator":
 		lhs := node.ChildByFieldName("name")
+		return ts.scanDecl(lhs, node, declaredVars)
+
+	case "assignment_expression":
+		lhs := node.ChildByFieldName("left")
 		return ts.scanDecl(lhs, node, declaredVars)
 
 	case "function_declaration":
