@@ -1,0 +1,178 @@
+language: py
+name: dangerous-spawn-process
+message: Detected `os` function with argument tainted by possible malicious `event` object
+category: security
+
+patterns:
+  - >
+    (call
+      function: (attribute
+        object: (identifier) @osmodule
+        attribute: (identifier) @method)
+      arguments: (argument_list
+        (_)
+        .
+        [(subscript
+          value: (identifier) @eventArg
+          subscript: (_))
+
+          (string
+            (string_start)
+            (string_content)
+            (interpolation
+              expression: (subscript
+                value: (identifier) @eventArg
+                subscript: (_)))
+            (string_end))
+
+          (binary_operator
+            left: (string)
+            right: (subscript
+              value: (identifier) @eventArg
+              subscript: (string)))
+
+          (call
+            function: (attribute
+              object: (string)
+              attribute: (identifier) @formatMethod)
+            arguments:(argument_list
+              (subscript
+                value: (identifier) @eventArg
+                subscript: (_))))
+          ]
+        (_)*)
+      (#eq? @osmodule "os")
+      (#match? @method "^(spawnl|spawnle|spawnlp|spawnlpe|spawnv|spawnve|spawnvp|spawnvpe|posix_spawn|posix_spawnp|startfile)$")
+      (#eq? @formatMethod "format")
+      (#eq? @eventArg "event")) @dangerous-spawn-process
+
+  - >
+    (call
+      function: (attribute
+        object: (identifier) @osmodule
+        attribute: (identifier) @method)
+      arguments: (argument_list
+        (_)
+        .
+        (string
+          (string_start)
+          (string_content) @shellName
+          (string_end)
+        )
+        .
+        (string
+          (string_start)
+          (string_content) @cflag
+          (string_end)
+        )
+        .
+        [(subscript
+          value: (identifier) @eventArg
+          subscript: (_))
+
+          (string
+            (string_start)
+            (string_content)
+            (interpolation
+              expression: (subscript
+                value: (identifier) @eventArg
+                subscript: (_)))
+            (string_end))
+
+          (binary_operator
+            left: (string)
+            right: (subscript
+              value: (identifier) @eventArg
+              subscript: (string)))
+
+          (call
+            function: (attribute
+              object: (string)
+              attribute: (identifier) @formatMethod)
+            arguments:(argument_list
+              (subscript
+                value: (identifier) @eventArg
+                subscript: (_))))
+        ]
+        .
+      (_)*)
+    (#eq? @osmodule "os")
+    (#match? @method "^(spawnl|spawnle|spawnlp|spawnlpe)$")
+    (#match? @shellName "(.*)(sh|bash|ksh|csh|tcsh|zsh)")
+    (#eq? @cflag "-c")
+    (#eq? @eventArg "event")
+    (#eq? @formatMethod "format")) @dangerous-spawn-process
+
+  - >
+    (call
+      function: (attribute
+        object: (identifier) @osmodule
+        attribute: (identifier) @method)
+      arguments: (argument_list
+        (_)
+        .
+        (string
+          (string_start)
+          (string_content) @shellName
+          (string_end)
+        )
+        .
+        (list
+          .
+          (string
+            (string_start)
+            (string_content) @cflag
+            (string_end))
+          .
+          [(subscript
+          value: (identifier) @eventArg
+          subscript: (_))
+
+          (string
+            (string_start)
+            (string_content)
+            (interpolation
+              expression: (subscript
+                value: (identifier) @eventArg
+                subscript: (_)))
+            (string_end))
+
+          (binary_operator
+            left: (string)
+            right: (subscript
+              value: (identifier) @eventArg
+              subscript: (string)))
+
+          (call
+            function: (attribute
+              object: (string)
+              attribute: (identifier) @formatMethod)
+            arguments:(argument_list
+              (subscript
+                value: (identifier) @eventArg
+                subscript: (_))))
+          ])
+          .
+        (_)*)
+        (#eq? @osmodule "os")
+        (#match? @method "^(spawnv|spawnve|spawnvp|spawnvp|spawnvpe|posix_spawn|posix_spawnp)$")
+        (#match? @shellName "(.*)(sh|bash|ksh|csh|tcsh|zsh)")
+        (#eq? @cflag "-c")
+        (#eq? @eventArg "event")
+        (#eq? @formatMethod "format")) @dangerous-spawn-process
+
+
+filters:
+  - pattern-inside: |
+      (function_definition
+        name: (identifier) @funcname
+        parameters: (parameters
+          (_)*
+          (identifier) @event
+          (_)*)
+        (#match? @funcname ".*handler.*")
+        (#eq? @event "event")
+      )
+
+description: >
+  Potential command injection vulnerability: event data flows into an os function. This may allow attackers to execute arbitrary commands if external data can reach this function. Carefully review and sanitize all inputs.
