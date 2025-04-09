@@ -1,3 +1,5 @@
+//globstar:registry-exclude
+
 package javascript
 
 import (
@@ -9,7 +11,7 @@ import (
 )
 
 var DataFlowAnalyzer = &analysis.Analyzer{
-	Name:        "DataFlowAnalyzer",
+	Name:        "data_flow_analyzer",
 	Language:    analysis.LangJs,
 	Description: "Create a Data Flow Graph for a javascript file",
 	Category:    analysis.CategorySecurity,
@@ -32,6 +34,13 @@ type FunctionDefinition struct {
 	Node       *sitter.Node
 	Parameters []*analysis.Variable
 	Body       *sitter.Node
+	Scope      *analysis.Scope
+}
+
+type ClassDefinition struct {
+	Node       *sitter.Node
+	Properties []*analysis.Variable
+	Methods    []*FunctionDefinition
 	Scope      *analysis.Scope
 }
 
@@ -175,11 +184,22 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 				Scope: currentScope,
 			}
 
+			funcVar := currentScope.Lookup(funcName)
+			if funcVar == nil {
+				return
+			}
+
 			for _, param := range currentScope.Variables {
 				funcDef.Parameters = append(funcDef.Parameters, param)
 			}
-
 			functionDefinitions[funcName] = funcDef
+			dataFlowGraph.Graph[funcVar] = &DataFlowNode{
+				Node:     funcNameNode,
+				Sources:  []*DataFlowNode{},
+				Scope:    currentScope,
+				Variable: funcVar,
+				FuncDef:  funcDef,
+			}
 		}
 
 		// Handle IIFE `(function(){...})()`
@@ -215,10 +235,8 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 
 					}
 				}
-
 			}
-
-			// TODO: Figure out a way to store anon functions in the function definition map.
+			// Create a data flow node for the IIFE
 
 		}
 
