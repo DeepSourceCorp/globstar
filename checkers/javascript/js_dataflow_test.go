@@ -1,4 +1,3 @@
-//globstar:registry-exclude
 package javascript
 
 import (
@@ -132,6 +131,38 @@ func TestDataFlowAnalysis(t *testing.T) {
 		// reassignment of `a` inside of g(x) causes it to be a different variable inside aF2Var
 		assert.NotEqual(t, aVar, aF2Var)
 
+	})
+
+	t.Run("variable_assignment_data_flow", func(t *testing.T) {
+		// Taint Logic not implemented after refactoring the data_flow_analyzer.
+		source := `
+		function f(x){
+			var a = x * 2;
+			return a;	
+		}
+		`
+
+		parseResult := parseJsCode(t, []byte(source))
+		pass := &ana.Pass{
+			Analyzer:    DataFlowAnalyzer,
+			FileContext: parseResult,
+		}
+		dfgStruct, err := createDataFlowGraph(pass)
+		assert.NoError(t, err)
+		dfg := dfgStruct.(*DataFlowGraph)
+		flowGraph := dfg.Graph
+		assert.NotNil(t, flowGraph)
+		scopeTree := dfg.ScopeTree
+		assert.NotNil(t, scopeTree)
+
+		functionVar := scopeTree.Root.Children[0].Lookup("f")
+
+		assert.NotNil(t, functionVar)
+		functionScope := scopeTree.GetScope(functionVar.DeclNode)
+		assert.NotNil(t, functionScope)
+		functionDef := flowGraph[functionVar].FuncDef
+		assert.NotNil(t, functionDef)
+		assert.NotNil(t, functionDef.Body)
 	})
 
 }
