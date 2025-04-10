@@ -172,3 +172,41 @@ func TestDataFlowAnalysis(t *testing.T) {
 	})
 
 }
+
+func TestClassDataFlow(t *testing.T) {
+	source := `
+		class A {
+			myName = "unnat"
+			constructor(x) {
+				this.x = x;
+			}
+			f() {
+				return this.x;
+			}
+		}
+
+		`
+
+	parseResult := parseJsCode(t, []byte(source))
+	pass := &ana.Pass{
+		Analyzer:    DataFlowAnalyzer,
+		FileContext: parseResult,
+	}
+	dfgStruct, err := createDataFlowGraph(pass)
+	assert.NoError(t, err)
+	dfg := dfgStruct.(*DataFlowGraph)
+	scopeTree := dfg.ScopeTree
+	graph := dfg.Graph
+	assert.NotNil(t, scopeTree)
+	classVar := scopeTree.Root.Children[0].Lookup("A")
+	assert.NotNil(t, classVar)
+	dfgClassNode := graph[classVar]
+	assert.NotNil(t, dfgClassNode)
+
+	classDef := dfg.ClassDefs
+	assert.NotNil(t, classDef)
+	assert.NotNil(t, classDef[classVar])
+	assert.Greater(t, len(classDef[classVar].Methods), 0)
+	assert.Greater(t, len(classDef[classVar].Properties), 0)
+
+}

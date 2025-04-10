@@ -186,72 +186,125 @@ func TestExportHandling(t *testing.T) {
 				assert.Equal(t, VarKindClass, classVar.Kind)
 			},
 		},
-		// {
-		// 	name: "default_export",
-		// 	source: `
-		//         const value = 42;
-		//         export default value;
-		//     `,
-		// 	checks: func(t *testing.T, scopeTree *ScopeTree) {
-		// 		globalScope := scopeTree.Root.Children[0]
+		{
+			name: "default_export",
+			source: `
+		        const value = 42;
+		        export default value;
+		    `,
+			checks: func(t *testing.T, scopeTree *ScopeTree) {
+				globalScope := scopeTree.Root.Children[0]
 
-		// 		valueVar := globalScope.Lookup("value")
-		// 		require.NotNil(t, valueVar, "value should be defined")
-		// 		assert.True(t, valueVar.Exported, "value should be marked as exported")
-		// 	},
-		// },
-		// {
-		// 	name: "mixed_exports",
-		// 	source: `
-		//         const a = 1, b = 2;
-		//         function helper() {}
-		//         export { a };
-		//         export const c = 3;
-		//         export default helper;
-		//     `,
-		// 	checks: func(t *testing.T, scopeTree *ScopeTree) {
-		// 		globalScope := scopeTree.Root.Children[0]
+				valueVar := globalScope.Lookup("value")
+				require.NotNil(t, valueVar, "value should be defined")
+				assert.True(t, valueVar.Exported, "value should be marked as exported")
+			},
+		},
+		{
+			name: "mixed_exports",
+			source: `
+		        const a = 1, b = 2;
+		        function helper() {}
+		        export { a };
+		        export const c = 3;
+		        export default helper;
+		    `,
+			checks: func(t *testing.T, scopeTree *ScopeTree) {
+				globalScope := scopeTree.Root.Children[0]
 
-		// 		aVar := globalScope.Lookup("a")
-		// 		require.NotNil(t, aVar, "a should be defined")
-		// 		assert.True(t, aVar.Exported, "a should be marked as exported")
+				aVar := globalScope.Lookup("a")
+				require.NotNil(t, aVar, "a should be defined")
+				assert.True(t, aVar.Exported, "a should be marked as exported")
 
-		// 		bVar := globalScope.Lookup("b")
-		// 		require.NotNil(t, bVar, "b should be defined")
-		// 		assert.False(t, bVar.Exported, "b should not be marked as exported")
+				bVar := globalScope.Lookup("b")
+				require.NotNil(t, bVar, "b should be defined")
+				assert.False(t, bVar.Exported, "b should not be marked as exported")
 
-		// 		cVar := globalScope.Lookup("c")
-		// 		require.NotNil(t, cVar, "c should be defined")
-		// 		assert.True(t, cVar.Exported, "c should be marked as exported")
+				cVar := globalScope.Lookup("c")
+				require.NotNil(t, cVar, "c should be defined")
+				assert.True(t, cVar.Exported, "c should be marked as exported")
 
-		// 		helperVar := globalScope.Lookup("helper")
-		// 		require.NotNil(t, helperVar, "helper should be defined")
-		// 		assert.True(t, helperVar.Exported, "helper should be marked as exported")
-		// 	},
-		// },
-		// {
-		// 	name: "export_from_inner_scope",
-		// 	source: `
-		//         const outer = 1;
-		//         {
-		//             const inner = 2;
-		//             export { inner };
-		//         }
-		//         export { outer };
-		//     `,
-		// 	checks: func(t *testing.T, scopeTree *ScopeTree) {
-		// 		globalScope := scopeTree.Root.Children[0]
+				helperVar := globalScope.Lookup("helper")
+				require.NotNil(t, helperVar, "helper should be defined")
+				assert.True(t, helperVar.Exported, "helper should be marked as exported")
+			},
+		},
+		{
+			name: "export_from_inner_scope",
+			source: `
+		        const outer = 1;
+		        {
+		            const inner = 2;
+		            export { inner };
+		        }
+		        export { outer };
+		    `,
+			checks: func(t *testing.T, scopeTree *ScopeTree) {
+				globalScope := scopeTree.Root.Children[0]
 
-		// 		outerVar := globalScope.Lookup("outer")
-		// 		t.Log(outerVar)
-		// 		require.NotNil(t, outerVar, "outer should be defined")
-		// 		assert.True(t, outerVar.Exported, "outer should be marked as exported")
+				outerVar := globalScope.Lookup("outer")
+				t.Log(outerVar)
+				require.NotNil(t, outerVar, "outer should be defined")
+				assert.True(t, outerVar.Exported, "outer should be marked as exported")
 
-		// 		innerVar := globalScope.Children[0].Lookup("inner")
-		// 		require.NotNil(t, innerVar, "inner should be defined")
-		// 		assert.True(t, innerVar.Exported, "inner should be marked as exported")
-		// 	},
-		// },
+				innerVar := globalScope.Children[0].Lookup("inner")
+				require.NotNil(t, innerVar, "inner should be defined")
+				assert.True(t, innerVar.Exported, "inner should be marked as exported")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed := parseFile(t, tt.source)
+			require.NotNil(t, parsed)
+
+			scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+			require.NotNil(t, scopeTree)
+
+			tt.checks(t, scopeTree)
+		})
+	}
+}
+
+func TestClassDeclarations(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		checks func(t *testing.T, scopeTree *ScopeTree)
+	}{
+		{
+			name: "class_declaration",
+			source: `
+				class MyClass {
+					myVar = "hello"
+					constructor(name) {
+						this.name = name;
+					}
+					method() {}
+				}
+			`,
+			checks: func(t *testing.T, scopeTree *ScopeTree) {
+				globalScope := scopeTree.Root.Children[0]
+
+				classVar := globalScope.Lookup("MyClass")
+				require.NotNil(t, classVar, "MyClass should be defined")
+				assert.Equal(t, VarKindClass, classVar.Kind)
+
+				classScope := scopeTree.GetScope(classVar.DeclNode)
+				require.NotNil(t, classScope)
+				classBody := classScope.Children[0]
+				constructorVar := classBody.Lookup("constructor")
+				require.NotNil(t, constructorVar, "constructor should be defined")
+
+				methodVar := classBody.Lookup("method")
+				require.NotNil(t, methodVar, "method should be defined")
+
+				myVar := classBody.Lookup("myVar")
+				require.NotNil(t, myVar, "myVar should be defined")
+				t.Log(classBody.Variables)
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -48,9 +48,11 @@ type DataFlowGraph struct {
 	Graph     map[*analysis.Variable]*DataFlowNode
 	ScopeTree *analysis.ScopeTree
 	FuncDefs  map[string]*FunctionDefinition
+	ClassDefs map[*analysis.Variable]*ClassDefinition
 }
 
 var functionDefinitions = make(map[string]*FunctionDefinition)
+var classDefinitions = make(map[*analysis.Variable]*ClassDefinition)
 
 // var DataFlowGraph = make(map[*analysis.Variable]*DataFlowNode)
 
@@ -244,30 +246,106 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 				}
 			}
 			// Create a data flow node for the IIFE
-
 		}
 
 		if node.Type() == "class_declaration" {
 			var dfNode *DataFlowNode
 			className := node.ChildByFieldName("name")
-			if className != nil {
-				varClassName := className.Content(pass.FileContext.Source)
-				classNameVar := currentScope.Lookup(varClassName)
-				classScope := scopeTree.GetScope(classNameVar.DeclNode)
-				if classScope == nil {
-					return
-				}
-				dfNode = &DataFlowNode{
-					Node:     classNameVar.DeclNode,
-					Scope:    classScope,
-					Variable: classNameVar,
-				}
+			if className == nil {
+				return
+			}
+
+			varClassName := className.Content(pass.FileContext.Source)
+			classNameVar := currentScope.Lookup(varClassName)
+			classScope := scopeTree.GetScope(classNameVar.DeclNode)
+			if classScope == nil {
+				return
+			}
+			dfNode = &DataFlowNode{
+				Node:     classNameVar.DeclNode,
+				Scope:    classScope,
+				Variable: classNameVar,
 			}
 			dataFlowGraph.Graph[dfNode.Variable] = dfNode
+
+			classBody := node.ChildByFieldName("body")
+			if classBody == nil {
+				return
+			}
+
+			var classMethods []*FunctionDefinition
+			var classProperties []*analysis.Variable
+
+			// Iterate over class body children
+			for i := range int(classBody.NamedChildCount()) {
+				classChild := classBody.NamedChild(i)
+				if classChild == nil {
+					continue
+				}
+
+				// Check for method definitions
+				if classChild.Type() == "method_definition" {
+					methodNameNode := classChild.ChildByFieldName("name")
+					if methodNameNode != nil && methodNameNode.Type() == "property_identifier" {
+						// methodName := methodNameNode.Content(pass.FileContext.Source)
+						methodDef := &FunctionDefinition{
+							Node:       classChild,
+							Body:       classChild.ChildByFieldName("body"),
+							Parameters: []*analysis.Variable{},
+							Scope:      classScope,
+						}
+
+						params := node.ChildByFieldName("parameters")
+						if params != nil {
+							for i := 0; i < int(params.NamedChildCount()); i++ {
+								param := params.NamedChild(i)
+								if param.Type() == "identifier" {
+									paramName := param.Content(pass.FileContext.Source)
+									paramVar := currentScope.Lookup(paramName)
+									if paramVar != nil {
+										methodDef.Parameters = append(methodDef.Parameters, paramVar)
+									}
+
+								}
+							}
+						}
+						classMethods = append(classMethods, methodDef)
+					}
+				}
+
+				// Check for class properties
+				if classChild.Type() == "public_field_definition" {
+					// fmt.Println(propNameNode.Content(pass.FileContext.Source))
+					propNameNode := classChild.ChildByFieldName("name")
+					if propNameNode != nil && propNameNode.Type() == "property_identifier" {
+						propName := propNameNode.Content(pass.FileContext.Source)
+						propVar := classScope.Children[0].Lookup(propName)
+						if propVar != nil {
+							classProperties = append(classProperties, propVar)
+						}
+					}
+
+					fmt.Println(classChild)
+				}
+			}
+
+			classDef := &ClassDefinition{
+				Node:       node,
+				Properties: classProperties,
+				Methods:    classMethods,
+				Scope:      classScope,
+			}
+
+			classDefinitions[classNameVar] = classDef
+			// Add logic to collect properties and methods inside this block itself.
+			// Iterate over name children -> Find method definitions -> Add them to an instance of function definition
+			// Iterate over class properties -> Add them to an instance of class definition
+			// Add the class definition to the data flow graph
 		}
 
 	})
 	dataFlowGraph.FuncDefs = functionDefinitions
+	dataFlowGraph.ClassDefs = classDefinitions
 
 	return dataFlowGraph, nil
 }
