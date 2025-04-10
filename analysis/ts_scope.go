@@ -2,7 +2,6 @@
 package analysis
 
 import (
-	"fmt"
 	"slices"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -51,7 +50,7 @@ func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 		typ == "function_declaration" ||
 		typ == "method_definition" ||
 		typ == "class_declaration" ||
-		typ == "export_statement" || typ == "assignment_expression"
+		typ == "export_statement" || typ == "assignment_expression" || typ == "public_field_definition"
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -237,6 +236,15 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 			})
 		}
 
+	case "public_field_definition":
+		fieldName := node.ChildByFieldName("name")
+		if fieldName != nil {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindVariable,
+				Name:     fieldName.Content(ts.source),
+				DeclNode: fieldName,
+			})
+		}
 	}
 
 	return declaredVars
@@ -328,7 +336,6 @@ func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
 	}
 	if node.Type() == "export_statement" {
 		// Handle named exports: export { foo, bar as baz };
-		fmt.Println(node)
 		exportClause := ChildrenOfType(node, "export_clause")
 
 		for _, clause := range exportClause {
@@ -359,13 +366,11 @@ func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
 			if declaration.Type() == "lexical_declaration" {
 				// Handle variable declarations: export const foo = 123, bar = 456;
 				declarators := ChildrenOfType(declaration, "variable_declarator")
-				// fmt.Println(declarators)
 				for _, declarator := range declarators {
 					name := declarator.ChildByFieldName("name")
 					if name != nil && name.Type() == "identifier" {
 						varName := name.Content(ts.source)
 
-						// fmt.Println("variable name", varName)
 						variable := scope.Lookup(varName)
 						if variable != nil {
 							variable.Exported = true
@@ -386,7 +391,7 @@ func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
 		}
 
 		// Handle default exports: export default foo;
-		defaultExport := node.ChildByFieldName("source")
+		defaultExport := node.ChildByFieldName("value")
 		if defaultExport != nil && defaultExport.Type() == "identifier" {
 			varName := defaultExport.Content(ts.source)
 			variable := scope.Lookup(varName)
