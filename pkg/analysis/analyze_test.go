@@ -92,6 +92,35 @@ func TestSkipCq(t *testing.T) {
 			`,
 			want: false,
 		},
+		{
+			name:      "skipcq with extra comments target match",
+			checkerId: "no-assert",
+			language:  LangPy,
+			source: `
+				def aFunc():
+					assert a == b # some comment skipcq: no-assert, sql-inject # nosec,
+			`,
+			want: true,
+		},
+		{
+			name:      "skipcq with extra comments target unmatched",
+			checkerId: "no-assert",
+			language:  LangPy,
+			source: `
+				assert a is b # should be true skipcq: sql-inject, django-taint # more
+			`,
+			want: false,
+		},
+		{
+			name:      "skipcq with extra comments no target",
+			checkerId: "no-assert",
+			language:  LangPy,
+			source: `
+				if True:
+					assert 1 == 2 # must be false skipcq # nosec,
+			`,
+			want: true,
+		},
 	}
 
 	for _, tt := range tests {

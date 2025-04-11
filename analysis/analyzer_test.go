@@ -122,6 +122,41 @@ func TestSkipCqComment(t *testing.T) {
 			checker:  mockChecker,
 			want:     false,
 		},
+		{
+			name:      "skipcq with extra comments matching targets",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
+			source: `
+				def someFunc():
+					assert a == b # assert statement skipcq: no-assert, sql-inject should skip # nosec
+			`,
+			language: LangPy,
+			checker:  mockChecker,
+			want:     true,
+		},
+		{
+			name:      "skipcq with extra comments no matching targets",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
+			source: `
+				assert 1 > 2 # random comment skipcq: unused-import, csv-writer, django-injection // more comment
+			`,
+			language: LangPy,
+			checker:  mockChecker,
+			want:     false,
+		},
+		{
+			name:      "skipcq with extra comments no target",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
+			source: `
+				def someFunc():
+					assert a == b # some comment skipcq # nosec
+			`,
+			language: LangPy,
+			checker:  mockChecker,
+			want:     true,
+		},
 	}
 
 	for _, tt := range tests {
