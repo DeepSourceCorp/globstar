@@ -128,6 +128,7 @@ func TestSkipCqComment(t *testing.T) {
 			filename:  "no-assert.test.py",
 			source: `
 				def someFunc():
+					# some comment
 					assert a == b # assert statement skipcq: no-assert, sql-inject should skip # nosec
 			`,
 			language: LangPy,
