@@ -101,7 +101,7 @@ type SkipComment struct {
 	// the entire text of the skipcq comment
 	CommentText string
 	// (optional) name of the checker for targetted skip
-	CheckerId []string
+	CheckerIds []string
 }
 
 // package level cache to store comments for each file
@@ -343,16 +343,12 @@ func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*Issue, error) {
 	return issues, nil
 }
 
-// cache all the skipcq comments from an ast
 func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 	var skipLines []*SkipComment
 
 	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
-	basePattern := fmt.Sprintf(`^%s\s+skipcq\s*$`, commentIdentifier)
-	baseRegexp := regexp.MustCompile(basePattern)
-
-	checkerPattern := fmt.Sprintf(`%s\s+skipcq:\s*(?P<issue_ids>([a-z0-9\-_]+(?:,(\s+)?)?)*)`, commentIdentifier)
-	checkerRegexp := regexp.MustCompile(checkerPattern)
+	pattern := fmt.Sprintf(`%s\s+skipcq(?::\s*(?P<issue_ids>([a-z0-9\-_]+(?:,(\s+)?)?)*))?\s*`, commentIdentifier)
+    skipRegexp := regexp.MustCompile(pattern)
 
 	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.
 		Grammar())
@@ -381,39 +377,29 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 			commentLine := int(commentNode.StartPoint().Row)
 			commentText := commentNode.Content(fileContext.Source)
 
-			matches := checkerRegexp.FindStringSubmatch(commentText)
+			matches := skipRegexp.FindStringSubmatch(commentText)
 			if matches != nil {
-				issueIdx := checkerRegexp.SubexpIndex("issue_ids")
-				if issueIdx != -1 && issueIdx < len(matches) {
-					issueIdStr := matches[issueIdx]
+				issueIdsIdx := skipRegexp.SubexpIndex("issue_ids")
+				var checkerIds []string
 
-					var checkerIds []string
-					if issueIdStr != "" {
-						idSlice := strings.Split(issueIdStr, ",")
-						for _, id := range idSlice {
-							trimmedId := strings.TrimSpace(id)
-							if trimmedId != "" {
-								checkerIds = append(checkerIds, trimmedId)
-							}
+				if issueIdsIdx != -1 && issueIdsIdx < len(matches) && matches[issueIdsIdx] != "" {
+					issueIdsIdx := matches[issueIdsIdx]
+					idSlice := strings.Split(issueIdsIdx, ",")
+					for _, id := range idSlice {
+						trimmedId := strings.TrimSpace(id)
+						if trimmedId != "" {
+							checkerIds = append(checkerIds, trimmedId)
 						}
 					}
-
-					skipLines = append(skipLines, &SkipComment{
-						CommentLine: commentLine,
-						CommentText: commentText,
-						CheckerId:   checkerIds,
-					})
-					continue
 				}
-			}
 
-			if baseRegexp.MatchString(commentText) {
 				skipLines = append(skipLines, &SkipComment{
 					CommentLine: commentLine,
 					CommentText: commentText,
-					CheckerId:   nil,
+					CheckerIds: checkerIds, // will be empty for generic skipcq
 				})
 			}
+			
 		}
 	}
 
@@ -439,8 +425,8 @@ func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool
 			continue
 		}
 
-		if len(comment.CheckerId) > 0 {
-			for _, id := range comment.CheckerId {
+		if len(comment.CheckerIds) > 0 {
+			for _, id := range comment.CheckerIds {
 				if checkerId == id {
 					return true
 				}
