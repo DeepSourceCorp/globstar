@@ -348,7 +348,7 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 
 	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
 	pattern := fmt.Sprintf(`%s\s+skipcq(?::\s*(?P<issue_ids>([a-z0-9\-_]+(?:,(\s+)?)?)*))?\s*`, commentIdentifier)
-    skipRegexp := regexp.MustCompile(pattern)
+	skipRegexp := regexp.MustCompile(pattern)
 
 	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.
 		Grammar())
@@ -396,10 +396,10 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 				skipLines = append(skipLines, &SkipComment{
 					CommentLine: commentLine,
 					CommentText: commentText,
-					CheckerIds: checkerIds, // will be empty for generic skipcq
+					CheckerIds:  checkerIds, // will be empty for generic skipcq
 				})
 			}
-			
+
 		}
 	}
 
