@@ -98,6 +98,30 @@ func TestSkipCqComment(t *testing.T) {
 			checker:  mockChecker,
 			want:     false,
 		},
+		{
+			name:      "skipcq with multiple targets matching",
+			checkerId: "no-assert",
+			filename:  "no-assert.test.py",
+			source: `
+				# skipcq: no-assert, csv-writer
+				assert a == c
+			`,
+			language: LangPy,
+			checker:  mockChecker,
+			want:     true,
+		},
+		{
+			name:      "skipcq with multiple targets mismatch",
+			checkerId: "no-assert",
+			filename:  "file.py",
+			source: `
+				# skipcq: sql-inject, flask-taint
+				assert 1 == 10
+			`,
+			language: LangPy,
+			checker:  mockChecker,
+			want:     false,
+		},
 	}
 
 	for _, tt := range tests {

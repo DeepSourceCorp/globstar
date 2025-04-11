@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -74,7 +75,7 @@ type SkipComment struct {
 	// the entire text of the skipcq comment
 	CommentText string
 	// (optional) name of the checker for targetted skip
-	CheckerId string
+	CheckerId []string
 }
 
 func walkTree(node *sitter.Node, f func(*sitter.Node)) {
@@ -249,8 +250,11 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 	var skipLines []*SkipComment
 
 	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
-	pattern := fmt.Sprintf(`^%s\s+skipcq(?::\s*([A-Za-z0-9_-]+))?`, commentIdentifier)
-	skipRegexp := regexp.MustCompile(pattern)
+	basePattern := fmt.Sprintf(`^%s\s+skipcq\s*$`, commentIdentifier)
+	baseRegexp := regexp.MustCompile(basePattern)
+
+	checkerPattern := fmt.Sprintf(`%s\s+skipcq:\s*(?P<issue_ids>([a-z0-9\-_]+(?:,(\s+)?)?)*)`, commentIdentifier)
+	checkerRegexp := regexp.MustCompile(checkerPattern)
 
 	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.
 		Grammar())
@@ -279,20 +283,37 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 			commentLine := int(commentNode.StartPoint().Row)
 			commentText := commentNode.Content(fileContext.Source)
 
-			// look for checker names
-			matches := skipRegexp.FindStringSubmatch(commentText)
-			var checkerId string
+			matches := checkerRegexp.FindStringSubmatch(commentText)
 			if matches != nil {
-				if len(matches) > 1 {
-					checkerId = matches[1]
+				issueIdx := checkerRegexp.SubexpIndex("issue_ids")
+				if issueIdx != -1 && issueIdx < len(matches) {
+					issueIdStr := matches[issueIdx]
+
+					var checkerIds []string
+					if issueIdStr != "" {
+						idSlice := strings.Split(issueIdStr, ",")
+						for _, id := range idSlice {
+							trimmedId := strings.TrimSpace(id)
+							if trimmedId != "" {
+								checkerIds = append(checkerIds, trimmedId)
+							}
+						}
+					}
+
+					skipLines = append(skipLines, &SkipComment{
+						CommentLine: commentLine,
+						CommentText: commentText,
+						CheckerId:   checkerIds,
+					})
+					continue
 				}
 			}
 
-			if skipRegexp.MatchString(commentText) {
+			if baseRegexp.MatchString(commentText) {
 				skipLines = append(skipLines, &SkipComment{
 					CommentLine: commentLine,
 					CommentText: commentText,
-					CheckerId: checkerId, // will be empty for generic skipcq
+					CheckerId:   nil,
 				})
 			}
 		}
@@ -320,13 +341,13 @@ func ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
 			continue
 		}
 
-		if comment.CheckerId != "" {
-			// targetted skipcq
-			if checkerId == comment.CheckerId {
-				return true
+		if len(comment.CheckerId) > 0 {
+			for _, id := range comment.CheckerId {
+				if checkerId == id {
+					return true
+				}
 			}
 		} else {
-			// generic skipcq
 			return true
 		}
 	}

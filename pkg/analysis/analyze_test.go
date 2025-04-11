@@ -73,6 +73,25 @@ func TestSkipCq(t *testing.T) {
 			`,
 			want: false,
 		},
+		{
+			name:      "skipcq with multiple targets matching",
+			checkerId: "no-assert",
+			language:  LangPy,
+			source: `
+				# skipcq: csv-writer, no-assert
+				assert 1 == 10
+			`,
+			want: true,
+		},
+		{
+			name:      "skipcq with multiple targets mismatching",
+			checkerId: "no-assert",
+			language:  LangPy,
+			source: `
+				assert 2==1 # skipcq: csv-writer, flask-error
+			`,
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {
