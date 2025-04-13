@@ -4,13 +4,49 @@ message: "Avoid using require() inside functions as it can complicate code bundl
 category: best-practices
 severity: warning
 pattern: >
-  (function_declaration
-  body: (statement_block
-          (lexical_declaration
-            (variable_declarator
-              value: (call_expression
-                      function: (identifier) @require
-                      (#eq? @require "require")))) @js_lazy_load_module))
+  [
+    ((function_declaration
+    body: (statement_block
+          [
+            ((lexical_declaration
+              (variable_declarator
+                value: (call_expression
+                        function: (identifier) @require
+                        (#eq? @require "require")))) @js_lazy_load_module)
+            ((expression_statement
+                (assignment_expression
+                  right: (call_expression
+                            function: (identifier) @require
+                            (#eq? @require "require")))) @js_lazy_load_module)])))
+    ((variable_declarator
+    value: [
+            ((function_expression
+              body: (statement_block
+                [
+                  ((lexical_declaration
+                    (variable_declarator
+                      value: (call_expression
+                              function: (identifier) @require
+                              (#eq? @require "require")))) @js_lazy_load_module)
+                  ((expression_statement
+                      (assignment_expression
+                        right: (call_expression
+                                  function: (identifier) @require
+                                  (#eq? @require "require")))) @js_lazy_load_module)])))
+            ((arrow_function
+              body: (statement_block
+                [
+                  ((lexical_declaration
+                    (variable_declarator
+                      value: (call_expression
+                              function: (identifier) @require
+                              (#eq? @require "require")))) @js_lazy_load_module)
+                  ((expression_statement
+                      (assignment_expression
+                        right: (call_expression
+                                  function: (identifier) @require
+                                  (#eq? @require "require")))) @js_lazy_load_module)])))])) 
+  ]
 exclude:
   - "test/**"
   - "*_test.js"
