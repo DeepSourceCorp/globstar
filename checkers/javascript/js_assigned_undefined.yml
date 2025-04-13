@@ -27,9 +27,10 @@ description: |
     Although older browsers might allow reassignment of 'undefined' in non-strict mode, 
     doing so creates code that is not forward-compatible and may cause unexpected behavior.
 
-    Remediation Example:
+    Remediation:
+    ```js 
     // Instead of trying to reassign undefined
-    // var undefined = "new value";
+    var undefined = "new value";
     
     // Use a different variable name:
     var undefinedValue = "new value";
@@ -41,3 +42,4 @@ description: |
     if (typeof myVar === "undefined") { ... }
     // or
     if (myVar === void 0) { ... }
+    ```

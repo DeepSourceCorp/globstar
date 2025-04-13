@@ -63,7 +63,8 @@ description: |
     The best practice is to place all require() statements at the top level of each file,
     before and outside of any functions.
 
-    Remediation Example:
+    Remediation:
+    ```js
     // Instead of:
     function getData() {
       // BAD: require inside function
@@ -84,3 +85,4 @@ description: |
       getFs = () => fs; // Memoize for future calls
       return fs;
     };
+    ```

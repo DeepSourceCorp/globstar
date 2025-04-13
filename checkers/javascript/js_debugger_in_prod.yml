@@ -1,0 +1,39 @@
+language: javascript
+name: js_debugger_in_prod
+message: "Avoid using debugger statements in production code."
+category: best-practices
+severity: warning
+pattern: >
+  (debugger_statement) @js_debugger_in_prod
+exclude:
+  - "test/**"
+  - "*_test.js"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+  Using `debugger` statements in production code is considered poor practice. When executed in a browser 
+  with developer tools open, these statements pause execution and activate the debugger, which can 
+  significantly disrupt the user experience in production environments.
+  
+  Debugger statements are useful during development but should be removed before deploying code to 
+  production.
+  
+  Remediation:
+  ```js
+  // Before:
+  function processData(data) {
+    debugger; // This will halt execution in production if dev tools are open
+    // Process data
+    return transformedData;
+  }
+  
+  // After:
+  function processData(data) {
+    // Use logging instead if needed
+    console.debug('Processing data:', data);
+    // Or remove completely
+    // Process data
+    return transformedData;
+  }
+  ``` 

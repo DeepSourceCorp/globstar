@@ -1,0 +1,64 @@
+language: javascript
+name: js_prompt_in_prod
+message: "Avoid using prompt() inside of production code."
+category: best-practices
+severity: warning
+pattern: >
+  (call_expression
+    function: [
+      ((identifier) @prompt
+      (#eq? @prompt "prompt"))
+      ((member_expression
+        object: (identifier) @window
+        property: (property_identifier) @prompt
+        (#eq? @window "window")
+        (#eq? @prompt "prompt"))) 
+    ]) @js_prompt_in_prod
+exclude:
+  - "test/**"
+  - "*_test.js"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+  Using prompt() in production code is considered poor practice. Similar to confirm(), the prompt() function 
+  creates a modal dialog that blocks JavaScript execution until the user submits or cancels the dialog, 
+  disrupting the user experience and halting all other processes.
+  
+  Modern web applications should use custom form elements or input components that don't block execution 
+  and provide a better, more consistent user experience.
+  
+  Remediation:
+  ```js
+  // Before:
+  function getUserName() {
+    const name = prompt("Please enter your name:", "");
+    if (name) {
+      processName(name);
+    }
+  }
+  
+  // After - Using a non-blocking custom input:
+  function getUserName() {
+    showInputDialog("Please enter your name:", "", 
+      // Submit callback
+      (name) => {
+        if (name) {
+          processName(name);
+        }
+      },
+      // Cancel callback (optional)
+      () => {
+        console.log("Input cancelled");
+      }
+    );
+  }
+  
+  // Or using a Promise-based approach:
+  async function getUserName() {
+    const name = await showInputDialog("Please enter your name:", "");
+    if (name) {
+      processName(name);
+    }
+  }
+  ```
