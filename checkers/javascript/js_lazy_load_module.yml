@@ -1,0 +1,50 @@
+language: javascript
+name: js_lazy_load_module
+message: "Avoid using require() inside functions as it can complicate code bundling and block execution"
+category: best-practices
+severity: warning
+pattern: >
+  (function_declaration
+  body: (statement_block
+          (lexical_declaration
+            (variable_declarator
+              value: (call_expression
+                      function: (identifier) @require
+                      (#eq? @require "require")))) @js_lazy_load_module))
+exclude:
+  - "test/**"
+  - "*_test.js"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+    Issue:
+    Placing require() calls inside functions can lead to several problems:
+      - It complicates code bundling and static analysis
+      - require() calls are executed synchronously, which can block the event loop
+      - It makes dependencies less obvious and harder to trace
+      - It may lead to unexpected behavior in certain environments
+      
+    The best practice is to place all require() statements at the top level of each file,
+    before and outside of any functions.
+
+    Remediation Example:
+    // Instead of:
+    function getData() {
+      // BAD: require inside function
+      const fs = require('fs');
+      return fs.readFileSync('file.txt');
+    }
+    
+    // Do this:
+    const fs = require('fs');
+    
+    function getData() {
+      return fs.readFileSync('file.txt');
+    }
+    
+    // If you need conditional loading, consider using a top-level function:
+    const getFs = () => {
+      const fs = require('fs');
+      getFs = () => fs; // Memoize for future calls
+      return fs;
+    };
