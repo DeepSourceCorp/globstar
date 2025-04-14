@@ -29,4 +29,6 @@ jobs:
           echo 'HOMEBREW_TOKEN=${{secrets.DS_BOT_PAT}}' >> .release-env
 
       - name: Publish Release
-        run: make release
+        run: |-
+          make generate-registry
+          make release
