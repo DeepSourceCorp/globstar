@@ -23,7 +23,7 @@ public class Cls extends HttpServlet
     }
 
     protected void ok(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        // ok:cbc-padding-oracle
+        // <no-error>
         Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
         c.init(Cipher.ENCRYPT_MODE, k, iv);
         byte[] cipherText = c.doFinal(plainText);
