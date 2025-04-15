@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	// "fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -165,6 +164,62 @@ func Test_PyBuildScopeTree(t *testing.T) {
 			fRefs := varF.Refs
 			require.Equal(t, 1, len(fRefs))
 			assert.Equal(t, "call", fRefs[0].Node.Parent().Parent().Type())
+		}
+	})
+
+	t.Run("supports walrus operator", func(t *testing.T) {
+		source := `
+if (n := random.randint(1, 100)) > 50:
+	print("Greater than 50")
+		`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		varN, exists := globalScope.Children[0].Variables["n"]
+		require.NotNil(t, varN)
+		require.True(t, exists)
+	})
+
+	// for `list_comprehension`, `dictionary_comprehension`, `generator_comprehension`, `set_comprehension`
+	t.Run("supports comprehension statements", func(t *testing.T) {
+		source := `
+a = [x for x in range(10) if x % 2 == 0]
+
+b = {x: x**2 for x in myList if x == 10}
+		`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		{
+			lcScope := globalScope.Children[0]
+			require.NotNil(t, lcScope)
+			varX, exists := lcScope.Variables["x"]
+			require.NotNil(t, varX)
+			require.True(t, exists)
+
+			xRefs := varX.Refs
+			assert.Equal(t, 2, len(xRefs)) // first in the expression, second in the if-else statement
+		}
+		
+		{
+			dcScope := globalScope.Children[1]
+			require.NotNil(t, dcScope)
+			varX, exists := dcScope.Variables["x"]
+			require.NotNil(t, varX)
+			require.True(t, exists)
+
+			xRefs := varX.Refs
+			assert.Equal(t, 3, len(xRefs))
 		}
 	})
 
