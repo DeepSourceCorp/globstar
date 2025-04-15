@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition" || typ == "named_expression"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -173,6 +173,16 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 			}
 		}
 
+	case "named_expression":
+		name := node.ChildByFieldName("name")
+		if name != nil && name.Type() == "identifier" {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindVariable,
+				Name:     name.Content(py.source),
+				DeclNode: node,
+			})
+		}
+
 	case "class_definition":
 		name := node.ChildByFieldName("name")
 		if name != nil && name.Type() == "identifier" {
@@ -238,6 +248,10 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		}
 
 		if parentType == "class_definition" {
+			return
+		}
+
+		if parentType == "named_expression" && parent.ChildByFieldName("name") == node {
 			return
 		}
 

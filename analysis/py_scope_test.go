@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	// "fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -166,6 +165,24 @@ func Test_PyBuildScopeTree(t *testing.T) {
 			require.Equal(t, 1, len(fRefs))
 			assert.Equal(t, "call", fRefs[0].Node.Parent().Parent().Type())
 		}
+	})
+
+	t.Run("supports walrus operator", func(t *testing.T) {
+		source := `
+if (n := random.randint(1, 100)) > 50:
+	print("Greater than 50")
+		`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		varN, exists := globalScope.Children[0].Variables["n"]
+		require.NotNil(t, varN)
+		require.True(t, exists)
 	})
 
 	t.Run("supports exception statements", func(t *testing.T) {
