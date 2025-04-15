@@ -258,6 +258,26 @@ for id, value in enumerate(someList):
 
 	})
 
+	t.Run("supports lambda expressions", func(t *testing.T) {
+		source := `
+a = lambda x: x**2
+		`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		lambdaScope := globalScope.Children[0]
+		varX, exists := lambdaScope.Variables["x"]
+		require.NotNil(t, varX)
+		require.True(t, exists)
+
+		assert.Equal(t, 1, len(varX.Refs))
+	})
+
 	t.Run("supports exception statements", func(t *testing.T) {
 		source := `
 			try:

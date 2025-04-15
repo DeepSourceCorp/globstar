@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition" || typ == "named_expression" || typ == "for_in_clause" || typ == "for_statement"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition" || typ == "named_expression" || typ == "for_in_clause" || typ == "for_statement" || typ == "lambda_parameters"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -115,6 +115,9 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 		})
 
 	case "parameters":
+		declaredVars = py.variableFromFunctionParams(node, declaredVars)
+
+	case "lambda_parameters":
 		declaredVars = py.variableFromFunctionParams(node, declaredVars)
 
 	case "aliased_import":
@@ -270,6 +273,10 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		}
 
 		if parentType == "for_statement" {
+			return
+		}
+
+		if parentType == "lambda_parameters" {
 			return
 		}
 
