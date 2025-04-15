@@ -48,7 +48,7 @@ func (py *PyScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (py *PyScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition" || typ == "named_expression" || typ == "for_in_clause"
+	return typ == "assignment" || typ == "dotted_name" || typ == "aliased_import" || typ == "with_statement" || typ == "parameters" || typ == "function_definition" || typ == "try_statement" || typ == "class_definition" || typ == "named_expression" || typ == "for_in_clause" || typ == "for_statement"
 }
 
 func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -173,6 +173,10 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 			}
 		}
 
+	case "for_statement":
+		left := node.ChildByFieldName("left")
+		declaredVars = py.scanDecl(left, node, declaredVars)
+
 	case "named_expression":
 		name := node.ChildByFieldName("name")
 		if name != nil && name.Type() == "identifier" {
@@ -192,13 +196,13 @@ func (py *PyScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				DeclNode: node,
 			})
 		}
-	
+
 	// used in `list_comprehension`, `dictionary_comprehension`, `generator_comprehension`
 	// `set_comprehension`
 	case "for_in_clause":
 		left := node.ChildByFieldName("left")
 		declaredVars = py.scanDecl(left, node, declaredVars)
-	}	
+	}
 
 	return declaredVars
 }
@@ -262,6 +266,10 @@ func (py *PyScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		}
 
 		if parentType == "for_in_clause" && parent.ChildByFieldName("left") == node {
+			return
+		}
+
+		if parentType == "for_statement" {
 			return
 		}
 

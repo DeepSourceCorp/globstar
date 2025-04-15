@@ -223,6 +223,41 @@ b = {x: x**2 for x in myList if x == 10}
 		}
 	})
 
+	t.Run("supports loop statements", func(t *testing.T) {
+		source := `
+for id, value in enumerate(someList):
+	print(id, value)
+		`
+		parsed := parsePyFile(t, source)
+
+		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		require.NotNil(t, scopeTree)
+
+		globalScope := scopeTree.Root.Children[0]
+		require.NotNil(t, globalScope)
+
+		forLoopScope := globalScope.Children[0]
+		require.NotNil(t, forLoopScope)
+		{
+			varId, exists := globalScope.Variables["id"]
+			require.NotNil(t, varId)
+			require.True(t, exists)
+
+			idRefs := varId.Refs
+			assert.Equal(t, 1, len(idRefs))
+		}
+
+		{
+			varValue, exists := globalScope.Variables["value"]
+			require.NotNil(t, varValue)
+			require.True(t, exists)
+
+			valueRefs := varValue.Refs
+			assert.Equal(t, 1, len(valueRefs))
+		}
+
+	})
+
 	t.Run("supports exception statements", func(t *testing.T) {
 		source := `
 			try:
