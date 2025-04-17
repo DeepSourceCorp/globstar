@@ -25,12 +25,12 @@ func Test_BuildScopeTree(t *testing.T) {
 
 		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
 		require.NotNil(t, scopeTree)
-
-		varX, exists := scopeTree.Root.Variables["x"]
+		globalScope := scopeTree.Root.Children[0]
+		varX, exists := globalScope.Variables["x"]
 		require.True(t, exists)
 		require.NotNil(t, varX)
 
-		varY, exists := scopeTree.Root.Children[0].Variables["y"]
+		varY, exists := globalScope.Children[0].Variables["y"]
 		require.True(t, exists)
 		require.NotNil(t, varY)
 		require.Equal(t, VarKindVariable, varY.Kind)
@@ -63,9 +63,9 @@ func Test_BuildScopeTree(t *testing.T) {
 
 		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
 		require.NotNil(t, scopeTree)
-
+		globalScope := scopeTree.Root.Children[0]
 		{
-			varR, exists := scopeTree.Root.Variables["r"]
+			varR, exists := globalScope.Variables["r"]
 			require.True(t, exists)
 			require.NotNil(t, varR)
 
@@ -77,7 +77,7 @@ func Test_BuildScopeTree(t *testing.T) {
 		}
 
 		{
-			varExtname, exists := scopeTree.Root.Variables["extname"]
+			varExtname, exists := globalScope.Variables["extname"]
 			require.True(t, exists)
 			require.NotNil(t, varExtname)
 
@@ -102,11 +102,11 @@ func Test_BuildScopeTree(t *testing.T) {
 		parsed := parseFile(t, source)
 		require.NotNil(t, parsed)
 		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+		globalScope := scopeTree.Root.Children[0]
 		// Checking function declaration
-		t.Log(scopeTree.Root.Variables)
-		funcVar := scopeTree.Root.Lookup("greet")
+		funcVar := globalScope.Lookup("greet")
 		require.NotNil(t, funcVar)
-		funcVariable, exists := scopeTree.Root.Variables["greet"] // tagged as an Identifier
+		funcVariable, exists := globalScope.Variables["greet"] // tagged as an Identifier
 		require.True(t, exists)
 		require.NotNil(t, funcVariable)
 
