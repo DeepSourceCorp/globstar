@@ -1,0 +1,18 @@
+language: java
+name: deprecated-default-httpclient
+message: "Detected usage of deprecated `DefaultHttpClient`. Use `HttpClientBuilder` instead"
+category: security
+severity: warning
+
+pattern: >
+  (object_creation_expression
+    type: (type_identifier) @httpclient (#eq? @httpclient "DefaultHttpClient")) @deprecated-default-httpclient
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  DefaultHttpClient is deprecated and does not support TLS1.2 connections, creating a significant security vulnerability. Use HttpClientBuilder instead for secure HTTP communications.

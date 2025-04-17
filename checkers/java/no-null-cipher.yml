@@ -1,0 +1,26 @@
+language: java
+name: no-null-cipher
+message: "Detected usage of NullCipher which does not perform encryption"
+category: security
+severity: warning
+
+pattern: >
+  (object_creation_expression
+    type: (type_identifier) @nullcipher (#eq? @nullcipher "NullCipher")) @no-null-cipher
+
+  (object_creation_expression
+    type: (scoped_type_identifier
+      (scoped_type_identifier
+        (type_identifier) @javax (#eq? @javax "javax")
+        (type_identifier) @crypto (#eq? @crypto "crypto")
+      )
+    (type_identifier) @nullcipher (#eq? @nullcipher "NullCipher"))) @no-null-cipher
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  NullCipher was detected. This provides no encryption as the cipher text remains identical to the plain text. Use a valid, secure cipher such as Cipher.getInstance("AES/CBC/PKCS7PADDING") instead.
