@@ -39,6 +39,8 @@ var PyScopeNodes = []string{
 	"except_clause",
 	"list_comprehension",
 	"dictionary_comprehension",
+	"set_comprehension",
+	"generator_expression",
 	"lambda",
 }
 
@@ -88,6 +90,17 @@ func (py *PyScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls [
 					DeclNode: declarator,
 				})
 			}
+		}
+
+	case "list_splat_pattern":
+		splatNode := ChildrenOfType(idOrPattern, "identifier")
+		splatId := splatNode[0].Child(0)
+		if splatId.Type() == "identifier" {
+			decls = append(decls, &Variable{
+				Kind:     VarKindVariable,
+				Name:     splatId.Content(py.source),
+				DeclNode: declarator,
+			})
 		}
 	}
 

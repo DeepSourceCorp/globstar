@@ -17,10 +17,10 @@ func parsePyFile(t *testing.T, source string) *ParseResult {
 func Test_PyBuildScopeTree(t *testing.T) {
 	t.Run("is able to resolve references", func(t *testing.T) {
 		source := `
-			x = 1
-			if True:
-				y = x
-			z = x`
+x = 1
+if True:
+	y = x
+z = x`
 		parsed := parsePyFile(t, source)
 
 		scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
@@ -47,14 +47,14 @@ func Test_PyBuildScopeTree(t *testing.T) {
 
 	t.Run("supports import statements", func(t *testing.T) {
 		source := `
-			import os
+import os
 
-			os.system("cat file.txt")
+os.system("cat file.txt")
 
-			from csv import read
+from csv import read
 
-			if True:
-				f = read(file.csv)
+if True:
+	f = read(file.csv)
 			`
 		parsed := parsePyFile(t, source)
 
@@ -96,10 +96,10 @@ func Test_PyBuildScopeTree(t *testing.T) {
 
 	t.Run("supports function parameters", func(t *testing.T) {
 		source := `
-			def myFunc(a, b=2, c:int, d:str="Hello"):
-				A = otherFunc(a)
-				C = b + c
-				print(d)
+def myFunc(a, b=2, c:int, d:str="Hello"):
+	A = otherFunc(a)
+	C = b + c
+	print(d)
 			`
 		parsed := parsePyFile(t, source)
 
@@ -144,8 +144,8 @@ func Test_PyBuildScopeTree(t *testing.T) {
 
 	t.Run("supports with statements", func(t *testing.T) {
 		source := `
-			with open("file.txt", 'r') as f:
-				print(f.read(5))
+with open("file.txt", 'r') as f:
+	print(f.read(5))
 			`
 		parsed := parsePyFile(t, source)
 
@@ -280,10 +280,10 @@ a = lambda x: x**2
 
 	t.Run("supports exception statements", func(t *testing.T) {
 		source := `
-			try:
-				result = 10 / 2
-			except ZeroDivisionError as e:
-				print(e)
+try:
+	result = 10 / 2
+except ZeroDivisionError as e:
+	print(e)
 			`
 		parsed := parsePyFile(t, source)
 
