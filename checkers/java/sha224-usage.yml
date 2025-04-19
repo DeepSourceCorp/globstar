@@ -1,0 +1,34 @@
+language: java
+name: sha224-usage
+message: "Detected the usage of 224-bit hash function which has been deprecated due to decreased security"
+category: security
+severity: warning
+
+pattern: >
+  (method_invocation
+    name: (identifier) @method
+    (#match? @method "^(getSha3_224Digest|getSha512_224Digest|sha3_224|sha3_224Hex|sha512_224|sha512_224Hex)$"))@sha224-usage
+
+  (method_invocation
+    object: (object_creation_expression
+      type: (type_identifier) @method
+      arguments: (argument_list
+        (identifier) @arg))
+      (#eq? @method "DigestUtils")
+      (#match? @arg "^(.*SHA_224|.*SHA_512_224|.*SHA3_224)$")) @sha224-usage
+
+  (method_invocation
+    name: (identifier) @method (#eq? @method "getInstance")
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @sha224 (#match? @sha224 ".*224")))) @sha224-usage
+
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  This code uses a 224-bit hash function, which is deprecated or disallowed in many security policies due to insufficient collision resistance. Consider updating to a stronger hash function such as SHA-384 or higher to ensure compliance with modern security standards and provide better protection against cryptographic attacks.
