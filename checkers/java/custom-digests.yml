@@ -1,0 +1,18 @@
+language: java
+name: custom-digests
+message: "Implementing custom digests can lead to security issues"
+category: security
+severity: warning
+
+pattern: >
+  (class_declaration
+    superclass: (superclass) @extension (#eq? @extension "extends MessageDigest")) @custom-digests
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  A custom message digest implementation risks introducing serious security vulnerabilities, as cryptographic algorithms require precise implementation to be secure. Instead, leverage the established and well-tested message digest implementations already available, such as SHA-256 through Java's MessageDigest API.

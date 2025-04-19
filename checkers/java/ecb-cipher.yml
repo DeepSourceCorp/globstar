@@ -1,0 +1,22 @@
+language: java
+name: ecb-cipher
+message: "Using Cipher with ECB mode gives deterministic output"
+category: security
+severity: warning
+
+pattern: >
+  (method_invocation
+    object: (identifier) @cipher (#eq? @cipher "Cipher")
+    name: (identifier) @instanceMethod (#eq? @instanceMethod "getInstance")
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @str (#match? @str ".*ECB.*")))) @ecb-cipher
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  Cipher in ECB mode produces identical output for identical input blocks, making it vulnerable to replay attacks where attackers can intercept and reuse encrypted data. Additionally, ECB mode lacks integrity checking mechanisms, which means there's no way to verify if the encrypted data has been tampered with during transmission.

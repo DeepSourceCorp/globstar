@@ -1,0 +1,23 @@
+language: java
+name: weak-ssl-context
+message: "Detected insecure SSL context with weak encryption"
+category: security
+severity: warning
+
+pattern: >
+  (method_invocation
+    object: (identifier) @sslcontext (#eq? @sslcontext "SSLContext")
+    name: (identifier) @instanceMethod (#eq? @instanceMethod "getInstance")
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @str (#not-match? @str "^(TLSv1.3|TLSv1.2)$")))) @weak-ssl-context
+
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  An insecure SSL context was detected. TLS versions 1.0, 1.1, and all SSL versions are considered weak encryption and are deprecated. Use SSLContext.getInstance("TLSv1.2") for the best security.

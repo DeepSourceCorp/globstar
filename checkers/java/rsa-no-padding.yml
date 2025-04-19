@@ -1,0 +1,22 @@
+name: rsa-no-padding
+language: java
+message: "Using RSA encryption without padding weakens the security"
+category: security
+severity: warning
+
+pattern: |
+  (method_invocation
+    object: (identifier) @cipher (#eq? @cipher "Cipher")
+    name: (identifier) @instanceMethod (#eq? @instanceMethod "getInstance")
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @str (#match? @str "RSA/[Nn][Oo][Nn][Ee]/NoPadding")))) @rsa-no-padding
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: |
+  This rule detects instances where RSA encryption is used without proper padding (NONE/NoPadding mode), which significantly weakens encryption strength. Without padding mechanisms like OAEP, the RSA implementation becomes vulnerable to various cryptographic attacks, potentially exposing sensitive data and compromising the confidentiality of encrypted information.

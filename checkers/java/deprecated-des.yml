@@ -1,0 +1,29 @@
+language: java
+name: deprecated-des
+message: "The DES encryption algorithm is considered insecure. AES is recommended."
+category: security
+severity: warning
+
+pattern: >
+  (method_invocation
+    object: (identifier) @cipher (#eq? @cipher "Cipher")
+    name: (identifier) @instanceMethod (#eq? @instanceMethod "getInstance")
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @string (#match? @string "^(DES/.*|DESede/.*|DES)$")))) @deprecated-des
+
+  (method_invocation
+    object: (method_invocation) @method
+    (#match? @method "\\.[Kk]eyGenerator\\.getInstance")
+    (#match? @method "\"DES\"")) @deprecated-des
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  DES and Triple DES (3DES/DESede) are considered deprecated encryption standards. AES is the recommended cipher for both cases. Organizations should upgrade their systems to use AES instead. For more information about the deprecation of DES, see https://www.nist.gov/news-events/news/2005/06/nist-withdraws-outdated-data-encryption-standard.
+
+  
