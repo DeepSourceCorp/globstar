@@ -21,7 +21,7 @@ func detectSha1Usage(pass *analysis.Pass) (interface{}, error) {
 	pkgs := []string{"jssha", "jssha/sha1", "jssha/dist/sha1"}
 
 	// Will be used to track the Encrypting library being used
-	var pkgDeclaratorVar *analysis.Variable
+	var pkgDeclaratorVar []*analysis.Variable
 
 	dfg := pass.ResultOf[DataFlowAnalyzer].(*DataFlowGraph)
 
@@ -68,10 +68,38 @@ func detectSha1Usage(pass *analysis.Pass) (interface{}, error) {
 				if varName != "" {
 					nameVar := scopeTree.GetScope(node).Lookup(varName)
 					if nameVar != nil {
-						pkgDeclaratorVar = nameVar
+						pkgDeclaratorVar = append(pkgDeclaratorVar, nameVar)
 					}
 				}
 			}
+		}
+		if node.Type() == "import_statement" {
+			// Handle the case for import declaration eg. import jssha from "jssha"
+
+			packageName := node.ChildByFieldName("source")
+			if packageName != nil && packageName.Type() == "string" {
+				packageNameContent := packageName.NamedChild(0).Content(pass.FileContext.Source)
+				if packageNameContent != "jssha" {
+					return
+				}
+
+			}
+
+			importField := node.NamedChild(0)
+
+			if importField != nil && importField.Type() == "import_clause" {
+				importIdentifier := importField.NamedChild(0)
+				if importIdentifier != nil && importIdentifier.Type() == "identifier" {
+					idName := importIdentifier.Content(pass.FileContext.Source)
+					if idName != "" {
+						nameVar := scopeTree.GetScope(node).Lookup(idName)
+						if nameVar != nil {
+							pkgDeclaratorVar = append(pkgDeclaratorVar, nameVar)
+						}
+					}
+				}
+			}
+
 		}
 	})
 
@@ -81,25 +109,19 @@ func detectSha1Usage(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		if node.Type() == "new_expression" {
-			// fmt.Println("+++++++++++++++++", node.Content(pass.FileContext.Source))
 			ctor := node.ChildByFieldName("constructor")
 			arg := node.ChildByFieldName("arguments")
 			if ctor != nil && arg != nil {
 				ctorVar := scopeTree.GetScope(ctor).Lookup(ctor.Content(pass.FileContext.Source))
-				// fmt.Println("++++++ctorVar+++++++", ctorVar, "++++++++++++")
-				// fmt.Println("++++++pkgDeclaratorVar+++++++", pkgDeclaratorVar, "++++++++++++")
-				if ctorVar != nil && ctorVar == pkgDeclaratorVar {
+				if ctorVar != nil && slices.Contains(pkgDeclaratorVar, ctorVar) {
 					hashAlgo := arg.NamedChild(0)
-					// fmt.Println("++++++hashAlgo+++++++", hashAlgo, "++++++++++++")
 					if hashAlgo == nil {
 						return
 					}
 
 					hashAlgoStr := hashAlgo.NamedChild(0)
 					hashAlgoName := hashAlgoStr.Content(pass.FileContext.Source)
-					// fmt.Println("++++++hashAlgoName+++++++", hashAlgoName, "++++++++++++")
 					if hashAlgoName == "SHA-1" {
-						// fmt.Println("++++++hashAlgoNameConditionTrue+++++++", hashAlgoName, "++++++++++++")
 						pass.Report(pass, node, "SHA-1 is not recommended for cryptographic purposes")
 					}
 
