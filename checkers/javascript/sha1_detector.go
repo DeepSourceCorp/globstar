@@ -66,7 +66,11 @@ func detectSha1Usage(pass *analysis.Pass) (interface{}, error) {
 			if nameNode != nil && nameNode.Type() == "identifier" {
 				varName := nameNode.Content(pass.FileContext.Source)
 				if varName != "" {
-					nameVar := scopeTree.GetScope(node).Lookup(varName)
+					nameVarScope := scopeTree.GetScope(node)
+					var nameVar *analysis.Variable
+					if nameVarScope != nil {
+						nameVar = nameVarScope.Lookup(varName)
+					}
 					if nameVar != nil {
 						pkgDeclaratorVar = append(pkgDeclaratorVar, nameVar)
 					}

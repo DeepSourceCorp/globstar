@@ -1,5 +1,5 @@
 language: javascript
-name: js_alert_in_prod
+name: alert_in_prod
 message: "Avoid using alert() inside of production code."
 category: best-practices
 severity: warning
@@ -14,7 +14,7 @@ pattern: >
         property: (property_identifier) @alert
         (#eq? @window "window")
         (#eq? @alert "alert"))) 
-    ]) @js_alert_in_prod
+    ]) @alert_in_prod
 exclude:
   - "test/**"
   - "*_test.js"
