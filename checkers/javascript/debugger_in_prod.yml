@@ -1,10 +1,10 @@
 language: javascript
-name: js_debugger_in_prod
+name: debugger_in_prod
 message: "Avoid using debugger statements in production code."
 category: best-practices
 severity: warning
 pattern: >
-  (debugger_statement) @js_debugger_in_prod
+  (debugger_statement) @debugger_in_prod
 exclude:
   - "test/**"
   - "*_test.js"

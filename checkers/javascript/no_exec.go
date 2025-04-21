@@ -8,7 +8,7 @@ import (
 var NoExec = &analysis.Analyzer{
 	Name:        "no_exec",
 	Language:    analysis.LangJs,
-	Description: "No prompt",
+	Description: "Use of exec on user input can lead to code injection vulnerabilities",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityCritical,
 	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
@@ -18,7 +18,7 @@ var NoExec = &analysis.Analyzer{
 func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 	// Map of vulnerable function names to watch for
 	vulnerableSinkFunctions := map[string]struct{}{
-		"log": struct{}{},
+		"exec": struct{}{},
 	}
 
 	vulnerableSourceFuncs := map[string]struct{}{
@@ -39,8 +39,6 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 	// Map to maintain any tainted nodes
 	taintedNodes := make(map[*sitter.Node]struct{})
 	analyzedFuncs := make(map[string]bool) // Prevent infinite recursion
-
-	// fmt.Println("++++++++++++++", dfg.Graph, "++++++++++++++")
 
 	// stores all the possible tainted inputs
 	possibleTaintedInputs := make(map[*sitter.Node]string)
@@ -81,13 +79,6 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 
 	// First pass: collect all suspicious source functions
 	analysis.Preorder(pass, func(node *sitter.Node) {
-		// function f() {
-		// 	let x = user.prompt()
-		// 	f(x)
-		// }
-		//
-		// function log(x) { console.log(x) }
-
 		if node == nil || node.Type() != "variable_declarator" {
 			return
 		}
@@ -142,8 +133,8 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 				taintedNodes[funcDef.Node] = struct{}{}
 			}
 		}
-
 	}
+
 	if len(taintedNodes) == 0 {
 		return nil, nil
 	}

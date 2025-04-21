@@ -1,7 +1,7 @@
-let x = user.prompt()
+let x = prompt()
 
-function foo(x){
-   console.log(x)
+function foo(x) {
+   exec(x)
 }
 
 // <expect-error>

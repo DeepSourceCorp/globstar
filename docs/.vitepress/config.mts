@@ -150,6 +150,8 @@ export default defineConfig({
           { text: 'Writing a checker in YAML', link: '/guides/writing-yaml-checker' },
           { text: 'Writing a checker in Go', link: '/guides/writing-go-checker' },
           { text: 'Contributing built-in checkers', link: '/guides/contributing-built-in-checkers' },
+          { text: 'Writing cross function analysis checkers', link: '/guides/writing-cross-function-analysis-checkers' },
+          { text: 'Writing cross file analysis checkers', link: '/guides/writing-cross-file-analysis-checkers' },
         ]
       },
       {

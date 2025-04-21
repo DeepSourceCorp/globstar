@@ -54,13 +54,11 @@ type DataFlowGraph struct {
 var functionDefinitions = make(map[string]*FunctionDefinition)
 var classDefinitions = make(map[*analysis.Variable]*ClassDefinition)
 
-// var DataFlowGraph = make(map[*analysis.Variable]*DataFlowNode)
-
 func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 
 	scopeResult, err := buildScopeTree(pass)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build the scope tree \n")
+		return nil, fmt.Errorf("failed to build the scope tree")
 	}
 
 	scopeTree := scopeResult.(*analysis.ScopeTree)
@@ -79,7 +77,6 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		currentScope := scopeTree.GetScope(node)
-		// fmt.Println(currentScope.Variables)
 		if currentScope == nil {
 			return
 		}

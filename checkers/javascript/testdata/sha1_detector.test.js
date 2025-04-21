@@ -11,10 +11,7 @@ import shapkg from "jssha"
 
 }
 
-new shapkg("SHA-512", "TEXT", { encoding: "UTF8"})
+new shapkg("SHA-512", "TEXT", { encoding: "UTF8" })
 
 // <expect-error>
-new shapkg("SHA-1", "TEXT", {encoding: "UTF8"})
-
-
-
+new shapkg("SHA-1", "TEXT", { encoding: "UTF8" })
