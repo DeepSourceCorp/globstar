@@ -1,4 +1,4 @@
-//global:registry-exclude
+//globstar:registry-exclude
 
 package python
 
