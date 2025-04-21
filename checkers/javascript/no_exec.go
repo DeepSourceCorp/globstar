@@ -18,11 +18,11 @@ var NoExec = &analysis.Analyzer{
 func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 	// Map of vulnerable function names to watch for
 	vulnerableSinkFunctions := map[string]struct{}{
-		"exec": struct{}{},
+		"exec": {},
 	}
 
 	vulnerableSourceFuncs := map[string]struct{}{
-		"prompt": struct{}{},
+		"prompt": {},
 	}
 
 	dfg := pass.ResultOf[DataFlowAnalyzer].(*DataFlowGraph)
@@ -53,7 +53,11 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 		// Check if this node is a sink
 		if node.Type() == "call_expression" {
 			funcNode := node.ChildByFieldName("function")
-			if funcNode != nil && funcNode.Type() == "member_expression" {
+			if funcNode == nil {
+				return false
+			}
+			// Check if the function is a member expression, like console.log
+			if funcNode.Type() == "member_expression" {
 				prop := funcNode.ChildByFieldName("property")
 				if prop != nil {
 					funcName := prop.Content(pass.FileContext.Source)
@@ -63,6 +67,15 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 						if int(args.NamedChildCount()) > 0 {
 							return true
 						}
+					}
+				}
+			} else if funcNode.Type() == "identifier" { // Check for standalone function calls
+				funcName := funcNode.Content(pass.FileContext.Source)
+				if _, ok := vulnerableSinkFunctions[funcName]; ok {
+					// Check if any argument is tainted
+					args := node.ChildByFieldName("arguments")
+					if int(args.NamedChildCount()) > 0 {
+						return true
 					}
 				}
 			}

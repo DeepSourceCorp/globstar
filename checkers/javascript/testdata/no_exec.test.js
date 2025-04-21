@@ -1,4 +1,4 @@
-let x = prompt()
+let x = window.prompt()
 
 function foo(x) {
    exec(x)
@@ -6,5 +6,3 @@ function foo(x) {
 
 // <expect-error>
 foo(x)
-
-
