@@ -16,7 +16,7 @@ var DataFlowAnalyzer = &analysis.Analyzer{
 	Description: "Create a data flow graph for Python",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityWarning,
-	Run:         createPyDFG,
+	Run:         createDataFlowGraph,
 	ResultType:  reflect.TypeOf(&DataFlowGraph{}),
 	Requires:    []*analysis.Analyzer{ScopeAnalyzer},
 }
@@ -53,7 +53,7 @@ type DataFlowGraph struct {
 var functionDefinitions = make(map[string]*FunctionDefinition)
 var classDefinitions = make(map[*analysis.Variable]*ClassDefinition)
 
-func createPyDFG(pass *analysis.Pass) (interface{}, error) {
+func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 	scopeResult, err := buildScopeTree(pass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build the source tree")
@@ -238,8 +238,9 @@ func createPyDFG(pass *analysis.Pass) (interface{}, error) {
 						}
 						classMethods = append(classMethods, methodDef)
 					}
-				} else if classChild.Type() == "assignment" {
-					classVarNameNode := classChild.ChildByFieldName("left")
+				} else if classChild.Type() == "expression_statement" {
+					assignNode := analysis.FirstChildOfType(classChild, "assignment")
+					classVarNameNode := assignNode.ChildByFieldName("left")
 					if classVarNameNode != nil && classVarNameNode.Type() == "identifier" {
 						classVarName := classVarNameNode.Content(pass.FileContext.Source)
 						classVar := classScope.Children[0].Lookup(classVarName)
