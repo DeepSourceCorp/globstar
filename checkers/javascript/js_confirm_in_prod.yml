@@ -1,0 +1,61 @@
+language: javascript
+name: js_confirm_in_prod
+message: "Avoid using confirm() inside of production code."
+category: best-practices
+severity: warning
+pattern: >
+  (call_expression
+    function: [
+      ((identifier) @confirm
+      (#eq? @confirm "confirm"))
+      ((member_expression
+        object: (identifier) @window
+        property: (property_identifier) @confirm
+        (#eq? @window "window")
+        (#eq? @confirm "confirm"))) 
+    ]) @js_confirm_in_prod
+exclude:
+  - "test/**"
+  - "*_test.js"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+  Issue: 
+  Using confirm() in production code is generally considered poor practice. The confirm() function creates 
+  a modal dialog that blocks the execution of JavaScript until the user makes a choice, disrupting the 
+  user experience and halting all other JavaScript execution.
+  
+  The best practice is to use non-blocking UI components like custom modals or confirmation dialogs 
+  that don't block JavaScript execution.
+  
+  Remediation:
+  ```js
+  // Before:
+  function deleteItem() {
+    if (confirm("Are you sure you want to delete this item?")) {
+      performDelete();
+    }
+  }
+  
+  // After - Using a non-blocking custom confirmation:
+  function deleteItem() {
+    showConfirmDialog("Are you sure you want to delete this item?", 
+      // Yes callback
+      () => {
+        performDelete();
+      },
+      // No callback (optional)
+      () => {
+        console.log("Delete cancelled");
+      }
+    );
+  }
+  
+  // Or using a Promise-based approach:
+  async function deleteItem() {
+    const confirmed = await showConfirmDialog("Are you sure you want to delete this item?");
+    if (confirmed) {
+      performDelete();
+    }
+  }
+  ```

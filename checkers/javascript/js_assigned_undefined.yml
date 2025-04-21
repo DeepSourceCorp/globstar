@@ -1,0 +1,45 @@
+language: javascript
+name: js_undefined_assignment
+message: "Assignment to the global 'undefined' identifier is not recommended and will not work in strict mode."
+category: best-practices
+severity: warning
+pattern: >
+  [
+    (assignment_expression
+      left: (undefined) @assigned_undefined
+      (#eq? @assigned_undefined "undefined"))
+    (variable_declarator
+      (#eq? @assigned_undefined "undefined"))
+  ] @js_undefined_assignment
+exclude:
+  - "test/**"
+  - "*_test.js"
+  - "tests/**"
+  - "__tests__/**"
+description: |
+    Issue:
+    Attempting to reassign the global 'undefined' identifier is problematic for several reasons:
+      - Since ECMAScript 5, 'undefined' is read-only in the global scope
+      - In strict mode, attempts to assign to 'undefined' will throw an error
+      - Redefining 'undefined' creates confusing and error-prone code
+      - It breaks standard JavaScript conventions and expectations
+
+    Although older browsers might allow reassignment of 'undefined' in non-strict mode, 
+    doing so creates code that is not forward-compatible and may cause unexpected behavior.
+
+    Remediation:
+    ```js 
+    // Instead of trying to reassign undefined
+    var undefined = "new value";
+    
+    // Use a different variable name:
+    var undefinedValue = "new value";
+
+    // Or if you need a custom undefined-like value:
+    var customUndefined = Object.create(null);
+    
+    // For checking undefined values, use:
+    if (typeof myVar === "undefined") { ... }
+    // or
+    if (myVar === void 0) { ... }
+    ```

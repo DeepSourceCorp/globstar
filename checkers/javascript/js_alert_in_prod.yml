@@ -1,0 +1,49 @@
+language: javascript
+name: js_alert_in_prod
+message: "Avoid using alert() inside of production code."
+category: best-practices
+severity: warning
+pattern: >
+  (call_expression
+    function: [
+      ((identifier) @alert
+      (#eq? @alert "alert"))
+
+      ((member_expression
+        object: (identifier) @window
+        property: (property_identifier) @alert
+        (#eq? @window "window")
+        (#eq? @alert "alert"))) 
+    ]) @js_alert_in_prod
+exclude:
+  - "test/**"
+  - "*_test.js"
+  - "tests/**"
+  - "__tests__/**"
+descritption: |
+  Issue: 
+  Using alert() in production code is generally considered poor practice. The alert() function creates 
+  a modal dialog that blocks the execution of JavaScript until dismissed by the user, disrupting the 
+  user experience and halting all other JavaScript execution.
+
+  The best practice is to use non-blocking UI notifications, console messages for debugging, or proper
+  error handling techniques instead of alert().
+
+  Remdiation:
+  ```js
+    // Before:
+  function handleError() {
+    alert("An error occurred!");
+  }
+
+  // After - Using a non-blocking toast notification:
+  function handleError() {
+    showToast("An error occurred!", "error");
+  }
+
+  // Or with console for debugging:
+  function handleError() {
+    console.error("An error occurred!");
+    // Handle the error appropriately
+  }
+  ```
