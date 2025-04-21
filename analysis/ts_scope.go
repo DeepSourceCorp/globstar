@@ -31,6 +31,10 @@ var ScopeNodes = []string{
 	"for_in_statement",
 	"for_of_statement",
 	"program",
+	"arrow_function",
+	"class_body",
+	// "class_declaration",
+	"method_definition",
 }
 
 func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
@@ -39,7 +43,14 @@ func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 
 func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
-	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier"
+	return typ == "variable_declarator" ||
+		typ == "import_clause" ||
+		typ == "import_specifier" ||
+		typ == "formal_parameters" ||
+		typ == "function_declaration" ||
+		typ == "method_definition" ||
+		typ == "class_declaration" ||
+		typ == "export_statement" || typ == "assignment_expression" || typ == "public_field_definition"
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -135,6 +146,10 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 		lhs := node.ChildByFieldName("name")
 		return ts.scanDecl(lhs, node, declaredVars)
 
+	case "assignment_expression":
+		lhs := node.ChildByFieldName("left")
+		return ts.scanDecl(lhs, node, declaredVars)
+
 	case "function_declaration":
 		name := node.ChildByFieldName("name")
 		// skipcq: TCV-001
@@ -150,6 +165,40 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 
 	case "formal_parameters":
 		// TODO
+		for i := 0; i < int(node.NamedChildCount()); i++ {
+			param := node.NamedChild(i)
+			if param == nil {
+				continue
+			}
+
+			var identifier *sitter.Node
+			if param.Type() == "identifier" {
+				identifier = param
+			} else if param.Type() == "required_parameter" || param.Type() == "optional_parameter" {
+				// Look for pattern which might be identifier or destructuring
+				pattern := param.ChildByFieldName("pattern")
+				if pattern != nil && pattern.Type() == "identifier" {
+					identifier = pattern
+				}
+				// TODO: Handle destructuring patterns within parameters if needed by calling scanDecl
+			} else if param.Type() == "assignment_pattern" {
+				// Parameter with default value: function foo(x = 1)
+				left := param.ChildByFieldName("left")
+				if left != nil && left.Type() == "identifier" {
+					identifier = left
+				}
+				// TODO: Handle destructuring patterns within parameters if needed by calling scanDecl
+			}
+			// TODO: Handle rest parameter (...)+
+			if identifier != nil {
+				declaredVars = append(declaredVars, &Variable{
+					Kind:     VarKindParameter,
+					Name:     identifier.Content(ts.source),
+					DeclNode: param, // Use the parameter node itself (or identifier) as DeclNode
+				})
+			}
+			// Add handling for destructuring patterns here if necessary using scanDecl
+		}
 
 	case "import_specifier":
 		// import { <name> } from ...
@@ -164,6 +213,36 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				Kind:     VarKindImport,
 				Name:     defaultImport.Content(ts.source),
 				DeclNode: defaultImport,
+			})
+		}
+
+	case "class_declaration":
+		className := node.ChildByFieldName("name")
+		if className != nil {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindClass,
+				Name:     className.Content(ts.source),
+				DeclNode: className,
+			})
+		}
+
+	case "method_definition":
+		methodName := node.ChildByFieldName("name")
+		if methodName != nil {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindFunction,
+				Name:     methodName.Content(ts.source),
+				DeclNode: methodName,
+			})
+		}
+
+	case "public_field_definition":
+		fieldName := node.ChildByFieldName("name")
+		if fieldName != nil {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindVariable,
+				Name:     fieldName.Content(ts.source),
+				DeclNode: fieldName,
 			})
 		}
 	}
@@ -232,6 +311,7 @@ func (ts *TsScopeBuilder) OnNodeEnter(node *sitter.Node, scope *Scope) {
 		}
 		variable.Refs = append(variable.Refs, ref)
 	}
+
 }
 
 func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
@@ -252,6 +332,72 @@ func (ts *TsScopeBuilder) OnNodeExit(node *sitter.Node, scope *Scope) {
 			}
 
 			variable.Refs = append(variable.Refs, ref)
+		}
+	}
+	if node.Type() == "export_statement" {
+		// Handle named exports: export { foo, bar as baz };
+		exportClause := ChildrenOfType(node, "export_clause")
+
+		for _, clause := range exportClause {
+			var varName string
+			exportSpecifier := ChildrenOfType(clause, "export_specifier")
+			if len(exportSpecifier) == 0 {
+				continue
+			}
+			for _, specifier := range exportSpecifier {
+				name := specifier.ChildByFieldName("name")
+				if name == nil {
+					continue
+				}
+				if name.Type() == "identifier" {
+					varName = name.Content(ts.source)
+				}
+				variable := scope.Lookup(varName)
+				if variable != nil {
+					variable.Exported = true
+				}
+			}
+
+		}
+
+		// Handle direct exports: export const foo = 123;
+		declaration := node.ChildByFieldName("declaration")
+		if declaration != nil {
+			if declaration.Type() == "lexical_declaration" {
+				// Handle variable declarations: export const foo = 123, bar = 456;
+				declarators := ChildrenOfType(declaration, "variable_declarator")
+				for _, declarator := range declarators {
+					name := declarator.ChildByFieldName("name")
+					if name != nil && name.Type() == "identifier" {
+						varName := name.Content(ts.source)
+
+						variable := scope.Lookup(varName)
+						if variable != nil {
+							variable.Exported = true
+						}
+					}
+				}
+			} else if declaration.Type() == "function_declaration" || declaration.Type() == "class_declaration" {
+				// Handle direct function/class exports: export function foo() {}
+				name := declaration.ChildByFieldName("name")
+				if name != nil {
+					varName := name.Content(ts.source)
+					variable := scope.Lookup(varName)
+					if variable != nil {
+						variable.Exported = true
+					}
+				}
+			}
+		}
+
+		// Handle default exports: export default foo;
+		defaultExport := node.ChildByFieldName("value")
+		if defaultExport != nil && defaultExport.Type() == "identifier" {
+			varName := defaultExport.Content(ts.source)
+			variable := scope.Lookup(varName)
+			if variable != nil {
+				variable.Exported = true
+			}
 		}
 	}
 }

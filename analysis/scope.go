@@ -29,6 +29,7 @@ const (
 	VarKindFunction
 	VarKindVariable
 	VarKindParameter
+	VarKindClass
 )
 
 type Variable struct {
@@ -39,6 +40,8 @@ type Variable struct {
 	DeclNode *sitter.Node
 	// Refs is a list of references to this variable throughout the file
 	Refs []*Reference
+	// Exported tracks if the variable is valid to be exported
+	Exported bool
 }
 
 // ScopeBuilder is an interface that has to be implemented
@@ -144,7 +147,7 @@ func buildScopeTree(
 	if builder.NodeCreatesScope(node) {
 		nextScope = NewScope(scope)
 		scopeOfNode[node] = nextScope
-
+		scope.AstNode = node
 		if scope != nil {
 			scope.Children = append(scope.Children, nextScope)
 		} else {
