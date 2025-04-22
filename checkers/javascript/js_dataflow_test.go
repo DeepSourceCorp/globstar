@@ -21,117 +21,117 @@ func TestDataFlowAnalysis(t *testing.T) {
 	// - Update test-cases to handle dataflow implementation instead of sql-injection cases.
 	// - Add other edge-cases including function blocks, Class Blocks etc.
 
-	// t.Run("variable_data_flow", func(t *testing.T) {
-	// 	source := `
-	// 		var a = 10
-	// 		function f(x){
-	// 			a = x * 2
-	// 			return a;
-	// 		}
+	t.Run("variable_data_flow", func(t *testing.T) {
+		source := `
+			var a = 10
+			function f(x){
+				a = x * 2
+				return a;
+			}
 
-	// 		f(a)
-	// 		console.log(a)
-	// 		`
-	// 	parseResult := parseJsCode(t, []byte(source))
+			f(a)
+			console.log(a)
+			`
+		parseResult := parseJsCode(t, []byte(source))
 
-	// 	pass := &ana.Pass{
-	// 		Analyzer:    DataFlowAnalyzer,
-	// 		FileContext: parseResult,
-	// 	}
+		pass := &ana.Pass{
+			Analyzer:    DataFlowAnalyzer,
+			FileContext: parseResult,
+		}
 
-	// 	dfgStruct, err := createDataFlowGraph(pass)
-	// 	assert.NoError(t, err)
+		dfgStruct, err := createDataFlowGraph(pass)
+		assert.NoError(t, err)
 
-	// 	dfg := dfgStruct.(*DataFlowGraph)
+		dfg := dfgStruct.(*DataFlowGraph)
 
-	// 	flowGraph := dfg.Graph
-	// 	assert.NotNil(t, flowGraph)
+		flowGraph := dfg.Graph
+		assert.NotNil(t, flowGraph)
 
-	// 	scopeTree := dfg.ScopeTree
-	// 	assert.NotNil(t, scopeTree)
+		scopeTree := dfg.ScopeTree
+		assert.NotNil(t, scopeTree)
 
-	// 	aVar := scopeTree.Root.Children[0].Lookup("a")
-	// 	assert.NotNil(t, aVar)
+		aVar := scopeTree.Root.Children[0].Lookup("a")
+		assert.NotNil(t, aVar)
 
-	// 	funcVar := scopeTree.Root.Children[0].Lookup("f")
-	// 	assert.NotNil(t, funcVar)
+		funcVar := scopeTree.Root.Children[0].Lookup("f")
+		assert.NotNil(t, funcVar)
 
-	// 	funcScope := scopeTree.GetScope(funcVar.DeclNode.ChildByFieldName("body"))
-	// 	assert.NotNil(t, funcScope)
+		funcScope := scopeTree.GetScope(funcVar.DeclNode.ChildByFieldName("body"))
+		assert.NotNil(t, funcScope)
 
-	// 	aFuncVar := funcScope.Lookup("a")
-	// 	assert.NotNil(t, aFuncVar)
+		aFuncVar := funcScope.Lookup("a")
+		assert.NotNil(t, aFuncVar)
 
-	// 	// no re-assignment of a inside the function body.
-	// 	assert.Equal(t, aVar, aFuncVar)
+		// no re-assignment of a inside the function body.
+		assert.Equal(t, aVar, aFuncVar)
 
-	// })
+	})
 
-	// t.Run("variable_data_flow_through_multiple_functions", func(t *testing.T) {
-	// 	source := `
-	// 		var a = 10
-	// 		function f(x){
-	// 			a = x * 2
-	// 			return a;
-	// 		}
+	t.Run("variable_data_flow_through_multiple_functions", func(t *testing.T) {
+		source := `
+			var a = 10
+			function f(x){
+				a = x * 2
+				return a;
+			}
 
-	// 		f(a)
-	// 		console.log(a)
+			f(a)
+			console.log(a)
 
-	// 		function g(x) {
-	// 			var a = x * 2;
-	// 			return a;
-	// 		}
+			function g(x) {
+				var a = x * 2;
+				return a;
+			}
 
-	// 		g(a)
-	// 		console.log(a)
-	// 		`
-	// 	parseResult := parseJsCode(t, []byte(source))
+			g(a)
+			console.log(a)
+			`
+		parseResult := parseJsCode(t, []byte(source))
 
-	// 	pass := &ana.Pass{
-	// 		Analyzer:    DataFlowAnalyzer,
-	// 		FileContext: parseResult,
-	// 	}
+		pass := &ana.Pass{
+			Analyzer:    DataFlowAnalyzer,
+			FileContext: parseResult,
+		}
 
-	// 	dfgStruct, err := createDataFlowGraph(pass)
-	// 	assert.NoError(t, err)
+		dfgStruct, err := createDataFlowGraph(pass)
+		assert.NoError(t, err)
 
-	// 	dfg := dfgStruct.(*DataFlowGraph)
+		dfg := dfgStruct.(*DataFlowGraph)
 
-	// 	flowGraph := dfg.Graph
-	// 	assert.NotNil(t, flowGraph)
+		flowGraph := dfg.Graph
+		assert.NotNil(t, flowGraph)
 
-	// 	scopeTree := dfg.ScopeTree
-	// 	assert.NotNil(t, scopeTree)
+		scopeTree := dfg.ScopeTree
+		assert.NotNil(t, scopeTree)
 
-	// 	aVar := scopeTree.Root.Children[0].Lookup("a")
-	// 	assert.NotNil(t, aVar)
+		aVar := scopeTree.Root.Children[0].Lookup("a")
+		assert.NotNil(t, aVar)
 
-	// 	f1Var := scopeTree.Root.Children[0].Lookup("f")
-	// 	assert.NotNil(t, f1Var)
+		f1Var := scopeTree.Root.Children[0].Lookup("f")
+		assert.NotNil(t, f1Var)
 
-	// 	f1Scope := scopeTree.GetScope(f1Var.DeclNode.ChildByFieldName("body"))
-	// 	assert.NotNil(t, f1Scope)
+		f1Scope := scopeTree.GetScope(f1Var.DeclNode.ChildByFieldName("body"))
+		assert.NotNil(t, f1Scope)
 
-	// 	aF1Var := f1Scope.Lookup("a")
-	// 	assert.NotNil(t, aF1Var)
+		aF1Var := f1Scope.Lookup("a")
+		assert.NotNil(t, aF1Var)
 
-	// 	// no re-assignment of a inside the function body.
-	// 	assert.Equal(t, aVar, aF1Var)
+		// no re-assignment of a inside the function body.
+		assert.Equal(t, aVar, aF1Var)
 
-	// 	f2Var := scopeTree.Root.Children[0].Lookup("g")
-	// 	assert.NotNil(t, f2Var)
+		f2Var := scopeTree.Root.Children[0].Lookup("g")
+		assert.NotNil(t, f2Var)
 
-	// 	f2Scope := scopeTree.GetScope(f2Var.DeclNode.ChildByFieldName("body"))
-	// 	assert.NotNil(t, f2Scope)
+		f2Scope := scopeTree.GetScope(f2Var.DeclNode.ChildByFieldName("body"))
+		assert.NotNil(t, f2Scope)
 
-	// 	aF2Var := f2Scope.Lookup("a")
-	// 	assert.NotNil(t, aF2Var)
+		aF2Var := f2Scope.Lookup("a")
+		assert.NotNil(t, aF2Var)
 
-	// 	// reassignment of `a` inside of g(x) causes it to be a different variable inside aF2Var
-	// 	assert.NotEqual(t, aVar, aF2Var)
+		// reassignment of `a` inside of g(x) causes it to be a different variable inside aF2Var
+		assert.NotEqual(t, aVar, aF2Var)
 
-	// })
+	})
 
 	t.Run("variable_assignment_data_flow", func(t *testing.T) {
 		// Taint Logic not implemented after refactoring the data_flow_analyzer.
@@ -156,9 +156,6 @@ func TestDataFlowAnalysis(t *testing.T) {
 		assert.NotNil(t, flowGraph)
 		scopeTree := dfg.ScopeTree
 		assert.NotNil(t, scopeTree)
-
-		t.Log(scopeTree.Root.Children[0].Variables)
-		t.Logf("+++++++%v++++++++\n", dfg.Graph)
 
 		// for variable, node := range dfg.Graph {
 		// 	t.Logf("Variable in graph: %s, Kind: %v\n", variable.Name, variable.Kind)
@@ -208,5 +205,35 @@ func TestClassDataFlow(t *testing.T) {
 	assert.NotNil(t, classDef[classVar])
 	assert.Greater(t, len(classDef[classVar].Methods), 0)
 	assert.Greater(t, len(classDef[classVar].Properties), 0)
+
+}
+
+func TestCallExp(t *testing.T) {
+	source := `
+	const input = req.query.input;
+	var y = Function("foo", "bar",` + "`return ${input}(a,b)`" + `)	
+	var x = new Function("bar", input)
+	`
+
+	parseResult := parseJsCode(t, []byte(source))
+	pass := &ana.Pass{
+		Analyzer:    DataFlowAnalyzer,
+		FileContext: parseResult,
+	}
+
+	dfgStruct, err := createDataFlowGraph(pass)
+	assert.NoError(t, err)
+	dfg := dfgStruct.(*DataFlowGraph)
+	scopeTree := dfg.ScopeTree
+	assert.NotNil(t, scopeTree)
+	flowGraph := dfg.Graph
+	assert.NotNil(t, flowGraph)
+
+	input := scopeTree.Root.Children[0].Lookup("input")
+	assert.NotNil(t, input)
+
+	y := scopeTree.Root.Children[0].Lookup("y")
+	assert.NotNil(t, y)
+	assert.Contains(t, flowGraph[y].Sources, flowGraph[input])
 
 }

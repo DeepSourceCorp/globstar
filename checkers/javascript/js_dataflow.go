@@ -85,6 +85,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		// Track variable declarations and assignments
+		// TODO: Add sources for the nameNode.
 		if node.Type() == "variable_declarator" || node.Type() == "assignment_expression" {
 			var nameNode, valueNode *sitter.Node
 
@@ -175,6 +176,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 					dfNode.FuncDef = funcDef
 
 				}
+
 				dataFlowGraph.Graph[variable] = dfNode
 
 			}
@@ -414,7 +416,6 @@ func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 				if variable := scope.Lookup(varName); variable != nil {
 					if sourceNode, exists := DataFlowGraph[variable]; exists {
 						dfNode.Sources = append(dfNode.Sources, sourceNode)
-
 					}
 				}
 			}
@@ -427,7 +428,6 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 	if node == nil || node.Type() != "call_expression" {
 		return
 	}
-
 	args := node.ChildByFieldName("arguments")
 	if args == nil {
 		return
@@ -436,6 +436,7 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 	// Check each argument for taint
 	for i := 0; i < int(args.NamedChildCount()); i++ {
 		arg := args.NamedChild(i)
+
 		if arg == nil {
 			continue
 		}
@@ -447,7 +448,13 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 					dfNode.Sources = append(dfNode.Sources, sourceNode)
 				}
 			}
+		}
 
+		// Add handling of template strings inside a function call
+		if arg.Type() == "template_string" {
+			// fmt.Println(arg.Content(sourceCode))
+			handleTemplateStringDataFlow(arg, dfNode, DataFlowGraph, sourceCode, scope)
 		}
 	}
+
 }
