@@ -146,6 +146,7 @@ func buildScopeTree(
 	nextScope := scope
 	if builder.NodeCreatesScope(node) {
 		nextScope = NewScope(scope)
+		nextScope.AstNode = node
 		scopeOfNode[node] = nextScope
 		scope.AstNode = node
 		if scope != nil {
@@ -179,7 +180,11 @@ func (st *ScopeTree) GetScope(node *sitter.Node) *Scope {
 func MakeScopeTree(lang Language, ast *sitter.Node, source []byte) *ScopeTree {
 	switch lang {
 	case LangPy:
-		return nil
+		builder := &PyScopeBuilder{
+			ast: ast,
+			source: source,
+		}
+		return BuildScopeTree(builder, ast, source)
 	case LangTs, LangJs, LangTsx:
 		builder := &TsScopeBuilder{
 			ast:    ast,
