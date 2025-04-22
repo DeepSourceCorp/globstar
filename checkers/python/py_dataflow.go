@@ -46,7 +46,7 @@ type ClassDefinition struct {
 type DataFlowGraph struct {
 	Graph     map[*analysis.Variable]*DataFlowNode
 	ScopeTree *analysis.ScopeTree
-	FunDefs   map[string]*FunctionDefinition
+	FuncDefs   map[string]*FunctionDefinition
 	ClassDefs map[*analysis.Variable]*ClassDefinition
 }
 
@@ -64,7 +64,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 	dfg := &DataFlowGraph{
 		Graph:     make(map[*analysis.Variable]*DataFlowNode),
 		ScopeTree: scopeTree,
-		FunDefs:   make(map[string]*FunctionDefinition),
+		FuncDefs:   make(map[string]*FunctionDefinition),
 	}
 
 	analysis.Preorder(pass, func(node *sitter.Node) {
@@ -89,7 +89,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 				varName := nameNode.Content(pass.FileContext.Source)
 				variable := currentScope.Lookup(varName)
 
-				if variable == nil {
+				if variable != nil {
 					dfNode = &DataFlowNode{
 						Node:     nameNode,
 						Sources:  []*DataFlowNode{},
@@ -243,7 +243,8 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 					classVarNameNode := assignNode.ChildByFieldName("left")
 					if classVarNameNode != nil && classVarNameNode.Type() == "identifier" {
 						classVarName := classVarNameNode.Content(pass.FileContext.Source)
-						classVar := classScope.Children[0].Lookup(classVarName)
+						fmt.Println(assignNode.Content(pass.FileContext.Source))
+						classVar := classScope.Lookup(classVarName)
 						if classVar != nil {
 							classProperties = append(classProperties, classVar)
 						}
@@ -262,7 +263,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 		}
 	})
 
-	dfg.FunDefs = functionDefinitions
+	dfg.FuncDefs = functionDefinitions
 	dfg.ClassDefs = classDefinitions
 
 	return dfg, nil

@@ -1,6 +1,7 @@
 package python
 
 import (
+	// "fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,6 +45,7 @@ func TestClassDataFlow(t *testing.T) {
 	source := `
 class A:
 	a = 10
+	b = 10
 	def __init__(self, a):
 		self.a = a
 	def f(self):
@@ -70,4 +72,21 @@ class A:
 	assert.NotNil(t, classDef[classVar])
 	assert.Greater(t, len(classDef[classVar].Methods), 0)
 	assert.Greater(t, len(classDef[classVar].Properties), 0)
+}
+
+func TestBinaryExpressionDataFlow(t *testing.T) {
+	source := `
+class A:
+	a: int
+	c: int
+	`
+	parseResult := parsePyCode(t, []byte(source))
+	pass := &analysis.Pass{
+		Analyzer: DataFlowAnalyzer,
+		FileContext: parseResult,
+	}
+	dfgStruct, err := createDataFlowGraph(pass)
+	// fmt.Println(dfgStruct.sco)
+	assert.NoError(t, err)
+	assert.NotNil(t, dfgStruct)
 }
