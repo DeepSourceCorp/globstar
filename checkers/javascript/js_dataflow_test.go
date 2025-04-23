@@ -209,31 +209,69 @@ func TestClassDataFlow(t *testing.T) {
 }
 
 func TestCallExp(t *testing.T) {
-	source := `
+	t.Run("function_call_expression", func(t *testing.T) {
+		source := `
 	const input = req.query.input;
 	var y = Function("foo", "bar",` + "`return ${input}(a,b)`" + `)	
 	var x = new Function("bar", input)
 	`
 
-	parseResult := parseJsCode(t, []byte(source))
-	pass := &ana.Pass{
-		Analyzer:    DataFlowAnalyzer,
-		FileContext: parseResult,
-	}
+		parseResult := parseJsCode(t, []byte(source))
+		pass := &ana.Pass{
+			Analyzer:    DataFlowAnalyzer,
+			FileContext: parseResult,
+		}
 
-	dfgStruct, err := createDataFlowGraph(pass)
-	assert.NoError(t, err)
-	dfg := dfgStruct.(*DataFlowGraph)
-	scopeTree := dfg.ScopeTree
-	assert.NotNil(t, scopeTree)
-	flowGraph := dfg.Graph
-	assert.NotNil(t, flowGraph)
+		dfgStruct, err := createDataFlowGraph(pass)
+		assert.NoError(t, err)
+		dfg := dfgStruct.(*DataFlowGraph)
+		scopeTree := dfg.ScopeTree
+		assert.NotNil(t, scopeTree)
+		flowGraph := dfg.Graph
+		assert.NotNil(t, flowGraph)
 
-	input := scopeTree.Root.Children[0].Lookup("input")
-	assert.NotNil(t, input)
+		input := scopeTree.Root.Children[0].Lookup("input")
+		assert.NotNil(t, input)
 
-	y := scopeTree.Root.Children[0].Lookup("y")
-	assert.NotNil(t, y)
-	assert.Contains(t, flowGraph[y].Sources, flowGraph[input])
+		y := scopeTree.Root.Children[0].Lookup("y")
+		assert.NotNil(t, y)
+		assert.Contains(t, flowGraph[y].Sources, flowGraph[input])
+
+	})
+
+	// t.Run("call_expressions_without_definition", func(t *testing.T) {
+	// 	source := `
+	// 	const input = req.query.input;
+	// 	eval(input);
+	// 	eval("alert");`
+
+	// 	parseResult := parseJsCode(t, []byte(source))
+	// 	pass := &ana.Pass{
+	// 		Analyzer:    DataFlowAnalyzer,
+	// 		FileContext: parseResult,
+	// 	}
+
+	// 	dfgStruct, err := createDataFlowGraph(pass)
+	// 	assert.NoError(t, err)
+	// 	assert.NotNil(t, dfgStruct)
+	// 	dfg := dfgStruct.(*DataFlowGraph)
+	// 	scopeTree := dfg.ScopeTree
+	// 	assert.NotNil(t, scopeTree)
+	// 	flowGraph := dfg.Graph
+	// 	assert.NotNil(t, flowGraph)
+	// 	inputVar := scopeTree.Root.Children[0].Lookup("input")
+	// 	assert.NotNil(t, inputVar)
+	// 	dfVar := flowGraph[inputVar]
+
+	// 	assert.NotNil(t, dfVar, "node for input should exist in dfg")
+
+	// 	callVar := scopeTree.Root.Children[0].Lookup("eval")
+	// 	assert.NotNil(t, callVar)
+	// 	assert.NotNil(t, flowGraph[callVar], "node for eval should exist in dfg")
+	// 	sources := flowGraph[callVar].Sources
+	// 	assert.Greater(t, len(sources), 0)
+	// 	assert.Contains(t, sources, dfVar, "input should be a source for setTimeout")
+
+	// })
 
 }
