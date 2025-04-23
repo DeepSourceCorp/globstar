@@ -33,7 +33,6 @@ var ScopeNodes = []string{
 	"program",
 	"arrow_function",
 	"class_body",
-	// "class_declaration",
 	"method_definition",
 }
 
@@ -50,7 +49,7 @@ func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 		typ == "function_declaration" ||
 		typ == "method_definition" ||
 		typ == "class_declaration" ||
-		typ == "export_statement" || typ == "assignment_expression" || typ == "public_field_definition"
+		typ == "export_statement" || typ == "assignment_expression" || typ == "public_field_definition" || typ == "call_expression" // To handle cases of inbuilt functions like setTimeout etc.
 }
 
 func (ts *TsScopeBuilder) scanDecl(idOrPattern, declarator *sitter.Node, decls []*Variable) []*Variable {
@@ -243,6 +242,15 @@ func (ts *TsScopeBuilder) CollectVariables(node *sitter.Node) []*Variable {
 				Kind:     VarKindVariable,
 				Name:     fieldName.Content(ts.source),
 				DeclNode: fieldName,
+			})
+		}
+	case "call_expression":
+		funcName := node.ChildByFieldName("function")
+		if funcName != nil && funcName.Type() == "identifier" {
+			declaredVars = append(declaredVars, &Variable{
+				Kind:     VarKindFunction,
+				Name:     funcName.Content(ts.source),
+				DeclNode: funcName,
 			})
 		}
 	}
