@@ -22,5 +22,5 @@ setTimeout(function () {
   console.log("Delayed for 1 second." + input);
 }, 1000);
 
-// <expect-error> setTimeout makes the browser do an eval() under the hood with the argument passed
+// <expect-error> 
 setTimeout("console.log(" + input + ")", 1000);

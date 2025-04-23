@@ -33,6 +33,11 @@ func detectEvalExpress(pass *analysis.Pass) (interface{}, error) {
 		return nil, nil
 	}
 
+	funcCall := dfg.FuncCalls
+	if funcCall == nil {
+		return nil, nil
+	}
+
 	// Common user-input sources for JavaScript applications.
 	userInputSrc := []string{"req.query.input", "req.params.id", "req.body", "req.cookies.sessionId", "localStorage.getItem"}
 
@@ -117,6 +122,23 @@ func detectEvalExpress(pass *analysis.Pass) (interface{}, error) {
 								}
 							}
 						}
+					}
+				}
+
+			}
+		}
+
+		if node.Type() == "expression_statement" {
+			callNode := node.NamedChild(0)
+			funcNode := callNode.ChildByFieldName("function")
+			var funcName string
+			if funcNode != nil {
+				funcName = funcNode.Content(pass.FileContext.Source)
+			}
+			if slices.Contains(vulnMethods, funcName) {
+				if funcCall, ok := functionCalls[callNode]; ok {
+					if ContainsAny(funcCall.Sources, taintedNodes) {
+						pass.Report(pass, node, "Eval attempt on user input, code injection vulnerability.")
 					}
 				}
 
