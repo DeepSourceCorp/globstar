@@ -98,13 +98,13 @@ func (r *patternCheckerImpl) OnMatch(
 		}
 	}
 	raisedIssue := &Issue{
-		Range: matchedNode.Range(),
-		Node: matchedNode,
-		Message: message,
+		Range:    matchedNode.Range(),
+		Node:     matchedNode,
+		Message:  message,
 		Filepath: ana.ParseResult.FilePath,
 		Category: r.Category(),
 		Severity: r.Severity(),
-		Id: &r.issueId,
+		Id:       &r.issueId,
 	}
 
 	filepath := ana.ParseResult.FilePath
