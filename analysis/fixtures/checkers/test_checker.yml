@@ -4,11 +4,8 @@ message: "This is a test checker"
 category: security
 severity: warning
 
-pattern: >
-  (assert_statement
-    (comparison_operator
-      (identifier)
-      (identifier))) @test_checker
+pattern: |
+  (assert_statement)
 
-description: >
+description: |
   This is a test checker used in unit tests.
