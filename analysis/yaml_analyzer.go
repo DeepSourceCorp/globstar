@@ -321,7 +321,7 @@ func (ana *YamlAnalyzer) Report(issue *YamlIssue) {
 func RunYamlCheckers(path string, analyzers []*YamlAnalyzer) ([]*YamlIssue, error) {
 	InitializeSkipComments(analyzers)
 
-	issues := []*YamlIssue{}
+	var issues []*YamlIssue
 	for _, analyzer := range analyzers {
 		issues = append(issues, analyzer.Analyze()...)
 	}
@@ -390,7 +390,7 @@ func YamlGatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 	return skipLines
 }
 
-func (ana *YamlAnalyzer) ContainsSkipcq(skipLines []*SkipComment, issue *YamlIssue) bool {
+func ContainsSkipcqYaml(skipLines []*SkipComment, issue *YamlIssue) bool {
 	if len(skipLines) == 0 {
 		return false
 	}

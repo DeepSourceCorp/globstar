@@ -87,7 +87,7 @@ func (r *patternCheckerImpl) OnMatch(
 
 	filepath := ana.ParseResult.FilePath
 	skipComments := fileSkipComment[filepath]
-	if !ana.ContainsSkipcq(skipComments, raisedIssue) {
+	if ContainsSkipcqYaml(skipComments, raisedIssue) {
 		ana.Report(raisedIssue)
 	}
 }
