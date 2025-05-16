@@ -22,11 +22,12 @@ var ControlFlowAnalyzer = &analysis.Analyzer{
 type CfgBlockType int
 
 const (
-	CfgBlockTypeStatement CfgBlockType = iota
-	CfgBlockTypeEntry                  // Marking entry point of a Basic Block
-	CfgBlockTypeExit                   // Marking exit point of a Basic Block
-	CfgBlockTypeFunction               // Marking the start of a function node
-	CfgBlockTypeBasic                  // Marking a basic block
+	CfgBlockTypeStatement   CfgBlockType = iota
+	CfgBlockTypeEntry                    // Marking entry point of a Basic Block
+	CfgBlockTypeExit                     // Marking exit point of a Basic Block
+	CfgBlockTypeFunction                 // Marking the start of a function node
+	CfgBlockTypeBasic                    // Marking a basic block
+	CfgBlockTypeConditional              // Marking a conditional block
 )
 
 var BlockDeclNodes = []string{
@@ -98,13 +99,16 @@ func AddEdge(from *CfgBlock, to *CfgBlock) {
 }
 
 // TODO:
-// Focus on a simple control flow implementation first.
-// Each function call creates a new control flow node
-// Hoisting needs to be handled for function calls (ref: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions#function_hoisting)
-// Hoisting only happens for function declarations, not function expressions.
-// Gather all the function nodes prior to linking them. (A builder method?)
-// Connecting the nodes will happen after the graph is fully created
-// Add functionality to handle function calls and hoisting.
+// Focus on a simple control flow implementation first. ✅
+// Each function call creates a new control flow node ✅
+// Hoisting needs to be handled for function calls (ref: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions#function_hoisting) ✅
+// Hoisting only happens for function declarations, not function expressions. ✅
+// Gather all the function nodes prior to linking them. (A builder method?) ✅
+// Connecting the nodes will happen after the graph is fully created ✅
+// Add functionality to handle function calls and hoisting. ✅
+// Handle Conditional Expressions. ✅
+// Handle Loops.
+// Handle Conditions inside functions.
 
 func createControlFlowGraph(pass *analysis.Pass) (interface{}, error) {
 	cfg := NewControlFlowGraph()
@@ -128,26 +132,20 @@ func createControlFlowGraph(pass *analysis.Pass) (interface{}, error) {
 			children := int(node.ChildCount())
 			for i := 0; i < children; i++ {
 				child := node.Child(i)
-				fmt.Println("child", child.Type())
 				if slices.Contains(BlockDeclNodes, child.Type()) {
+					switch child.Type() {
+					case "if_statement":
+						cfg.processIfStatement(cfg.nextNodeID-1 /*pass,*/, child)
+					}
 					continue
-					// Need a way to only attach the function decl block, when it is called in the actual code.
-					// Right now it's part of the CFG even if it's not called.
-					// if child.Type() == "function_declaration" {
-					// 	block := cfg.Functions[child.ChildByFieldName("name").Content(pass.FileContext.Source)]
-					// 	funcBlockIndex, _ := cfg.CreateBlock(child, CfgBlockTypeFunction, block)
-					// 	AddEdge(cfg.AllBlocks[funcBlockIndex-1], cfg.AllBlocks[funcBlockIndex])
-					// }
 				}
 				if child.Type() == "expression_statement" {
 					callExp := child.Child(0)
 					if callExp == nil {
 						continue
 					}
-					fmt.Println("callExp", child.Child(0).Child(0).Type())
 					funcNameStr := callExp.ChildByFieldName("function").Content(pass.FileContext.Source)
 					block := cfg.Functions[funcNameStr]
-					fmt.Println("block", block)
 					if block == nil {
 						continue
 					}
@@ -224,9 +222,53 @@ func (cfg *ControlFlowGraph) processFunctionDeclaration(pass *analysis.Pass, nod
 			cfgNode.Nodes = append(cfgNode.ExitNodes, child)
 		}
 	}
-	// cfg.CreateBlock(node, CfgBlockTypeFunction, cfgNode)
 
 	return cfgNode, nil
+}
+
+func (cfg *ControlFlowGraph) processIfStatement(lastBlockID int /*pass *analysis.Pass,*/, node *sitter.Node) (int, *CfgBlock, error) {
+	// Need seperate blocks. Seperating the branches of the if statements (true and false) ✅
+	// Need to handle the else if and else statements. ✅
+	// Link all the leaf nodes to the exit block. How about we return all the leaf nodes Index and link them in the main loop ?
+
+	condition := node.ChildByFieldName("condition")
+	consequent := node.ChildByFieldName("consequence")
+	elseConditions := node.ChildByFieldName("alternative")
+
+	ifBlockID, ifBlock := cfg.CreateBlock(node, CfgBlockTypeConditional, nil)
+	if condition != nil {
+		ifBlock.Nodes = append(ifBlock.Nodes, condition)
+	}
+	AddEdge(cfg.AllBlocks[lastBlockID], ifBlock)
+
+	if consequent != nil {
+		_, trueBlock := cfg.CreateBlock(consequent, CfgBlockTypeBasic, nil)
+		trueBlock.Nodes = append(trueBlock.Nodes, consequent)
+		AddEdge(cfg.AllBlocks[ifBlockID], trueBlock)
+	}
+
+	if elseConditions != nil {
+		if int(elseConditions.ChildCount()) < 2 {
+			return ifBlockID, ifBlock, nil
+		}
+		switch elseConditions.Child(1).Type() {
+		case "if_statement":
+			cfg.processIfStatement(ifBlockID, elseConditions.Child(1))
+		default:
+			fmt.Println("else_clause", elseConditions.Child(1))
+			elseBlockID, elseBlock := cfg.CreateBlock(elseConditions, CfgBlockTypeBasic, nil)
+			// elseBlock.Nodes = append(elseBlock.Nodes, elseConditions)
+			AddEdge(cfg.AllBlocks[ifBlockID], elseBlock)
+			_, falseBlock := cfg.CreateBlock(elseConditions, CfgBlockTypeBasic, nil)
+			if elseConditions.Child(1) != nil {
+				falseBlock.Nodes = append(falseBlock.Nodes, elseConditions.Child(1))
+			}
+			AddEdge(cfg.AllBlocks[elseBlockID], falseBlock)
+		}
+
+	}
+
+	return ifBlockID, ifBlock, nil
 }
 
 // Print outputs the entire Control Flow Graph structure in a readable format
@@ -318,6 +360,8 @@ func blockTypeToString(blockType CfgBlockType) string {
 		return "Function"
 	case CfgBlockTypeBasic:
 		return "Basic"
+	case CfgBlockTypeConditional:
+		return "Conditional"
 	default:
 		return "Unknown"
 	}
@@ -358,6 +402,10 @@ func (cfg *ControlFlowGraph) GenerateDOTWithSource(source []byte) string {
 		if len(block.Nodes) > 0 {
 			nodeLabel += "\\n\\nStatements:"
 			for _, node := range block.Nodes {
+				if node == nil {
+					continue
+				}
+
 				// Add node type
 				nodeLabel += fmt.Sprintf("\\n- %s", node.Type())
 
@@ -387,6 +435,8 @@ func (cfg *ControlFlowGraph) GenerateDOTWithSource(source []byte) string {
 			nodeStyle = ", color=red"
 		case CfgBlockTypeFunction:
 			nodeStyle = ", color=blue, style=filled, fillcolor=lightblue"
+		case CfgBlockTypeConditional:
+			nodeStyle = ", color=purple, style=filled, fillcolor=lavender"
 		}
 
 		result += fmt.Sprintf("  node%d [label=\"%s\"%s];\n", block.ID, nodeLabel, nodeStyle)
@@ -399,6 +449,9 @@ func (cfg *ControlFlowGraph) GenerateDOTWithSource(source []byte) string {
 		}
 
 		for _, succ := range block.Successors {
+			if succ == nil {
+				continue
+			}
 			result += fmt.Sprintf("  node%d -> node%d;\n", block.ID, succ.ID)
 		}
 	}
@@ -411,14 +464,14 @@ func (cfg *ControlFlowGraph) GenerateDOTWithSource(source []byte) string {
 
 // escapeForDot escapes special characters in strings for DOT format
 func escapeForDot(s string) string {
+	// Replace backslashes first to avoid double-escaping
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+
 	// Replace newlines with \n
 	s = strings.ReplaceAll(s, "\n", "\\n")
 
 	// Replace quotes with escaped quotes
 	s = strings.ReplaceAll(s, "\"", "\\\"")
-
-	// Replace backslashes with escaped backslashes
-	s = strings.ReplaceAll(s, "\\", "\\\\")
 
 	return s
 }

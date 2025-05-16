@@ -8,7 +8,8 @@ import (
 )
 
 func TestControlFlowGraph(t *testing.T) {
-	source := `
+	t.Run("function_calls", func(t *testing.T) {
+		source := `
 		let a = 21;
 		let b = 22;
 		f(a);
@@ -19,12 +20,34 @@ func TestControlFlowGraph(t *testing.T) {
 
 		f(a);
 	`
-	parseResult := ParseJsCode(t, []byte(source))
-	pass := &ana.Pass{
-		Analyzer:    ControlFlowAnalyzer,
-		FileContext: parseResult,
-	}
+		parseResult := ParseJsCode(t, []byte(source))
+		pass := &ana.Pass{
+			Analyzer:    ControlFlowAnalyzer,
+			FileContext: parseResult,
+		}
 
-	_, err := createControlFlowGraph(pass)
-	require.NoError(t, err)
+		_, err := createControlFlowGraph(pass)
+		require.NoError(t, err)
+	})
+
+	t.Run("if_statements", func(t *testing.T) {
+		source := `
+		if (a > b) {
+			console.log("a is greater than b");
+		}else if(a <c){
+			console.log("a is less than c");
+		} else {
+			console.log("a is less than b");
+		}
+		`
+		parseResult := ParseJsCode(t, []byte(source))
+		pass := &ana.Pass{
+			Analyzer:    ControlFlowAnalyzer,
+			FileContext: parseResult,
+		}
+
+		_, err := createControlFlowGraph(pass)
+		require.NoError(t, err)
+
+	})
 }
