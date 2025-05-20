@@ -1,0 +1,40 @@
+language: java
+name: active_debug_code
+message: "Possible active debug code detected. This may expose sensitive information to attackers."
+category: security
+severity: warning
+
+pattern: >
+  (expression_statement
+    (method_invocation
+      object: (field_access 
+        object: (identifier) @object_name
+        field: (identifier) @field_name
+      )
+      name: (identifier) @method_name
+    )
+    (#eq? @object_name "System")
+    (#any-of? @field_name "out" "err")
+    (#any-of? @method_name "println" "printf" "format" "write" "print")
+    )@active_debug_code
+  
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  Possible active debug code detected. Deploying an application with debug code can create unintended entry points or expose sensitive information. Debug code like System.out.println() statements should be removed before deploying to production as they may leak sensitive data like stack traces, system information, or application state to potential attackers.
+
+  Remediation:
+  ```java
+  // Before - Debug code that could leak information
+  System.out.println("User data: " + userData);
+  System.err.println(exception.getStackTrace());
+
+  // After - Use proper logging with appropriate log levels
+  logger.debug("User data: {}", userData);
+  logger.error("Exception occurred", exception);
+  ```
