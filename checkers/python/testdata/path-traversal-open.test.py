@@ -162,6 +162,7 @@ def download_doc(request):
     return response
 
 class GenerateUserAPI(APIView):
+    # <expect-error>
     def get(self, request):
         """
         download users excel
