@@ -7,5 +7,6 @@ func CreatePyRules() []analysis.Rule {
 	return []analysis.Rule{
 		IsLiteral(),
 		IfTuple(),
+		NoElseAfterReturn(),
 	}
 }

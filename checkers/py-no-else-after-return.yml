@@ -1,0 +1,9 @@
+language: py
+id: py-no-else-after-return
+name: no-else-after-return # Added name for consistency with other yml files
+severity: warning
+message: "Unnecessary 'else' after 'return'. The 'if' block always returns."
+category: antipattern # Added category
+description: |
+  An 'else' block is not necessary if the 'if' block unconditionally returns or raises.
+  This improves readability by reducing nesting.
