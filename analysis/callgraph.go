@@ -1,6 +1,11 @@
 package analysis
 
-import "path/filepath"
+import (
+	"fmt"
+	"io/fs"
+	"path/filepath"
+	"strings"
+)
 
 // Function interface represents a callable unit
 type Function interface {
@@ -24,7 +29,7 @@ type Call interface {
 	Callee() Function
 
 	CallSiteFile() string
-	CallSiteLine() int
+	CallSiteLine() string
 }
 
 // interface for the complete call graph structure
@@ -264,4 +269,89 @@ func (g *CallGraphGenerator) CreateCallGraph(functions []Function, calls []Call)
 	}
 
 	return builder.Build()
+}
+
+// handle parsing a codebase to generate a call graph
+type CodebaseAnalyzer struct {
+	config CallGraphConfig
+}
+
+func NewCodeBaseAnalyzer(config CallGraphConfig) *CodebaseAnalyzer {
+	return &CodebaseAnalyzer{
+		config: config,
+	}
+}
+
+func (a *CodebaseAnalyzer) AnalyzeCodebase(rootpath string, parseFile func(string) ([]Function, []Call, error)) (CallGraph, error) {
+	allFunctions := make([]Function, 0)
+	allCalls := make([]Call, 0)
+
+	err := filepath.WalkDir(rootpath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		if !a.shouldIncludeFile(path) {
+			return nil
+		}
+
+		functions, calls, parseErr := parseFile(path)
+		if parseErr != nil {
+			fmt.Printf("warning: failed to parse %s: %v\n", path, parseErr)
+			return nil
+		}
+
+		allFunctions = append(allFunctions, functions...)
+		allCalls = append(allCalls, calls...)
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("error analyzing codebase at %s: %w", rootpath, err)
+	}
+
+	return a.buildCallGraph(allFunctions, allCalls)
+}
+
+
+func (a *CodebaseAnalyzer) shouldIncludeFile(filepath string) bool {
+	if len(a.config.IncludePaths) > 0 {
+		included := false
+		for _, includePath := range a.config.IncludePaths {
+			if strings.HasPrefix(filepath, includePath) {
+				included = true
+				break
+			}
+		}
+		if !included {
+			return false
+		}
+	}
+
+	excludePaths := []string{
+		"/.git/",
+		"/vendor/",
+		"__pycache__",
+		"/target/",
+		"/.idea/",
+		"/.vscode/",
+	}
+
+	for _, excludePath := range excludePaths {
+		if strings.Contains(filepath, excludePath) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (a *CodebaseAnalyzer) buildCallGraph(functions []Function, calls []Call) (CallGraph, error) {
+	generator := NewCallGraphGenerator(a.config)
+	return generator.CreateCallGraph(functions, calls)
 }
