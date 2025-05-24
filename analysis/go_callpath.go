@@ -263,7 +263,7 @@ func (dcpf *DetailedCallPathFinder) createDetailedCallPath(callPath CallPath) *D
 
 	pathType := determinePathType(callPath.Functions)
 
-	codeContext := dcpf.extractCodeContext(callPath.Functions, callPath.Calls)
+	codeContext := dcpf.extractCodeContext(callPath.Functions)
 
 	return &DetailedCallPath{
 		CallPath: callPath,
@@ -293,7 +293,7 @@ func determinePathType(functions []Function) string {
 	}
 }
 
-func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function, calls []Call) map[string]CodeSnippet {
+func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function) map[string]CodeSnippet {
 	context := make(map[string]CodeSnippet)
 
 	for _, function := range functions {
