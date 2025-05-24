@@ -52,7 +52,7 @@ func (e *goExtractor) traverse(node *sitter.Node) {
 
 func (e *goExtractor) extractPackage(node *sitter.Node) {
 	nameNode := node.Child(0)
-	if nameNode.Type() == "package_identifier" && nameNode != nil {
+	if nameNode != nil && nameNode.Type() == "package_identifier" {
 		e.packageName = nameNode.Content(e.source)
 	}
 }
