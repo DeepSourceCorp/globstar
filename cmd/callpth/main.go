@@ -14,7 +14,7 @@ func main() {
 	}
 
 	analyzer := analysis.NewCodeBaseAnalyzer(config)
-	graph, err := analyzer.AnalyzeCodebase("/home/okabe/graveyard/simple-mock", analysis.ParseGoFile)
+	graph, err := analyzer.AnalyzeCodebase("/path/to/codebase", analysis.ParseGoFile)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}

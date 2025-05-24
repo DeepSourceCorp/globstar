@@ -261,7 +261,7 @@ func (dcpf *DetailedCallPathFinder) createDetailedCallPath(callPath CallPath) *D
 		return nil
 	}
 
-	pathType := dcpf.determinePathType(callPath.Functions)
+	pathType := determinePathType(callPath.Functions)
 
 	codeContext := dcpf.extractCodeContext(callPath.Functions, callPath.Calls)
 
@@ -272,7 +272,7 @@ func (dcpf *DetailedCallPathFinder) createDetailedCallPath(callPath CallPath) *D
 	}
 }
 
-func (dcpf *DetailedCallPathFinder) determinePathType(functions []Function) string {
+func determinePathType(functions []Function) string {
 	hasInternal := false
 	hasThirdParty := false
 
@@ -301,11 +301,11 @@ func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function, cal
 			continue
 		}
 
-		if !dcpf.config.ShowTestFiles && dcpf.isTestFile(function.Filepath()) {
+		if !dcpf.config.ShowTestFiles {
 			continue
 		}
 
-		snippet := dcpf.getCodeSnippet(function, function.LineNumber(), "function")
+		snippet := dcpf.getCodeSnippet(function, function.LineNumber())
 		if snippet != nil {
 			context[function.ID()] = *snippet
 		}
@@ -314,7 +314,7 @@ func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function, cal
 	return context
 }
 
-func (dcpf *DetailedCallPathFinder) getCodeSnippet(function Function, targetLine int, contextType string) *CodeSnippet {
+func (dcpf *DetailedCallPathFinder) getCodeSnippet(function Function, targetLine int) *CodeSnippet {
 	filePath := function.Filepath()
 
 	if targetLine <= 0 || filePath == "" || filePath == "unknown" {
@@ -395,10 +395,6 @@ func (dcpf *DetailedCallPathFinder) shouldIncludePath(path DetailedCallPath) boo
 	}
 
 	return true
-}
-
-func (dcpf *DetailedCallPathFinder) isTestFile(filePath string) bool {
-	return false
 }
 
 func (dcp *DetailedCallPath) String() string {
