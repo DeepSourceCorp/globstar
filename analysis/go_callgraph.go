@@ -17,6 +17,9 @@ type goExtractor struct {
 }
 
 func ParseGoFile(filePath string) ([]Function, []Call, error) {
+	if !strings.HasSuffix(filePath, ".go") {
+		return []Function{}, []Call{}, nil
+	}
 	parseResult, err := ParseFile(filePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse Go file %s: %w", filePath, err)
@@ -29,11 +32,16 @@ func ParseGoFile(filePath string) ([]Function, []Call, error) {
 		calls: make([]Call, 0),
 	}
 
-	extractor.traverse(parseResult.Ast)
+	// first pass
+	extractor.extractFunctionsOnly(parseResult.Ast)
+
+	// second pass
+	extractor.extractCallsOnly(parseResult.Ast)
+
 	return extractor.functions, extractor.calls, nil
 }
 
-func (e *goExtractor) traverse(node *sitter.Node) {
+func (e *goExtractor) extractFunctionsOnly(node *sitter.Node) {
 	switch node.Type() {
 	case "package_clause":
 		e.extractPackage(node)
@@ -41,12 +49,59 @@ func (e *goExtractor) traverse(node *sitter.Node) {
 		e.extractFunction(node)
 	case "method_declaration":
 		e.extractMethod(node)
-	case "call_expression":
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		e.extractFunctionsOnly(node.Child(i))
+	}
+}
+
+func (e *goExtractor) extractCallsOnly(node *sitter.Node) {
+	switch node.Type() {
+	case "function_declaration", "method_declaration":
+		e.setCurrentFunction(node)
+		
+		// extract calls from the function body
+		for i := 0; i < int(node.ChildCount()); i++ {
+			e.extractCallsFromBody(node.Child(i))
+		}
+		e.currentFunc = nil
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		e.extractCallsOnly(node.Child(i))
+	}
+}
+
+func (e *goExtractor) extractCallsFromBody(node *sitter.Node) {
+	if node.Type() == "call_expression" {
 		e.extractCall(node)
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
-		e.traverse(node.Child(i))
+		e.extractCallsFromBody(node.Child(i))
+	}
+}
+
+func (e *goExtractor) setCurrentFunction(node *sitter.Node) {
+	funcName := ""
+	if node.Type() == "function_declaration" {
+		if nameNode := node.ChildByFieldName("name"); nameNode != nil {
+			funcName = nameNode.Content(e.source)
+		}
+	} else if node.Type() == "method_declaration" {
+		if nameNode := node.ChildByFieldName("name"); nameNode != nil {
+			funcName = nameNode.Content(e.source)
+		}
+	}
+
+	for _, fn := range e.functions {
+		if fn.Name() == funcName {
+			if bf, ok := fn.(*BasicFunction); ok {
+				e.currentFunc = bf
+				break
+			}
+		}
 	}
 }
 
@@ -154,16 +209,36 @@ func (e *goExtractor) extractCall(node *sitter.Node) {
 		return
 	}
 
+
 	calleeName := e.extractCallName(functionNode)
 	if calleeName == "" {
 		return
 	}
 
+
 	line := int(node.StartPoint().Row) + 1
-	callee := &BasicFunction{
-		Id: fmt.Sprintf("go:unknown:%s:-1", calleeName),
-		QualifiedName_: calleeName,
-		IsThirdParty_: e.isThirdPartyFile(),
+	var callee Function
+	found := false
+
+	for _, existingFunc := range e.functions {
+		if existingFunc.Name() == calleeName {
+			callee = existingFunc
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		callee = &BasicFunction{
+			Id: fmt.Sprintf("go:unknown:%s:-1", calleeName),
+			Name_: calleeName,
+			QualifiedName_: calleeName,
+			Filepath_: "unknown",
+			LineNumber_: -1,
+			IsThirdParty_: e.isThirdPartyFile(),
+		}
+
+		e.functions = append(e.functions, callee)
 	}
 
 	call := &BasicCall{

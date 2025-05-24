@@ -226,15 +226,20 @@ func (b *BasicCallGraphBuilder) Build() (CallGraph, error) {
 		}
 	}
 
+
+
 	// add calls to graph
 	for _, call := range b.calls {
 		callerId := call.Caller().ID()
 		calleeId := call.Callee().ID()
 
+
+
 		if _, ok := graph.functions[callerId]; !ok {
 			continue
 		}
 		if _, ok := graph.functions[calleeId]; !ok {
+
 			continue
 		}
 
@@ -242,6 +247,7 @@ func (b *BasicCallGraphBuilder) Build() (CallGraph, error) {
 		graph.callsFrom[callerId] = append(graph.callsFrom[callerId], call)
 		graph.callsTo[calleeId] = append(graph.callsTo[calleeId], call)
 	}
+
 
 	return graph, nil
 
