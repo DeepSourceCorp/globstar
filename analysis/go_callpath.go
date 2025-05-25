@@ -297,6 +297,7 @@ func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function) map
 	context := make(map[string]CodeSnippet)
 
 	for _, function := range functions {
+
 		if function.IsThirdParty() && !dcpf.config.ShowThirdPartyCode {
 			continue
 		}
@@ -304,6 +305,7 @@ func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function) map
 		if !dcpf.config.ShowTestFiles {
 			continue
 		}
+
 
 		snippet := dcpf.getCodeSnippet(function, function.LineNumber())
 		if snippet != nil {
@@ -317,7 +319,7 @@ func (dcpf *DetailedCallPathFinder) extractCodeContext(functions []Function) map
 func (dcpf *DetailedCallPathFinder) getCodeSnippet(function Function, targetLine int) *CodeSnippet {
 	filePath := function.Filepath()
 
-	if targetLine <= 0 || filePath == "" || filePath == "unknown" {
+	if targetLine <= 0 || filePath == "" || filePath == "unknown" || filePath == "external" {
 		return nil
 	}
 
@@ -334,6 +336,7 @@ func (dcpf *DetailedCallPathFinder) getCodeSnippet(function Function, targetLine
 	for scanner.Scan() {
 		allLines = append(allLines, scanner.Text())
 	}
+
 
 	if len(allLines) == 0 || targetLine > len(allLines) {
 		return nil
@@ -423,5 +426,37 @@ func (dcp *DetailedCallPath) String() string {
 	}
 	
 	result.WriteString("\n")
+	return result.String()
+}
+
+func (dcp *DetailedCallPath) StringWithContext() string {
+	var result strings.Builder
+
+	result.WriteString(dcp.String())
+
+	for i, function := range dcp.Functions {
+		if snippet, exists := dcp.CodeContext[function.ID()]; exists {
+			nodeNum := i + 1
+			result.WriteString(fmt.Sprintf("Code Context for node %d (%s): \n", nodeNum, function.Name()))
+			result.WriteString(snippet.FormatSnippet())
+			result.WriteString("\n")
+		}
+	}
+
+	return result.String()
+}
+
+func (cs *CodeSnippet) FormatSnippet() string {
+	var result strings.Builder
+
+	for _, line := range cs.Lines {
+		marker := " "
+		if line.IsTarget {
+			marker =  ">"
+		}
+
+		result.WriteString(fmt.Sprintf("%s%3d: %s\n", marker, line.Number, line.Content))
+	}
+
 	return result.String()
 }

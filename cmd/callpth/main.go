@@ -14,7 +14,7 @@ func main() {
 	}
 
 	analyzer := analysis.NewCodeBaseAnalyzer(config)
-	graph, err := analyzer.AnalyzeCodebase("/path/to/codebase", analysis.ParseGoFile)
+	graph, err := analyzer.AnalyzeCodebase("/path/to/code", analysis.ParseGoFile)
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -31,14 +31,17 @@ func main() {
 		ContextLinesBefore: 3,
 		ContextLinesAfter: 3,
 		MaxPathDepth: 15,
-		ShowThirdPartyCode: false,
-		FocusFunctions: []string{"transformData", "saveResult"},
+		ShowThirdPartyCode: true,
+		ShowTestFiles: true,
+		FocusFunctions: []string{},
 	}
 
 	finder := analysis.NewDetailedCallPathFinder(graph, pathConfig)
 	paths := finder.FindAllCallPaths()
 
 	for i, path := range paths {
-		fmt.Printf("Path %d: %s\n", i+1, path.CallPath.String())
+		fmt.Printf("Call Path %d\n", i)
+		fmt.Print(path.StringWithContext())
+		fmt.Println()
 	}
 }
