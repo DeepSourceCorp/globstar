@@ -272,6 +272,77 @@ func (dcpf *DetailedCallPathFinder) createDetailedCallPath(callPath CallPath) *D
 	}
 }
 
+func ResolveCallsToFunctions(calls []Call, functions []Function) []Call {
+	functionMaps := buildFunctionLookupMaps(functions)
+
+	resolvedCalls := make([]Call, 0)
+	resolvedCount := 0
+
+	for _, call := range calls {
+		calleeName := call.Callee().QualifiedName()
+		actualFunction := findBestFunctionMatch(calleeName, functionMaps)
+
+		if actualFunction != nil && actualFunction.Filepath() != "unknown" {
+			resolvedCall := &BasicCall{
+				CallerFunc: call.Caller(),
+				CalleeFunc: actualFunction,
+				SourceFile: call.CallSiteFile(),
+				SourceLine: call.CallSiteLine(),
+			}
+			resolvedCalls = append(resolvedCalls, resolvedCall)
+			resolvedCount++
+		} else {
+			resolvedCalls = append(resolvedCalls, call)
+		}
+	}
+
+	return resolvedCalls
+}
+
+func buildFunctionLookupMaps(functions []Function) map[string][]Function {
+	lookup := make(map[string][]Function)
+
+	for _, fn := range functions {
+		if fn.Filepath() == "unknown" {
+			continue
+		}
+
+		keys := []string {
+			fn.Name(),
+			fn.QualifiedName(),
+		}
+
+		if strings.Contains(fn.QualifiedName(), ".") {
+			parts := strings.Split(fn.QualifiedName(), ".")
+			if len(parts) >= 2 {
+				keys = append(keys, parts[len(parts)-2] + "." + parts[len(parts)-1])
+			}
+		}
+
+		for _, key := range keys {
+			lookup[key] = append(lookup[key], fn)
+		}
+	}
+
+	return lookup
+}
+
+func findBestFunctionMatch(calleeName string, functionMaps map[string][]Function) Function {
+	if matches, exists := functionMaps[calleeName]; exists && len(matches) > 0 {
+		return matches[0]
+	}
+
+	for key, matches := range functionMaps {
+		if strings.Contains(key, calleeName) || strings.Contains(calleeName, key) {
+			if len(matches) > 0 {
+				return matches[0]
+			}
+		}
+	}
+
+	return nil
+}
+
 func determinePathType(functions []Function) string {
 	hasInternal := false
 	hasThirdParty := false

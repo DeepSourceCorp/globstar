@@ -258,21 +258,34 @@ func (e *goExtractor) extractCallName(node *sitter.Node) string {
 	case "selector_expression":
 		var parts []string
 		e.collectSelectorParts(node, &parts)
-		return strings.Join(parts, ".")
+		result := strings.Join(parts, ".")
+		return result
+
 	default:
-		return node.Content(e.source)
+		content := node.Content(e.source)
+		return content
+
 	}
 }
 
 func (e *goExtractor) collectSelectorParts(node *sitter.Node, parts *[]string) {
-	for i := 0; i < int(node.ChildCount()); i++ {
-		child := node.Child(i)
-		switch child.Type() {
-		case "identifier":
-			*parts = append(*parts, child.Content(e.source))
-		case "selector_expression":
-			e.collectSelectorParts(child, parts)
+	if node.Type() == "selector_expression" {
+		for i := 0; i < int(node.ChildCount()); i++ {
+			child := node.Child(i)
+			childType := child.Type()
+			childContent := child.Content(e.source)
+
+			switch childType {
+			case "identifier":
+				*parts = append(*parts, childContent)
+			case "selector_expression":
+				e.collectSelectorParts(child, parts)
+			case "field_identifier":
+				*parts = append(*parts, childContent)
+			}
 		}
+	} else if node.Type() == "identifier" {
+		*parts = append(*parts, node.Content(e.source))
 	}
 }
 

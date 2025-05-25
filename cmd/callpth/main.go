@@ -13,35 +13,47 @@ func main() {
 		IncludeThirdParty: true,
 	}
 
+	// paths for codebase and third party package
+	paths := []string {}
+
 	analyzer := analysis.NewCodeBaseAnalyzer(config)
-	graph, err := analyzer.AnalyzeCodebase("/path/to/code", analysis.ParseGoFile)
+	allFunctions, allCalls, err := analyzer.ExtractFunctionsAndCallsFromPaths(paths, analysis.ParseGoFile)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		panic(err)
+	}
+	
+	resolved := analysis.ResolveCallsToFunctions(allCalls, allFunctions)
+
+	generator := analysis.NewCallGraphGenerator(config)
+	graph, err := generator.CreateCallGraph(allFunctions, resolved)
+	if err != nil {
+		log.Fatalf("error creating combined graph: %v", err)
 	}
 
 	functions := graph.GetFunctions()
 	calls := graph.GetCalls()
 	entryPoints := graph.GetEntryPoints()
+
 	
-	fmt.Printf("Found %d functions\n", len(functions))
-	fmt.Printf("Found %d calls\n", len(calls))
-	fmt.Printf("Found %d entry points\n", len(entryPoints))
+	fmt.Printf("Final graph: %d functions, %d calls, %d entry points\n", 
+		len(functions), len(calls), len(entryPoints))
+
 
 	pathConfig := analysis.CallPathConfig{
 		ContextLinesBefore: 3,
 		ContextLinesAfter: 3,
-		MaxPathDepth: 15,
+		MaxPathDepth: 4,
 		ShowThirdPartyCode: true,
 		ShowTestFiles: true,
-		FocusFunctions: []string{},
+		FocusFunctions: []string{"createServer"},
 	}
 
 	finder := analysis.NewDetailedCallPathFinder(graph, pathConfig)
-	paths := finder.FindAllCallPaths()
+	callpaths := finder.FindAllCallPaths()
 
-	for i, path := range paths {
+	for i, callpath := range callpaths {
 		fmt.Printf("Call Path %d\n", i)
-		fmt.Print(path.StringWithContext())
+		fmt.Print(callpath.StringWithContext())
 		fmt.Println()
 	}
 }

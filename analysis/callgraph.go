@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+	"os"
 )
 
 // Function interface represents a callable unit
@@ -322,6 +323,69 @@ func (a *CodebaseAnalyzer) AnalyzeCodebase(rootpath string, parseFile func(strin
 	}
 
 	return a.buildCallGraph(allFunctions, allCalls)
+}
+
+func (a *CodebaseAnalyzer) ExtractFunctionsAndCallsFromPaths(paths []string, parseFile func(string) ([]Function, []Call, error)) ([]Function, []Call, error) {
+	allFunctions := make([]Function, 0)
+	allCalls := make([]Call, 0)
+
+	for _, rootpath := range paths {
+		fmt.Printf("Analyzing path: %s\n", rootpath)
+		
+		// Check if path exists
+		if _, err := os.Stat(rootpath); os.IsNotExist(err) {
+			fmt.Printf("Warning: path %s doesn't exist, skipping...\n", rootpath)
+			continue
+		}
+
+		pathFunctions, pathCalls, err := a.extractFromSinglePath(rootpath, parseFile)
+		if err != nil {
+			fmt.Printf("Warning: failed to analyze %s: %v\n", rootpath, err)
+			continue
+		}
+
+		fmt.Printf("  Found %d functions, %d calls\n", len(pathFunctions), len(pathCalls))
+		
+		allFunctions = append(allFunctions, pathFunctions...)
+		allCalls = append(allCalls, pathCalls...)
+	}
+
+	return allFunctions, allCalls, nil
+}
+
+func (a *CodebaseAnalyzer) extractFromSinglePath(rootpath string, parseFile func(string) ([]Function, []Call, error)) ([]Function, []Call, error) {
+	allFunctions := make([]Function, 0)
+	allCalls := make([]Call, 0)
+
+	err := filepath.WalkDir(rootpath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		if !a.shouldIncludeFile(path) {
+			return nil
+		}
+
+		functions, calls, parseErr := parseFile(path)
+		if parseErr != nil {
+			fmt.Printf("warning: failed to parse %s: %v\n", path, parseErr)
+			return nil
+		}
+
+		allFunctions = append(allFunctions, functions...)
+		allCalls = append(allCalls, calls...)
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("error analyzing codebase at %s: %w", rootpath, err)
+	}
+	return allFunctions, allCalls, nil
 }
 
 
