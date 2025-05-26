@@ -32,11 +32,12 @@ func ParseGoFile(filePath string) ([]Function, []Call, error) {
 		calls: make([]Call, 0),
 	}
 
-	// first pass
-	extractor.extractFunctionsOnly(parseResult.Ast)
+	// first pass: only look for function declarations
+	walkTree(parseResult.Ast, extractor.extractFunctionsOnly)
 
-	// second pass
-	extractor.extractCallsOnly(parseResult.Ast)
+	// second pass: only look for function calls
+	walkTree(parseResult.Ast, extractor.extractCallsOnly)
+	
 
 	return extractor.functions, extractor.calls, nil
 }
@@ -50,26 +51,20 @@ func (e *goExtractor) extractFunctionsOnly(node *sitter.Node) {
 	case "method_declaration":
 		e.extractMethod(node)
 	}
-
-	for i := 0; i < int(node.ChildCount()); i++ {
-		e.extractFunctionsOnly(node.Child(i))
-	}
 }
 
 func (e *goExtractor) extractCallsOnly(node *sitter.Node) {
 	switch node.Type() {
 	case "function_declaration", "method_declaration":
 		e.setCurrentFunction(node)
-		
-		// extract calls from the function body
-		for i := 0; i < int(node.ChildCount()); i++ {
-			e.extractCallsFromBody(node.Child(i))
-		}
-		e.currentFunc = nil
-	}
 
-	for i := 0; i < int(node.ChildCount()); i++ {
-		e.extractCallsOnly(node.Child(i))
+		walkTree(node, func(childNode *sitter.Node) {
+			if childNode.Type() == "call_expression" {
+				e.extractCallsFromBody(childNode)
+			}
+		})
+
+		e.currentFunc = nil
 	}
 }
 

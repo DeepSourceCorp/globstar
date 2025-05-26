@@ -14,7 +14,8 @@ func main() {
 	}
 
 	// paths for codebase and third party package
-	var paths []string
+	paths := []string{
+	}
 
 	analyzer := analysis.NewCodeBaseAnalyzer(config)
 	allFunctions, allCalls, err := analyzer.ExtractFunctionsAndCallsFromPaths(paths, analysis.ParseGoFile)
