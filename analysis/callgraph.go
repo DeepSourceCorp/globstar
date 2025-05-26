@@ -24,7 +24,7 @@ type Function interface {
 	IsThirdParty() bool
 }
 
-// Defines a function-caller relationship
+// Call defines the relationship between and function and its caller
 type Call interface {
 	Caller() Function
 	Callee() Function
@@ -33,7 +33,7 @@ type Call interface {
 	CallSiteLine() string
 }
 
-// interface for the complete call graph structure
+// CallGraph is the interface for the language agnostic call graph methods
 type CallGraph interface {
 	GetFunctions() []Function
 	GetCalls() []Call
@@ -278,7 +278,8 @@ func (g *CallGraphGenerator) CreateCallGraph(functions []Function, calls []Call)
 	return builder.Build()
 }
 
-// handle parsing a codebase to generate a call graph
+// CodeBase analyzer handles the the parsing and analysis of a codebase and generates
+// call graph for it
 type CodebaseAnalyzer struct {
 	config CallGraphConfig
 }

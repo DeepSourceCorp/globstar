@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-// call path structure
+// CallPath defines the structure of the call path unit
 type CallPath struct {
 	Functions []Function
 	Calls     []Call
