@@ -278,8 +278,7 @@ func (g *CallGraphGenerator) CreateCallGraph(functions []Function, calls []Call)
 	return builder.Build()
 }
 
-// CodeBase analyzer handles the the parsing and analysis of a codebase and generates
-// call graph for it
+// CodeBase analyzer handles the the parsing and analysis of a codebase and generates call graph for it
 type CodebaseAnalyzer struct {
 	config CallGraphConfig
 }
