@@ -8,7 +8,7 @@ import (
 var NoExec = &analysis.Analyzer{
 	Name:        "no_exec",
 	Language:    analysis.LangJs,
-	Description: "No prompt",
+	Description: "Use of exec on user input can lead to code injection vulnerabilities",
 	Category:    analysis.CategorySecurity,
 	Severity:    analysis.SeverityCritical,
 	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
@@ -18,11 +18,11 @@ var NoExec = &analysis.Analyzer{
 func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 	// Map of vulnerable function names to watch for
 	vulnerableSinkFunctions := map[string]struct{}{
-		"log": struct{}{},
+		"exec": {},
 	}
 
 	vulnerableSourceFuncs := map[string]struct{}{
-		"prompt": struct{}{},
+		"prompt": {},
 	}
 
 	dfg := pass.ResultOf[DataFlowAnalyzer].(*DataFlowGraph)
@@ -40,8 +40,6 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 	taintedNodes := make(map[*sitter.Node]struct{})
 	analyzedFuncs := make(map[string]bool) // Prevent infinite recursion
 
-	// fmt.Println("++++++++++++++", dfg.Graph, "++++++++++++++")
-
 	// stores all the possible tainted inputs
 	possibleTaintedInputs := make(map[*sitter.Node]string)
 
@@ -55,7 +53,11 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 		// Check if this node is a sink
 		if node.Type() == "call_expression" {
 			funcNode := node.ChildByFieldName("function")
-			if funcNode != nil && funcNode.Type() == "member_expression" {
+			if funcNode == nil {
+				return false
+			}
+			// Check if the function is a member expression, like console.log
+			if funcNode.Type() == "member_expression" {
 				prop := funcNode.ChildByFieldName("property")
 				if prop != nil {
 					funcName := prop.Content(pass.FileContext.Source)
@@ -65,6 +67,15 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 						if int(args.NamedChildCount()) > 0 {
 							return true
 						}
+					}
+				}
+			} else if funcNode.Type() == "identifier" { // Check for standalone function calls
+				funcName := funcNode.Content(pass.FileContext.Source)
+				if _, ok := vulnerableSinkFunctions[funcName]; ok {
+					// Check if any argument is tainted
+					args := node.ChildByFieldName("arguments")
+					if int(args.NamedChildCount()) > 0 {
+						return true
 					}
 				}
 			}
@@ -81,13 +92,6 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 
 	// First pass: collect all suspicious source functions
 	analysis.Preorder(pass, func(node *sitter.Node) {
-		// function f() {
-		// 	let x = user.prompt()
-		// 	f(x)
-		// }
-		//
-		// function log(x) { console.log(x) }
-
 		if node == nil || node.Type() != "variable_declarator" {
 			return
 		}
@@ -142,8 +146,8 @@ func detectExecOnUserInput(pass *analysis.Pass) (interface{}, error) {
 				taintedNodes[funcDef.Node] = struct{}{}
 			}
 		}
-
 	}
+
 	if len(taintedNodes) == 0 {
 		return nil, nil
 	}

@@ -1,5 +1,5 @@
 language: javascript
-name: js_confirm_in_prod
+name: confirm_in_prod
 message: "Avoid using confirm() inside of production code."
 category: best-practices
 severity: warning
@@ -13,7 +13,7 @@ pattern: >
         property: (property_identifier) @confirm
         (#eq? @window "window")
         (#eq? @confirm "confirm"))) 
-    ]) @js_confirm_in_prod
+    ]) @confirm_in_prod
 exclude:
   - "test/**"
   - "*_test.js"

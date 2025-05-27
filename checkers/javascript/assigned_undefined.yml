@@ -1,5 +1,5 @@
 language: javascript
-name: js_undefined_assignment
+name: undefined_assignment
 message: "Assignment to the global 'undefined' identifier is not recommended and will not work in strict mode."
 category: best-practices
 severity: warning
@@ -10,7 +10,7 @@ pattern: >
       (#eq? @assigned_undefined "undefined"))
     (variable_declarator
       (#eq? @assigned_undefined "undefined"))
-  ] @js_undefined_assignment
+  ] @undefined_assignment
 exclude:
   - "test/**"
   - "*_test.js"

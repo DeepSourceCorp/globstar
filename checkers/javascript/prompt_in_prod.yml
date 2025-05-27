@@ -1,5 +1,5 @@
 language: javascript
-name: js_prompt_in_prod
+name: prompt_in_prod
 message: "Avoid using prompt() inside of production code."
 category: best-practices
 severity: warning
@@ -13,7 +13,7 @@ pattern: >
         property: (property_identifier) @prompt
         (#eq? @window "window")
         (#eq? @prompt "prompt"))) 
-    ]) @js_prompt_in_prod
+    ]) @prompt_in_prod
 exclude:
   - "test/**"
   - "*_test.js"
