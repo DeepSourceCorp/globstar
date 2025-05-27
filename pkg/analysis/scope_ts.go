@@ -19,7 +19,7 @@ type TsScopeBuilder struct {
 	unresolvedRefs []UnresolvedRef
 }
 
-func (j *TsScopeBuilder) GetLanguage() Language {
+func (*TsScopeBuilder) GetLanguage() Language {
 	return LangJs
 }
 
@@ -33,11 +33,11 @@ var ScopeNodes = []string{
 	"program",
 }
 
-func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
+func (*TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 	return slices.Contains(ScopeNodes, node.Type())
 }
 
-func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
+func (*TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
 	// addition of function_declaration and formal_parameters necessary for functional scope handling.
 	return typ == "variable_declarator" || typ == "import_clause" || typ == "import_specifier" || typ == "formal_parameters" || typ == "function_declaration"

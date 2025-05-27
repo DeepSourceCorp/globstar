@@ -19,7 +19,7 @@ type TsScopeBuilder struct {
 	unresolvedRefs []UnresolvedRef
 }
 
-func (j *TsScopeBuilder) GetLanguage() Language {
+func (*TsScopeBuilder) GetLanguage() Language {
 	return LangJs
 }
 
@@ -37,11 +37,11 @@ var ScopeNodes = []string{
 	"method_definition",
 }
 
-func (ts *TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
+func (*TsScopeBuilder) NodeCreatesScope(node *sitter.Node) bool {
 	return slices.Contains(ScopeNodes, node.Type())
 }
 
-func (ts *TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
+func (*TsScopeBuilder) DeclaresVariable(node *sitter.Node) bool {
 	typ := node.Type()
 	return typ == "variable_declarator" ||
 		typ == "import_clause" ||

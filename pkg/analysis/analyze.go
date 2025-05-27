@@ -405,7 +405,7 @@ func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
 	return skipLines
 }
 
-func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
+func (*Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *Issue) bool {
 	if len(skipLines) == 0 {
 		return false
 	}
