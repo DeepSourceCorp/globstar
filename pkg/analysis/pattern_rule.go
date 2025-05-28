@@ -98,6 +98,7 @@ func (r *patternCheckerImpl) OnMatch(
 			)
 		}
 	}
+
 	raisedIssue := &analysis.Issue{
 		Message:  message,
 		Filepath: ana.ParseResult.FilePath,
