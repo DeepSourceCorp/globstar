@@ -298,7 +298,7 @@ func (c *Cli) CheckFile(
 	checkersMap map[analysis.Language][]analysis.Checker,
 	patternCheckers map[analysis.Language][]analysis.YamlChecker,
 	path string,
-) ([]*analysis.Issue, error) {
+) ([]*goAnalysis.Issue, error) {
 	lang := analysis.LanguageFromFilePath(path)
 	checkers := checkersMap[lang]
 	if checkers == nil && patternCheckers == nil {
@@ -320,20 +320,20 @@ func (c *Cli) CheckFile(
 }
 
 type checkResult struct {
-	issues          []*analysis.Issue
+	issues          []*goAnalysis.Issue
 	numFilesChecked int
 }
 
 func (lr *checkResult) GetExitStatus(conf *config.Config) int {
 	for _, issue := range lr.issues {
 		for _, failCategory := range conf.FailWhen.CategoryIn {
-			if issue.Category == failCategory {
+			if issue.Category == goAnalysis.Category(failCategory) {
 				return conf.FailWhen.ExitCode
 			}
 		}
 
 		for _, failSeverity := range conf.FailWhen.SeverityIn {
-			if issue.Severity == failSeverity {
+			if issue.Severity == goAnalysis.Severity(failSeverity) {
 				return conf.FailWhen.ExitCode
 			}
 		}
@@ -494,11 +494,11 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			txt, _ := issue.AsText()
 			log.Error().Msg(string(txt))
 
-			result.issues = append(result.issues, &analysis.Issue{
+			result.issues = append(result.issues, &goAnalysis.Issue{
 				Filepath: issue.Filepath,
 				Message:  issue.Message,
-				Severity: config.Severity(issue.Severity),
-				Category: config.Category(issue.Category),
+				Severity: goAnalysis.Severity(issue.Severity),
+				Category: goAnalysis.Category(issue.Category),
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})
@@ -516,11 +516,11 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 
 		for _, issue := range customGoIssues {
-			result.issues = append(result.issues, &analysis.Issue{
+			result.issues = append(result.issues, &goAnalysis.Issue{
 				Filepath: issue.Filepath,
 				Message:  issue.Message,
-				Severity: config.Severity(issue.Severity),
-				Category: config.Category(issue.Category),
+				Severity: goAnalysis.Severity(issue.Severity),
+				Category: goAnalysis.Category(issue.Category),
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})

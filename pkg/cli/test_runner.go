@@ -112,7 +112,7 @@ func runTestCases(dir string) (passed bool, err error) {
 
 		var got []int
 		for _, issue := range issues {
-			got = append(got, int(issue.Range.StartPoint.Row)+1) // 0-indexed to 1-indexed
+			got = append(got, int(issue.Node.Range().StartPoint.Row)+1) // 0-indexed to 1-indexed
 		}
 
 		slices.Sort(got)

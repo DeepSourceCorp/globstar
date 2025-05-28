@@ -6,6 +6,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"globstar.dev/analysis"
 )
 
 func parseTestFile(t *testing.T, filename string, source string, language Language) *ParseResult {
@@ -150,7 +151,7 @@ func TestSkipCq(t *testing.T) {
 
 			require.NotNil(t, assertNode, "failed to capture assert node")
 
-			issue := &Issue{
+			issue := &analysis.Issue{
 				Filepath: "no-assert.test.py",
 				Node:     assertNode,
 				Id:       &tt.checkerId,

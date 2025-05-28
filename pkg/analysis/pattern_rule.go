@@ -7,6 +7,7 @@ import (
 
 	"github.com/gobwas/glob"
 	sitter "github.com/smacker/go-tree-sitter"
+	analysis "globstar.dev/analysis"
 	"globstar.dev/pkg/config"
 	"gopkg.in/yaml.v3"
 )
@@ -97,14 +98,13 @@ func (r *patternCheckerImpl) OnMatch(
 			)
 		}
 	}
-	raisedIssue := &Issue{
-		Range: matchedNode.Range(),
-		Node: matchedNode,
-		Message: message,
+	raisedIssue := &analysis.Issue{
+		Message:  message,
 		Filepath: ana.ParseResult.FilePath,
-		Category: r.Category(),
-		Severity: r.Severity(),
-		Id: &r.issueId,
+		Category: analysis.Category(r.Category()),
+		Severity: analysis.Severity(r.Severity()),
+		Id:       &r.issueId,
+		Node:     matchedNode,
 	}
 
 	filepath := ana.ParseResult.FilePath
