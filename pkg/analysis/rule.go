@@ -2,7 +2,7 @@ package analysis
 
 import sitter "github.com/smacker/go-tree-sitter"
 
-type VisitFn func(checker Checker, analyzer *Analyzer, node *sitter.Node)
+type VisitFn func(checker Checker, node *sitter.Node)
 
 type Checker interface {
 	NodeType() string

@@ -193,13 +193,14 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					// Track test failures but continue running all tests
 					var testsFailed bool
 
-					yamlPassed, err := runTests(analysisDir)
+					_, _, yamlPassed, err := goAnalysis.RunAnalyzerTests(analysisDir, []*goAnalysis.Analyzer{})
 					if err != nil {
 						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())
 						// Don't return immediately, continue with other tests
 					}
 					if !yamlPassed {
+						return fmt.Errorf("YAML tests failed ")
 						testsFailed = true
 					}
 
@@ -294,30 +295,30 @@ func (c *Cli) buildCustomGoCheckers() error {
 	return nil
 }
 
-func (c *Cli) CheckFile(
-	checkersMap map[analysis.Language][]analysis.Checker,
-	patternCheckers map[analysis.Language][]analysis.YamlChecker,
-	path string,
-) ([]*goAnalysis.Issue, error) {
-	lang := analysis.LanguageFromFilePath(path)
-	checkers := checkersMap[lang]
-	if checkers == nil && patternCheckers == nil {
-		// no checkers are registered for this language
-		return nil, nil
-	}
+// func (c *Cli) CheckFile(
+// 	checkersMap map[goAnalysis.Language][]goAnalysis.Analyzer,
+// 	patternCheckers map[goAnalysis.Language][]goAnalysis.Analyzer,
+// 	path string,
+// ) ([]*goAnalysis.Issue, error) {
+// 	lang := goAnalysis.LanguageFromFilePath(path)
+// 	checkers := checkersMap[lang]
+// 	if checkers == nil && patternCheckers == nil {
+// 		// no checkers are registered for this language
+// 		return nil, nil
+// 	}
 
-	analyzer, err := analysis.FromFile(path, checkers)
-	if err != nil {
-		return nil, err
-	}
-	analyzer.WorkDir = c.RootDirectory
+// 	analyzer, err := analysis.FromFile(path, checkers)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	analyzer.WorkDir = c.RootDirectory
 
-	if patternCheckers != nil {
-		analyzer.YamlCheckers = patternCheckers[lang]
-	}
+// 	if patternCheckers != nil {
+// 		analyzer.YamlCheckers = patternCheckers[lang]
+// 	}
 
-	return analyzer.Analyze(), nil
-}
+// 	return analyzer.Analyze(), nil
+// }
 
 type checkResult struct {
 	issues          []*goAnalysis.Issue
@@ -360,7 +361,7 @@ var defaultIgnoreDirs = []string{
 func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	patternCheckers := make(map[analysis.Language][]analysis.YamlChecker)
+	patternCheckers := make(map[goAnalysis.Language][]goAnalysis.Analyzer)
 
 	var goAnalyzers []*goAnalysis.Analyzer
 	if runBuiltinCheckers {
@@ -443,8 +444,8 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			}
 		}
 
-		language := analysis.LanguageFromFilePath(path)
-		if language == analysis.LangUnknown {
+		language := goAnalysis.LanguageFromFilePath(path)
+		if language == goAnalysis.LangUnknown {
 			return nil
 		}
 
@@ -453,7 +454,15 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		// run checker
 		// the first arg is empty, since the format for inbuilt Go-based checkers has changed
 		// TODO: factor it in later
-		issues, err := c.CheckFile(map[analysis.Language][]analysis.Checker{}, patternCheckers, path)
+		nonYamlAnalyzers := []*goAnalysis.Analyzer{}
+		issues, err := goAnalysis.RunAnalyzers(c.RootDirectory, nonYamlAnalyzers, func(filename string) bool {
+			if c.CmpHash != "" {
+				_, isChanged := changedFileMap[filename]
+				return isChanged
+			}
+			return true
+		})
+
 		if err != nil {
 			// parse error on a single file should not exit the entire analysis process
 			// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
@@ -465,7 +474,14 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			txt, _ := issue.AsText()
 			log.Error().Msg(string(txt))
 
-			result.issues = append(result.issues, issue)
+			result.issues = append(result.issues, &goAnalysis.Issue{
+				Filepath: issue.Filepath,
+				Message:  issue.Message,
+				Severity: goAnalysis.Severity(issue.Severity),
+				Category: goAnalysis.Category(issue.Category),
+				Node:     issue.Node,
+				Id:       issue.Id,
+			})
 		}
 
 		return nil

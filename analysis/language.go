@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	sitter "github.com/smacker/go-tree-sitter"
 
@@ -82,6 +83,66 @@ const (
 	LangScala
 	LangSwift
 )
+
+func DecodeLanguage(language string) Language {
+	language = strings.ToLower(language)
+	switch language {
+	case "javascript", "js":
+		return LangJs
+	case "typescript", "ts":
+		return LangTs
+	case "jsx", "tsx":
+		return LangTsx
+	case "python", "py":
+		return LangPy
+	case "ocaml", "ml":
+		return LangOCaml
+	case "docker", "dockerfile":
+		return LangDockerfile
+	case "java":
+		return LangJava
+	case "kotlin", "kt":
+		return LangKotlin
+	case "rust", "rs":
+		return LangRust
+	case "ruby", "rb":
+		return LangRuby
+	case "lua":
+		return LangLua
+	case "yaml", "yml":
+		return LangYaml
+	case "sql":
+		return LangSql
+	case "css", "css3":
+		return LangCss
+	case "markdown", "md":
+		return LangMarkdown
+	case "sh", "bash":
+		return LangBash
+	case "csharp", "cs":
+		return LangCsharp
+	case "elixir", "ex":
+		return LangElixir
+	case "elm":
+		return LangElm
+	case "go":
+		return LangGo
+	case "groovy":
+		return LangGroovy
+	case "hcl", "tf":
+		return LangHcl
+	case "html":
+		return LangHtml
+	case "php":
+		return LangPhp
+	case "scala":
+		return LangScala
+	case "swift":
+		return LangSwift
+	default:
+		return LangUnknown
+	}
+}
 
 // tsGrammarForLang returns the tree-sitter grammar for the given language.
 // May return `nil` when `lang` is `LangUnkown`.
