@@ -1,438 +1,438 @@
 package analysis
 
-import (
-	"fmt"
-	"path/filepath"
-	"regexp"
-	"strings"
+// import (
+// 	"fmt"
+// 	"path/filepath"
+// 	"regexp"
+// 	"strings"
 
-	sitter "github.com/smacker/go-tree-sitter"
-	ana "globstar.dev/analysis"
-)
+// 	sitter "github.com/smacker/go-tree-sitter"
+// 	ana "globstar.dev/analysis"
+// )
 
-// type Issue struct {
-// 	// The category of the issue
-// 	Category config.Category
-// 	// The severity of the issue
-// 	Severity config.Severity
-// 	// The message to display to the user
-// 	Message string
-// 	// The file path of the file that the issue was found in
-// 	Filepath string
-// 	// The range of the issue in the source code
-// 	Range sitter.Range
-// 	// (optional) The AST node that caused the issue
-// 	Node *sitter.Node
-// 	// Id is a unique ID for the issue.
-// 	// Issue that have 'Id's can be explained using the `globstar desc` command.
-// 	Id *string
+// // type Issue struct {
+// // 	// The category of the issue
+// // 	Category config.Category
+// // 	// The severity of the issue
+// // 	Severity config.Severity
+// // 	// The message to display to the user
+// // 	Message string
+// // 	// The file path of the file that the issue was found in
+// // 	Filepath string
+// // 	// The range of the issue in the source code
+// // 	Range sitter.Range
+// // 	// (optional) The AST node that caused the issue
+// // 	Node *sitter.Node
+// // 	// Id is a unique ID for the issue.
+// // 	// Issue that have 'Id's can be explained using the `globstar desc` command.
+// // 	Id *string
+// // }
+
+// // func (i *Issue) AsJson() ([]byte, error) {
+// // 	type location struct {
+// // 		Row    int `json:"row"`
+// // 		Column int `json:"column"`
+// // 	}
+
+// // 	type position struct {
+// // 		Filename string   `json:"filename"`
+// // 		Start    location `json:"start"`
+// // 		End      location `json:"end"`
+// // 	}
+
+// // 	type issueJson struct {
+// // 		Category config.Category `json:"category"`
+// // 		Severity config.Severity `json:"severity"`
+// // 		Message  string          `json:"message"`
+// // 		Range    position        `json:"range"`
+// // 		Id       string          `json:"id"`
+// // 	}
+// // 	issue := issueJson{
+// // 		Category: i.Category,
+// // 		Severity: i.Severity,
+// // 		Message:  i.Message,
+// // 		Range: position{
+// // 			Filename: i.Filepath,
+// // 			Start: location{
+// // 				Row:    int(i.Range.StartPoint.Row),
+// // 				Column: int(i.Range.StartPoint.Column),
+// // 			},
+// // 			End: location{
+// // 				Row:    int(i.Range.EndPoint.Row),
+// // 				Column: int(i.Range.EndPoint.Column),
+// // 			},
+// // 		},
+// // 		Id: *i.Id,
+// // 	}
+
+// // 	return json.Marshal(issue)
+// // }
+
+// // func (i *Issue) AsText() ([]byte, error) {
+// // 	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, i.Range.StartPoint.Row, i.Range.StartPoint.Column, i.Message)), nil
+// // }
+
+// type Analyzer struct {
+// 	Language Language
+// 	// WorkDir is the directory in which the analysis is being run.
+// 	WorkDir string
+// 	// ParseResult is the result of parsing a file with a tree-sitter parser,
+// 	// along with some extra appendages (e.g: scope information).
+// 	ParseResult *ParseResult
+// 	// checkers is a list of all checkers that should be applied to the AST
+// 	// for this language.
+// 	checkers []Checker
+// 	// patternCheckers is a list of all checkers that run after a query is run on the AST.
+// 	// Usually, these are written in a DSL (which, for now, is the tree-sitter S-Expression query language)
+// 	YamlCheckers []YamlChecker
+// 	// entryCheckers maps node types to the checkers that should be applied
+// 	// when entering that node.
+// 	entryCheckersForNode map[string][]Checker
+// 	// exitCheckers maps node types to the checkers that should be applied
+// 	// when leaving that node.
+// 	exitCheckersForNode map[string][]Checker
+// 	issuesRaised        []*ana.Issue
 // }
 
-// func (i *Issue) AsJson() ([]byte, error) {
-// 	type location struct {
-// 		Row    int `json:"row"`
-// 		Column int `json:"column"`
-// 	}
-
-// 	type position struct {
-// 		Filename string   `json:"filename"`
-// 		Start    location `json:"start"`
-// 		End      location `json:"end"`
-// 	}
-
-// 	type issueJson struct {
-// 		Category config.Category `json:"category"`
-// 		Severity config.Severity `json:"severity"`
-// 		Message  string          `json:"message"`
-// 		Range    position        `json:"range"`
-// 		Id       string          `json:"id"`
-// 	}
-// 	issue := issueJson{
-// 		Category: i.Category,
-// 		Severity: i.Severity,
-// 		Message:  i.Message,
-// 		Range: position{
-// 			Filename: i.Filepath,
-// 			Start: location{
-// 				Row:    int(i.Range.StartPoint.Row),
-// 				Column: int(i.Range.StartPoint.Column),
-// 			},
-// 			End: location{
-// 				Row:    int(i.Range.EndPoint.Row),
-// 				Column: int(i.Range.EndPoint.Column),
-// 			},
-// 		},
-// 		Id: *i.Id,
-// 	}
-
-// 	return json.Marshal(issue)
+// type SkipComment struct {
+// 	// the line number for the skipcq comment
+// 	CommentLine int
+// 	// the entire text of the skipcq comment
+// 	CommentText string
+// 	// (optional) name of the checker for targetted skip
+// 	CheckerIds []string
 // }
 
-// func (i *Issue) AsText() ([]byte, error) {
-// 	return []byte(fmt.Sprintf("%s:%d:%d:%s", i.Filepath, i.Range.StartPoint.Row, i.Range.StartPoint.Column, i.Message)), nil
+// // package level cache to store comments for each file
+// var fileSkipComment = make(map[string][]*SkipComment)
+
+// func InitializeSkipComments(analyzers []*Analyzer) {
+// 	fileSkipComments := make(map[string][]*SkipComment)
+
+// 	processedPaths := make(map[string]bool)
+
+// 	for _, analyzer := range analyzers {
+// 		filepath := analyzer.ParseResult.FilePath
+// 		if processedPaths[filepath] {
+// 			continue
+// 		}
+
+// 		processedPaths[filepath] = true
+// 		fileSkipComments[filepath] = GatherSkipInfo(analyzer.ParseResult)
+// 	}
 // }
 
-type Analyzer struct {
-	Language Language
-	// WorkDir is the directory in which the analysis is being run.
-	WorkDir string
-	// ParseResult is the result of parsing a file with a tree-sitter parser,
-	// along with some extra appendages (e.g: scope information).
-	ParseResult *ParseResult
-	// checkers is a list of all checkers that should be applied to the AST
-	// for this language.
-	checkers []Checker
-	// patternCheckers is a list of all checkers that run after a query is run on the AST.
-	// Usually, these are written in a DSL (which, for now, is the tree-sitter S-Expression query language)
-	YamlCheckers []YamlChecker
-	// entryCheckers maps node types to the checkers that should be applied
-	// when entering that node.
-	entryCheckersForNode map[string][]Checker
-	// exitCheckers maps node types to the checkers that should be applied
-	// when leaving that node.
-	exitCheckersForNode map[string][]Checker
-	issuesRaised        []*ana.Issue
-}
+// func FromFile(filePath string, baseCheckers []Checker) (*Analyzer, error) {
+// 	res, err := ParseFile(filePath)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-type SkipComment struct {
-	// the line number for the skipcq comment
-	CommentLine int
-	// the entire text of the skipcq comment
-	CommentText string
-	// (optional) name of the checker for targetted skip
-	CheckerIds []string
-}
+// 	return NewAnalyzer(res, baseCheckers), nil
+// }
 
-// package level cache to store comments for each file
-var fileSkipComment = make(map[string][]*SkipComment)
+// func NewAnalyzer(file *ParseResult, checkers []Checker) *Analyzer {
+// 	ana := &Analyzer{
+// 		ParseResult:          file,
+// 		Language:             file.Language,
+// 		entryCheckersForNode: map[string][]Checker{},
+// 		exitCheckersForNode:  map[string][]Checker{},
+// 	}
 
-func InitializeSkipComments(analyzers []*Analyzer) {
-	fileSkipComments := make(map[string][]*SkipComment)
+// 	for _, checker := range checkers {
+// 		ana.AddChecker(checker)
+// 	}
 
-	processedPaths := make(map[string]bool)
+// 	return ana
+// }
 
-	for _, analyzer := range analyzers {
-		filepath := analyzer.ParseResult.FilePath
-		if processedPaths[filepath] {
-			continue
-		}
+// func (ana *Analyzer) Analyze() []*ana.Issue {
+// 	WalkTree(ana.ParseResult.Ast, ana)
+// 	ana.runPatternCheckers()
+// 	return ana.issuesRaised
+// }
 
-		processedPaths[filepath] = true
-		fileSkipComments[filepath] = GatherSkipInfo(analyzer.ParseResult)
-	}
-}
+// func (ana *Analyzer) AddChecker(checker Checker) {
+// 	ana.checkers = append(ana.checkers, checker)
+// 	typ := checker.NodeType()
 
-func FromFile(filePath string, baseCheckers []Checker) (*Analyzer, error) {
-	res, err := ParseFile(filePath)
-	if err != nil {
-		return nil, err
-	}
+// 	if checker.OnEnter() != nil {
+// 		ana.entryCheckersForNode[typ] = append(ana.entryCheckersForNode[typ], checker)
+// 	}
 
-	return NewAnalyzer(res, baseCheckers), nil
-}
+// 	if checker.OnLeave() != nil {
+// 		ana.exitCheckersForNode[typ] = append(ana.exitCheckersForNode[typ], checker)
+// 	}
+// }
 
-func NewAnalyzer(file *ParseResult, checkers []Checker) *Analyzer {
-	ana := &Analyzer{
-		ParseResult:          file,
-		Language:             file.Language,
-		entryCheckersForNode: map[string][]Checker{},
-		exitCheckersForNode:  map[string][]Checker{},
-	}
+// func (ana *Analyzer) OnEnterNode(node *sitter.Node) bool {
+// 	nodeType := node.Type()
+// 	checkers := ana.entryCheckersForNode[nodeType]
+// 	for _, checker := range checkers {
+// 		visitFn := checker.OnEnter()
+// 		if visitFn != nil {
+// 			(*visitFn)(checker, ana, node)
+// 		}
+// 	}
+// 	return true
+// }
 
-	for _, checker := range checkers {
-		ana.AddChecker(checker)
-	}
+// func (ana *Analyzer) OnLeaveNode(node *sitter.Node) {
+// 	nodeType := node.Type()
+// 	checkers := ana.exitCheckersForNode[nodeType]
+// 	for _, checker := range checkers {
+// 		visitFn := checker.OnLeave()
+// 		if visitFn != nil {
+// 			(*visitFn)(checker, ana, node)
+// 		}
+// 	}
+// }
 
-	return ana
-}
+// func (ana *Analyzer) shouldSkipChecker(checker YamlChecker) bool {
+// 	pathFilter := checker.PathFilter()
+// 	if pathFilter == nil {
+// 		// no filter is set, so we should not skip this checker
+// 		return false
+// 	}
 
-func (ana *Analyzer) Analyze() []*ana.Issue {
-	WalkTree(ana.ParseResult.Ast, ana)
-	ana.runPatternCheckers()
-	return ana.issuesRaised
-}
+// 	relPath := ana.ParseResult.FilePath
+// 	if ana.WorkDir != "" {
+// 		rel, err := filepath.Rel(ana.WorkDir, ana.ParseResult.FilePath)
+// 		if err == nil {
+// 			relPath = rel
+// 		}
+// 	}
 
-func (ana *Analyzer) AddChecker(checker Checker) {
-	ana.checkers = append(ana.checkers, checker)
-	typ := checker.NodeType()
+// 	if len(pathFilter.ExcludeGlobs) > 0 {
+// 		for _, excludeGlob := range pathFilter.ExcludeGlobs {
+// 			if excludeGlob.Match(relPath) {
+// 				return true
+// 			}
+// 		}
 
-	if checker.OnEnter() != nil {
-		ana.entryCheckersForNode[typ] = append(ana.entryCheckersForNode[typ], checker)
-	}
+// 		// no exclude globs matched, so we should not skip this checker
+// 		return false
+// 	}
 
-	if checker.OnLeave() != nil {
-		ana.exitCheckersForNode[typ] = append(ana.exitCheckersForNode[typ], checker)
-	}
-}
+// 	if len(pathFilter.IncludeGlobs) > 0 {
+// 		for _, includeGlob := range pathFilter.IncludeGlobs {
+// 			if includeGlob.Match(relPath) {
+// 				return false
+// 			}
+// 		}
 
-func (ana *Analyzer) OnEnterNode(node *sitter.Node) bool {
-	nodeType := node.Type()
-	checkers := ana.entryCheckersForNode[nodeType]
-	for _, checker := range checkers {
-		visitFn := checker.OnEnter()
-		if visitFn != nil {
-			(*visitFn)(checker, ana, node)
-		}
-	}
-	return true
-}
+// 		// no include globs matched, so we should skip this checker
+// 		return true
+// 	}
 
-func (ana *Analyzer) OnLeaveNode(node *sitter.Node) {
-	nodeType := node.Type()
-	checkers := ana.exitCheckersForNode[nodeType]
-	for _, checker := range checkers {
-		visitFn := checker.OnLeave()
-		if visitFn != nil {
-			(*visitFn)(checker, ana, node)
-		}
-	}
-}
+// 	return false
+// }
 
-func (ana *Analyzer) shouldSkipChecker(checker YamlChecker) bool {
-	pathFilter := checker.PathFilter()
-	if pathFilter == nil {
-		// no filter is set, so we should not skip this checker
-		return false
-	}
+// func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node) bool {
+// 	qc := sitter.NewQueryCursor()
+// 	defer qc.Close()
 
-	relPath := ana.ParseResult.FilePath
-	if ana.WorkDir != "" {
-		rel, err := filepath.Rel(ana.WorkDir, ana.ParseResult.FilePath)
-		if err == nil {
-			relPath = rel
-		}
-	}
+// 	qc.Exec(filter.query, parent)
 
-	if len(pathFilter.ExcludeGlobs) > 0 {
-		for _, excludeGlob := range pathFilter.ExcludeGlobs {
-			if excludeGlob.Match(relPath) {
-				return true
-			}
-		}
+// 	// check if the filter matches the `parent` node
+// 	for {
+// 		m, ok := qc.NextMatch()
+// 		if !ok {
+// 			break
+// 		}
 
-		// no exclude globs matched, so we should not skip this checker
-		return false
-	}
+// 		m = qc.FilterPredicates(m, ana.ParseResult.Source)
+// 		for _, capture := range m.Captures {
+// 			captureName := filter.query.CaptureNameForId(capture.Index)
+// 			if captureName == filterPatternKey && capture.Node == parent {
+// 				return true
+// 			}
+// 		}
+// 	}
 
-	if len(pathFilter.IncludeGlobs) > 0 {
-		for _, includeGlob := range pathFilter.IncludeGlobs {
-			if includeGlob.Match(relPath) {
-				return false
-			}
-		}
+// 	return false
+// }
 
-		// no include globs matched, so we should skip this checker
-		return true
-	}
+// // runParentFilters checks if the parent filters for a checker match the given node.
+// func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bool {
+// 	filters := checker.NodeFilters()
+// 	if len(filters) == 0 {
+// 		return true
+// 	}
 
-	return false
-}
+// 	for _, filter := range filters {
+// 		shouldMatch := filter.shouldMatch
+// 		nodeMatched := false
 
-func (ana *Analyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node) bool {
-	qc := sitter.NewQueryCursor()
-	defer qc.Close()
+// 		// The matched node is expected to be a child of some other
+// 		// node, but it has no parents (is a top-level node)
+// 		if node.Parent() == nil && filter.shouldMatch {
+// 			return false
+// 		}
 
-	qc.Exec(filter.query, parent)
+// 		for parent := node.Parent(); parent != nil; parent = parent.Parent() {
+// 			if ana.filterMatchesParent(&filter, parent) {
+// 				nodeMatched = true
+// 				if !shouldMatch {
+// 					// pattern-not-inside matched, so this checker should be skipped
+// 					return false
+// 				} else {
+// 					// pattern-inside matched, so we can break out of the loop
+// 					break
+// 				}
+// 			}
+// 		}
 
-	// check if the filter matches the `parent` node
-	for {
-		m, ok := qc.NextMatch()
-		if !ok {
-			break
-		}
+// 		if !nodeMatched && shouldMatch {
+// 			return false
+// 		}
+// 	}
 
-		m = qc.FilterPredicates(m, ana.ParseResult.Source)
-		for _, capture := range m.Captures {
-			captureName := filter.query.CaptureNameForId(capture.Index)
-			if captureName == filterPatternKey && capture.Node == parent {
-				return true
-			}
-		}
-	}
+// 	return true
+// }
 
-	return false
-}
+// func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
+// 	qc := sitter.NewQueryCursor()
+// 	defer qc.Close()
 
-// runParentFilters checks if the parent filters for a checker match the given node.
-func (ana *Analyzer) runParentFilters(checker YamlChecker, node *sitter.Node) bool {
-	filters := checker.NodeFilters()
-	if len(filters) == 0 {
-		return true
-	}
+// 	qc.Exec(query, ana.ParseResult.Ast)
+// 	for {
+// 		m, ok := qc.NextMatch()
 
-	for _, filter := range filters {
-		shouldMatch := filter.shouldMatch
-		nodeMatched := false
+// 		if !ok {
+// 			break
+// 		}
 
-		// The matched node is expected to be a child of some other
-		// node, but it has no parents (is a top-level node)
-		if node.Parent() == nil && filter.shouldMatch {
-			return false
-		}
+// 		m = qc.FilterPredicates(m, ana.ParseResult.Source)
+// 		for _, capture := range m.Captures {
+// 			captureName := query.CaptureNameForId(capture.Index)
+// 			// TODO: explain why captureName == checker.Name()
+// 			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) {
+// 				checker.OnMatch(ana, query, capture.Node, m.Captures)
+// 			}
+// 		}
+// 	}
+// }
 
-		for parent := node.Parent(); parent != nil; parent = parent.Parent() {
-			if ana.filterMatchesParent(&filter, parent) {
-				nodeMatched = true
-				if !shouldMatch {
-					// pattern-not-inside matched, so this checker should be skipped
-					return false
-				} else {
-					// pattern-inside matched, so we can break out of the loop
-					break
-				}
-			}
-		}
+// // runPatternCheckers executes all checkers that are written as AST queries.
+// func (ana *Analyzer) runPatternCheckers() {
+// 	for _, checker := range ana.YamlCheckers {
+// 		if ana.shouldSkipChecker(checker) {
+// 			continue
+// 		}
 
-		if !nodeMatched && shouldMatch {
-			return false
-		}
-	}
+// 		queries := checker.Patterns()
+// 		for _, q := range queries {
+// 			ana.executeCheckerQuery(checker, q)
+// 		}
+// 	}
+// }
 
-	return true
-}
+// func (ana *Analyzer) Report(issue *ana.Issue) {
+// 	ana.issuesRaised = append(ana.issuesRaised, issue)
+// }
 
-func (ana *Analyzer) executeCheckerQuery(checker YamlChecker, query *sitter.Query) {
-	qc := sitter.NewQueryCursor()
-	defer qc.Close()
+// func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*ana.Issue, error) {
+// 	InitializeSkipComments(analyzers)
 
-	qc.Exec(query, ana.ParseResult.Ast)
-	for {
-		m, ok := qc.NextMatch()
+// 	issues := []*ana.Issue{}
+// 	for _, analyzer := range analyzers {
+// 		issues = append(issues, analyzer.Analyze()...)
+// 	}
+// 	return issues, nil
+// }
 
-		if !ok {
-			break
-		}
+// func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
+// 	var skipLines []*SkipComment
 
-		m = qc.FilterPredicates(m, ana.ParseResult.Source)
-		for _, capture := range m.Captures {
-			captureName := query.CaptureNameForId(capture.Index)
-			// TODO: explain why captureName == checker.Name()
-			if captureName == checker.Name() && ana.runParentFilters(checker, capture.Node) {
-				checker.OnMatch(ana, query, capture.Node, m.Captures)
-			}
-		}
-	}
-}
+// 	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
+// 	pattern := fmt.Sprintf(`%s(?i).*?\bskipcq\b(?::(?:\s*(?P<issue_ids>([A-Za-z\-_0-9]*(?:,\s*)?)+))?)?`, commentIdentifier)
+// 	skipRegexp := regexp.MustCompile(pattern)
 
-// runPatternCheckers executes all checkers that are written as AST queries.
-func (ana *Analyzer) runPatternCheckers() {
-	for _, checker := range ana.YamlCheckers {
-		if ana.shouldSkipChecker(checker) {
-			continue
-		}
+// 	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.Grammar())
 
-		queries := checker.Patterns()
-		for _, q := range queries {
-			ana.executeCheckerQuery(checker, q)
-		}
-	}
-}
+// 	if err != nil {
+// 		return skipLines
+// 	}
 
-func (ana *Analyzer) Report(issue *ana.Issue) {
-	ana.issuesRaised = append(ana.issuesRaised, issue)
-}
+// 	cursor := sitter.NewQueryCursor()
+// 	cursor.Exec(query, fileContext.Ast)
 
-func RunYamlCheckers(path string, analyzers []*Analyzer) ([]*ana.Issue, error) {
-	InitializeSkipComments(analyzers)
+// 	// gather all skipcq comment lines in a single pass
+// 	for {
+// 		m, ok := cursor.NextMatch()
+// 		if !ok {
+// 			break
+// 		}
 
-	issues := []*ana.Issue{}
-	for _, analyzer := range analyzers {
-		issues = append(issues, analyzer.Analyze()...)
-	}
-	return issues, nil
-}
+// 		for _, capture := range m.Captures {
+// 			captureName := query.CaptureNameForId(capture.Index)
+// 			if captureName != "skipcq" {
+// 				continue
+// 			}
 
-func GatherSkipInfo(fileContext *ParseResult) []*SkipComment {
-	var skipLines []*SkipComment
+// 			commentNode := capture.Node
+// 			commentLine := int(commentNode.StartPoint().Row)
+// 			commentText := commentNode.Content(fileContext.Source)
 
-	commentIdentifier := GetEscapedCommentIdentifierFromPath(fileContext.FilePath)
-	pattern := fmt.Sprintf(`%s(?i).*?\bskipcq\b(?::(?:\s*(?P<issue_ids>([A-Za-z\-_0-9]*(?:,\s*)?)+))?)?`, commentIdentifier)
-	skipRegexp := regexp.MustCompile(pattern)
+// 			matches := skipRegexp.FindStringSubmatch(commentText)
+// 			if matches != nil {
+// 				issueIdsIdx := skipRegexp.SubexpIndex("issue_ids")
+// 				var checkerIds []string
 
-	query, err := sitter.NewQuery([]byte("(comment) @skipcq"), fileContext.Language.Grammar())
+// 				if issueIdsIdx != -1 && issueIdsIdx < len(matches) && matches[issueIdsIdx] != "" {
+// 					issueIdsIdx := matches[issueIdsIdx]
+// 					idSlice := strings.Split(issueIdsIdx, ",")
+// 					for _, id := range idSlice {
+// 						trimmedId := strings.TrimSpace(id)
+// 						if trimmedId != "" {
+// 							checkerIds = append(checkerIds, trimmedId)
+// 						}
+// 					}
+// 				}
 
-	if err != nil {
-		return skipLines
-	}
+// 				skipLines = append(skipLines, &SkipComment{
+// 					CommentLine: commentLine,
+// 					CommentText: commentText,
+// 					CheckerIds:  checkerIds, // will be empty for generic skipcq
+// 				})
+// 			}
 
-	cursor := sitter.NewQueryCursor()
-	cursor.Exec(query, fileContext.Ast)
+// 		}
+// 	}
 
-	// gather all skipcq comment lines in a single pass
-	for {
-		m, ok := cursor.NextMatch()
-		if !ok {
-			break
-		}
+// 	return skipLines
+// }
 
-		for _, capture := range m.Captures {
-			captureName := query.CaptureNameForId(capture.Index)
-			if captureName != "skipcq" {
-				continue
-			}
+// func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *ana.Issue) bool {
+// 	if len(skipLines) == 0 {
+// 		return false
+// 	}
 
-			commentNode := capture.Node
-			commentLine := int(commentNode.StartPoint().Row)
-			commentText := commentNode.Content(fileContext.Source)
+// 	issueNode := issue.Node
+// 	nodeLine := int(issueNode.StartPoint().Row)
+// 	prevLine := nodeLine - 1
 
-			matches := skipRegexp.FindStringSubmatch(commentText)
-			if matches != nil {
-				issueIdsIdx := skipRegexp.SubexpIndex("issue_ids")
-				var checkerIds []string
+// 	var checkerId string
+// 	if issue.Id != nil {
+// 		checkerId = *issue.Id
+// 	}
 
-				if issueIdsIdx != -1 && issueIdsIdx < len(matches) && matches[issueIdsIdx] != "" {
-					issueIdsIdx := matches[issueIdsIdx]
-					idSlice := strings.Split(issueIdsIdx, ",")
-					for _, id := range idSlice {
-						trimmedId := strings.TrimSpace(id)
-						if trimmedId != "" {
-							checkerIds = append(checkerIds, trimmedId)
-						}
-					}
-				}
+// 	for _, comment := range skipLines {
+// 		if comment.CommentLine != nodeLine && comment.CommentLine != prevLine {
+// 			continue
+// 		}
 
-				skipLines = append(skipLines, &SkipComment{
-					CommentLine: commentLine,
-					CommentText: commentText,
-					CheckerIds:  checkerIds, // will be empty for generic skipcq
-				})
-			}
+// 		if len(comment.CheckerIds) > 0 {
+// 			for _, id := range comment.CheckerIds {
+// 				if checkerId == id {
+// 					return true
+// 				}
+// 			}
+// 		} else {
+// 			return true
+// 		}
+// 	}
 
-		}
-	}
-
-	return skipLines
-}
-
-func (ana *Analyzer) ContainsSkipcq(skipLines []*SkipComment, issue *ana.Issue) bool {
-	if len(skipLines) == 0 {
-		return false
-	}
-
-	issueNode := issue.Node
-	nodeLine := int(issueNode.StartPoint().Row)
-	prevLine := nodeLine - 1
-
-	var checkerId string
-	if issue.Id != nil {
-		checkerId = *issue.Id
-	}
-
-	for _, comment := range skipLines {
-		if comment.CommentLine != nodeLine && comment.CommentLine != prevLine {
-			continue
-		}
-
-		if len(comment.CheckerIds) > 0 {
-			for _, id := range comment.CheckerIds {
-				if checkerId == id {
-					return true
-				}
-			}
-		} else {
-			return true
-		}
-	}
-
-	return false
-}
+// 	return false
+// }
