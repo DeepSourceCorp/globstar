@@ -263,6 +263,14 @@ func (e *goExtractor) extractCallName(node *sitter.Node) string {
 	}
 }
 
+// collectSelectorParts recursively extracts the components of a Go selector expression
+// and appends them to the `parts` slice in order they appear in the code. This function
+// handles the tree-sitter AST node where selector expressions are nested, with multiple `identifier` and
+// `field_identifier`
+//
+// A selector expression represents chained access like:
+// - pkg.Function -> ["pkg", "Function"]
+// - obj.Field.Method -> ["obj", "Field", "Method"]
 func (e *goExtractor) collectSelectorParts(node *sitter.Node, parts *[]string) {
 	if node.Type() == "selector_expression" {
 		for i := 0; i < int(node.ChildCount()); i++ {
