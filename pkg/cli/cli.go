@@ -17,7 +17,8 @@ import (
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers"
 	"globstar.dev/checkers/discover"
-	"globstar.dev/pkg/analysis"
+
+	// "globstar.dev/pkg/analysis"
 	"globstar.dev/pkg/config"
 	"globstar.dev/util"
 )
@@ -26,9 +27,9 @@ type Cli struct {
 	// RootDirectory is the target directory to analyze
 	RootDirectory string
 	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
-	Checkers []analysis.Checker
-	Config   *config.Config
-	CmpHash  string
+	// Checkers []analysis.Checker
+	Config  *config.Config
+	CmpHash string
 }
 
 func (c *Cli) loadConfig() error {
@@ -193,15 +194,15 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					// Track test failures but continue running all tests
 					var testsFailed bool
 
-					_, _, yamlPassed, err := goAnalysis.RunAnalyzerTests(analysisDir, []*goAnalysis.Analyzer{})
+					yamlPassed, err := runTestCases(analysisDir)
 					if err != nil {
 						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())
 						// Don't return immediately, continue with other tests
 					}
 					if !yamlPassed {
-						return fmt.Errorf("YAML tests failed ")
 						testsFailed = true
+						return fmt.Errorf("YAML tests failed ")
 					}
 
 					goPassed := true
@@ -454,35 +455,35 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		// run checker
 		// the first arg is empty, since the format for inbuilt Go-based checkers has changed
 		// TODO: factor it in later
-		nonYamlAnalyzers := []*goAnalysis.Analyzer{}
-		issues, err := goAnalysis.RunAnalyzers(c.RootDirectory, nonYamlAnalyzers, func(filename string) bool {
-			if c.CmpHash != "" {
-				_, isChanged := changedFileMap[filename]
-				return isChanged
-			}
-			return true
-		})
+		// nonYamlAnalyzers := []*goAnalysis.Analyzer{}
+		// issues, err := goAnalysis.RunAnalyzers(c.RootDirectory, nonYamlAnalyzers, func(filename string) bool {
+		// 	if c.CmpHash != "" {
+		// 		_, isChanged := changedFileMap[filename]
+		// 		return isChanged
+		// 	}
+		// 	return true
+		// })
 
-		if err != nil {
-			// parse error on a single file should not exit the entire analysis process
-			// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
-			// fmt.Fprintf(os.Stderr, "Error parsing file %s: %s\n", path, err)
-			return nil
-		}
+		// if err != nil {
+		// 	// parse error on a single file should not exit the entire analysis process
+		// 	// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
+		// 	// fmt.Fprintf(os.Stderr, "Error parsing file %s: %s\n", path, err)
+		// 	return nil
+		// }
 
-		for _, issue := range issues {
-			txt, _ := issue.AsText()
-			log.Error().Msg(string(txt))
+		// for _, issue := range issues {
+		// 	txt, _ := issue.AsText()
+		// 	log.Error().Msg(string(txt))
 
-			result.issues = append(result.issues, &goAnalysis.Issue{
-				Filepath: issue.Filepath,
-				Message:  issue.Message,
-				Severity: goAnalysis.Severity(issue.Severity),
-				Category: goAnalysis.Category(issue.Category),
-				Node:     issue.Node,
-				Id:       issue.Id,
-			})
-		}
+		// 	result.issues = append(result.issues, &goAnalysis.Issue{
+		// 		Filepath: issue.Filepath,
+		// 		Message:  issue.Message,
+		// 		Severity: goAnalysis.Severity(issue.Severity),
+		// 		Category: goAnalysis.Category(issue.Category),
+		// 		Node:     issue.Node,
+		// 		Id:       issue.Id,
+		// 	})
+		// }
 
 		return nil
 	})

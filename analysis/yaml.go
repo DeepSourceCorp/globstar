@@ -181,6 +181,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 	}
 
 	patternChecker := &Analyzer{
+		Name:        checker.Code,
 		Language:    lang,
 		Description: checker.Description,
 		Category:    checker.Category,
@@ -189,6 +190,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 
 	yamlAnalyzer := &YamlAnalyzer{
 		Analyzer: Analyzer{
+			Name:        checker.Code,
 			Language:    lang,
 			Description: checker.Description,
 			Category:    checker.Category,
@@ -225,8 +227,9 @@ func RunYamlAnalyzer(YamlAnalyzer *YamlAnalyzer) func(pass *Pass) (any, error) {
 							captureName := query.CaptureNameForId(capture.Index)
 							message = strings.ReplaceAll(message, "@"+captureName, capture.Node.Content(pass.FileContext.Source))
 						}
+
+						pass.Report(pass, capture.Node, message)
 					}
-					pass.Report(pass, capture.Node, YamlAnalyzer.Message)
 				}
 
 			}
