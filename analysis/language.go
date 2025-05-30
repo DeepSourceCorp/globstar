@@ -230,7 +230,7 @@ func LanguageFromFilePath(path string) Language {
 		return LangYaml
 	case ".css":
 		return LangCss
-	case ".dockerfile":
+	case ".dockerfile", ".Dockerfile":
 		return LangDockerfile
 	case ".md":
 		return LangMarkdown
