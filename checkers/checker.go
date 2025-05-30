@@ -8,13 +8,12 @@ import (
 	"path/filepath"
 
 	goAnalysis "globstar.dev/analysis"
-	"globstar.dev/pkg/analysis"
 )
 
 //go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
-func findYamlCheckers(checkersMap map[analysis.Language][]analysis.YamlChecker) func(path string, d fs.DirEntry, err error) error {
+func findYamlCheckers(checkersMap map[goAnalysis.Language][]goAnalysis.Analyzer) func(path string, d fs.DirEntry, err error) error {
 	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -35,25 +34,25 @@ func findYamlCheckers(checkersMap map[analysis.Language][]analysis.YamlChecker) 
 			return nil
 		}
 
-		patternChecker, err := analysis.ReadFromBytes(fileContent)
+		patternChecker, err := goAnalysis.ReadFromBytes(fileContent)
 		if err != nil {
 			return fmt.Errorf("invalid checker '%s': %s", d.Name(), err.Error())
 		}
 
-		lang := patternChecker.Language()
+		lang := patternChecker.Language
 		checkersMap[lang] = append(checkersMap[lang], patternChecker)
 		return nil
 	}
 }
 
-func LoadBuiltinYamlCheckers() (map[analysis.Language][]analysis.YamlChecker, error) {
-	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+func LoadBuiltinYamlCheckers() (map[goAnalysis.Language][]goAnalysis.Analyzer, error) {
+	checkersMap := make(map[goAnalysis.Language][]goAnalysis.Analyzer)
 	err := fs.WalkDir(builtinCheckers, ".", findYamlCheckers(checkersMap))
 	return checkersMap, err
 }
 
-func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.YamlChecker, error) {
-	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+func LoadCustomYamlCheckers(dir string) (map[goAnalysis.Language][]goAnalysis.Analyzer, error) {
+	checkersMap := make(map[goAnalysis.Language][]goAnalysis.Analyzer)
 	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap))
 	return checkersMap, err
 }
