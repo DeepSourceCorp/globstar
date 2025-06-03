@@ -34,7 +34,7 @@ func findYamlCheckers(checkersMap map[goAnalysis.Language][]goAnalysis.Analyzer)
 			return nil
 		}
 
-		patternChecker, err := goAnalysis.ReadFromBytes(fileContent)
+		patternChecker, _, err := goAnalysis.ReadFromBytes(fileContent)
 		if err != nil {
 			return fmt.Errorf("invalid checker '%s': %s", d.Name(), err.Error())
 		}
