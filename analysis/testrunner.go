@@ -167,7 +167,7 @@ func discoverYamlAnalyzers(testDir string) ([]*Analyzer, error) {
 		baseName := strings.TrimSuffix(path, fileExt)
 
 		// Try to read the YAML checker
-		analyzer, err := ReadFromFile(path)
+		analyzer, _, err := ReadFromFile(path)
 		if err != nil {
 			// Skip files that aren't valid checkers
 			return nil

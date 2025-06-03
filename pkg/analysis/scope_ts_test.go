@@ -94,7 +94,7 @@ package analysis
 // 		source := `
 // 		function greet(name, age = 18) {
 // 			let greeting = "Hello";
-// 			return greeting + " " + name;	
+// 			return greeting + " " + name;
 // 		}
 // 		greet("Alice")
 // 		`

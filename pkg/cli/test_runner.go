@@ -49,7 +49,7 @@ func findTestCases(dir string) ([]testCase, error) {
 			return nil
 		}
 
-		patternChecker, err := ana.ReadFromFile(path)
+		patternChecker, _, err := ana.ReadFromFile(path)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "invalid checker '%s': %s\n", d.Name(), err.Error())
 			return nil
@@ -91,7 +91,7 @@ func runTestCases(dir string) (passed bool, err error) {
 
 		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(tc.yamlCheckerPath))
 		// Read and parse the checker definition
-		checker, err := ana.ReadFromFile(tc.yamlCheckerPath)
+		checker, _, err := ana.ReadFromFile(tc.yamlCheckerPath)
 		if err != nil {
 			return false, err
 		}

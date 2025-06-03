@@ -71,56 +71,56 @@ type YamlAnalyzer struct {
 }
 
 // ReadFromFile reads a pattern checker definition from a YAML config file.
-func ReadFromFile(filePath string) (Analyzer, error) {
+func ReadFromFile(filePath string) (Analyzer, YamlAnalyzer, error) {
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
-		return Analyzer{}, err
+		return Analyzer{}, YamlAnalyzer{}, err
 	}
 
 	return ReadFromBytes(fileContent)
 }
 
 // ReadFromBytes reads a pattern checker definition from bytes array
-func ReadFromBytes(fileContent []byte) (Analyzer, error) {
+func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer,error) {
 	var checker Yaml
 	if err := yaml.Unmarshal(fileContent, &checker); err != nil {
-		return Analyzer{}, err
+		return Analyzer{}, YamlAnalyzer{}, err
 	}
 
 	lang := DecodeLanguage(checker.Language)
 	if lang == LangUnknown {
-		return Analyzer{}, fmt.Errorf("unknown language code: '%s'", checker.Language)
+		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("unknown language code: '%s'", checker.Language)
 	}
 
 	if checker.Code == "" {
-		return Analyzer{}, fmt.Errorf("no name provided in checker definition")
+		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no name provided in checker definition")
 	}
 
 	if checker.Message == "" {
-		return Analyzer{}, fmt.Errorf("no message provided in checker '%s'", checker.Code)
+		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no message provided in checker '%s'", checker.Code)
 	}
 
 	var patterns []*sitter.Query
 	if checker.Pattern != "" {
 		pattern, err := sitter.NewQuery([]byte(checker.Pattern), lang.Grammar())
 		if err != nil {
-			return Analyzer{}, err
+			return Analyzer{}, YamlAnalyzer{}, err
 		}
 		patterns = append(patterns, pattern)
 	} else if len(checker.Patterns) > 0 {
 		for _, patternStr := range checker.Patterns {
 			pattern, err := sitter.NewQuery([]byte(patternStr), lang.Grammar())
 			if err != nil {
-				return Analyzer{}, err
+				return Analyzer{}, YamlAnalyzer{}, err
 			}
 			patterns = append(patterns, pattern)
 		}
 	} else {
-		return Analyzer{}, fmt.Errorf("no pattern provided in checker '%s'", checker.Code)
+		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no pattern provided in checker '%s'", checker.Code)
 	}
 
 	if checker.Pattern != "" && len(checker.Patterns) > 0 {
-		return Analyzer{}, fmt.Errorf("only one of 'pattern' or 'patterns' can be provided in a checker definition")
+		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("only one of 'pattern' or 'patterns' can be provided in a checker definition")
 	}
 
 	// include and exclude patterns
@@ -134,7 +134,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 		for _, exclude := range checker.Exclude {
 			g, err := glob.Compile(exclude)
 			if err != nil {
-				return Analyzer{}, err
+				return Analyzer{}, YamlAnalyzer{}, err
 			}
 			pathFilter.ExcludeGlobs = append(pathFilter.ExcludeGlobs, g)
 		}
@@ -142,7 +142,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 		for _, include := range checker.Include {
 			g, err := glob.Compile(include)
 			if err != nil {
-				return Analyzer{}, err
+				return Analyzer{}, YamlAnalyzer{}, err
 			}
 			pathFilter.IncludeGlobs = append(pathFilter.IncludeGlobs, g)
 		}
@@ -156,7 +156,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 				queryStr := filter.PatternInside + " @" + filterPatternKey
 				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
 				if err != nil {
-					return Analyzer{}, err
+					return Analyzer{}, YamlAnalyzer{}, err
 				}
 
 				filters = append(filters, NodeFilter{
@@ -169,7 +169,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 				queryStr := filter.PatternNotInside + " @" + filterPatternKey
 				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
 				if err != nil {
-					return Analyzer{}, err
+					return Analyzer{}, YamlAnalyzer{}, err
 				}
 
 				filters = append(filters, NodeFilter{
@@ -203,7 +203,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, error) {
 	}
 
 	patternChecker.Run = RunYamlAnalyzer(yamlAnalyzer)
-	return *patternChecker, nil
+	return *patternChecker, *yamlAnalyzer, nil
 }
 
 func RunYamlAnalyzer(YamlAnalyzer *YamlAnalyzer) func(pass *Pass) (any, error) {
