@@ -3,7 +3,6 @@ package analysis
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -143,48 +142,6 @@ func getExpectedIssuesInDir(testDir string, fileFilter func(string) bool) (map[s
 	}
 
 	return expectedIssues, nil
-}
-
-func discoverYamlAnalyzers(testDir string) ([]*Analyzer, error) {
-	var yamlAnalyzers []*Analyzer
-
-	err := filepath.Walk(testDir, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		fileExt := filepath.Ext(path)
-		isYamlFile := fileExt == ".yaml" || fileExt == ".yml"
-		if !isYamlFile {
-			return nil
-		}
-
-		// Check if there's a corresponding test file
-		baseName := strings.TrimSuffix(path, fileExt)
-
-		// Try to read the YAML checker
-		analyzer, _, err := ReadFromFile(path)
-		if err != nil {
-			// Skip files that aren't valid checkers
-			return nil
-		}
-
-		// Check if corresponding test file exists
-		testFile := baseName + ".test" + GetExtFromLanguage(analyzer.Language)
-		if _, err := os.Stat(testFile); os.IsNotExist(err) {
-			// Skip if no test file exists
-			return nil
-		}
-
-		yamlAnalyzers = append(yamlAnalyzers, &analyzer)
-		return nil
-	})
-
-	return yamlAnalyzers, err
 }
 
 func getExpectedIssuesInFile(file *ParseResult, query *sitter.Query) map[int][]string {

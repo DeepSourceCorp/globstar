@@ -250,7 +250,7 @@ func (ana *YamlAnalyzer) runParentFilters(source []byte, capture *sitter.Node) b
 		nodeMatched := false
 
 		for parent := capture.Parent(); parent != nil; parent = parent.Parent() {
-			if ana.filterMatchesParent(&filter, parent, source) {
+			if filterMatchesParent(&filter, parent, source) {
 				nodeMatched = true
 				if !shouldMatch {
 					return false
@@ -268,7 +268,7 @@ func (ana *YamlAnalyzer) runParentFilters(source []byte, capture *sitter.Node) b
 	return true
 }
 
-func (ana *YamlAnalyzer) filterMatchesParent(filter *NodeFilter, parent *sitter.Node, source []byte) bool {
+func filterMatchesParent(filter *NodeFilter, parent *sitter.Node, source []byte) bool {
 	qc := sitter.NewQueryCursor()
 	defer qc.Close()
 
