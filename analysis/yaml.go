@@ -81,7 +81,7 @@ func ReadFromFile(filePath string) (Analyzer, YamlAnalyzer, error) {
 }
 
 // ReadFromBytes reads a pattern checker definition from bytes array
-func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer,error) {
+func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	var checker Yaml
 	if err := yaml.Unmarshal(fileContent, &checker); err != nil {
 		return Analyzer{}, YamlAnalyzer{}, err
