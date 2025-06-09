@@ -47,27 +47,37 @@ type PathFilter struct {
 	IncludeGlobs []glob.Glob
 }
 
+type AnalysisFunction struct {
+	Name       string              `yaml:"name"`
+	Parameters map[string][]string `yaml:"parameters"`
+	Run        func(args ...interface{}) (Analyzer, error)
+}
+
 type Yaml struct {
-	Language    string          `yaml:"language"`
-	Code        string          `yaml:"name"`
-	Message     string          `yaml:"message"`
-	Category    Category        `yaml:"category"`
-	Severity    Severity        `yaml:"severity"`
-	Pattern     string          `yaml:"pattern"`
-	Patterns    []string        `yaml:"patterns"`
-	Description string          `yaml:"description"`
-	Exclude     []string        `yaml:"exclude,omitempty"`
-	Include     []string        `yaml:"include,omitempty"`
-	Filters     []filterYaml    `yaml:"filters,omitempty"`
-	PathFilter  *pathFilterYaml `yaml:"path_filter,omitempty"`
+	Language         string           `yaml:"language"`
+	Code             string           `yaml:"name"`
+	Message          string           `yaml:"message"`
+	Category         Category         `yaml:"category"`
+	Severity         Severity         `yaml:"severity"`
+	Pattern          string           `yaml:"pattern"`
+	Patterns         []string         `yaml:"patterns"`
+	Description      string           `yaml:"description"`
+	Exclude          []string         `yaml:"exclude,omitempty"`
+	Include          []string         `yaml:"include,omitempty"`
+	Filters          []filterYaml     `yaml:"filters,omitempty"`
+	PathFilter       *pathFilterYaml  `yaml:"path_filter,omitempty"`
+	Sink             []string         `yaml:"sink,omitempty"`
+	Source           []string         `yaml:"source,omitempty"`
+	AnalysisFunction AnalysisFunction `yaml:"analysisFunction,omitempty"`
 }
 
 type YamlAnalyzer struct {
-	Analyzer   Analyzer
-	Patterns   []*sitter.Query
-	NodeFilter []NodeFilter
-	PathFilter *PathFilter
-	Message    string
+	Analyzer         Analyzer
+	Patterns         []*sitter.Query
+	NodeFilter       []NodeFilter
+	PathFilter       *PathFilter
+	Message          string
+	AnalysisFunction AnalysisFunction
 }
 
 // ReadFromFile reads a pattern checker definition from a YAML config file.
@@ -85,6 +95,16 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	var checker Yaml
 	if err := yaml.Unmarshal(fileContent, &checker); err != nil {
 		return Analyzer{}, YamlAnalyzer{}, err
+	}
+
+	analysisFunction := checker.AnalysisFunction
+
+	if analysisFunction.Name != "" {
+		analysisFunction.Parameters = map[string][]string{
+			"sources": checker.Source,
+			"sinks":   checker.Sink,
+		}
+		InitializeAnalysisFunction(analysisFunction)
 	}
 
 	lang := DecodeLanguage(checker.Language)
@@ -196,10 +216,11 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 			Category:    checker.Category,
 			Severity:    checker.Severity,
 		},
-		Patterns:   patterns,
-		NodeFilter: filters,
-		PathFilter: pathFilter,
-		Message:    checker.Message,
+		Patterns:         patterns,
+		NodeFilter:       filters,
+		PathFilter:       pathFilter,
+		Message:          checker.Message,
+		AnalysisFunction: checker.AnalysisFunction,
 	}
 
 	patternChecker.Run = RunYamlAnalyzer(yamlAnalyzer)
@@ -291,3 +312,6 @@ func filterMatchesParent(filter *NodeFilter, parent *sitter.Node, source []byte)
 
 	return false
 }
+
+// TODO:  Add a new field inside the Yaml Strcut, that takes in Function field
+//  Introduction of a new Struct for storing analysisFunction

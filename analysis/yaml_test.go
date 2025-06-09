@@ -74,3 +74,14 @@ func TestNodeFilterWithTests(t *testing.T) {
 	t.Logf("Log: %s", log)
 	assert.True(t, passed)
 }
+
+func TestAnalysisFunction(t *testing.T) {
+	path := "./testdata/mock-analysis-function.yml"
+	ana, yamlAna, err := ReadFromFile(path)
+	require.NoError(t, err, "Failed to read YAML data")
+	assert.Equal(t, ana.Name, "run_taint_analysis")
+	assert.Equal(t, yamlAna.AnalysisFunction.Name, "taint")
+	assert.Equal(t, len(yamlAna.AnalysisFunction.Parameters["sources"]), 1)
+	assert.Equal(t, len(yamlAna.AnalysisFunction.Parameters["sinks"]), 1)
+	assert.Equal(t, yamlAna.AnalysisFunction.Name, "taint")
+}
