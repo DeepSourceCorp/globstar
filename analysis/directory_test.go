@@ -16,8 +16,8 @@ func TestInitializeAnalysisFunction(t *testing.T) {
 		},
 	})
 
-	inbuiltTaintAnalyzer, err := fn.Run([]string{"source1", "source2"}, []string{"sink1", "sink2"})
-	assert.NoError(t, err)
+	inbuiltTaintAnalyzer := fn.Run([]string{"source1", "source2"}, []string{"sink1", "sink2"})
+	// assert.NoError(t, err)
 
 	assert.Equal(t, inbuiltTaintAnalyzer.Name, "taint_analyzer")
 

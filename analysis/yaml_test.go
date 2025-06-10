@@ -82,6 +82,7 @@ func TestAnalysisFunction(t *testing.T) {
 	assert.Equal(t, ana.Name, "run_taint_analysis")
 	assert.Equal(t, yamlAna.AnalysisFunction.Name, "taint")
 	assert.Equal(t, len(yamlAna.AnalysisFunction.Parameters["sources"]), 1)
+	t.Logf("%v", yamlAna.AnalysisFunction.Parameters["sources"])
 	assert.Equal(t, len(yamlAna.AnalysisFunction.Parameters["sinks"]), 1)
 	assert.Equal(t, yamlAna.AnalysisFunction.Name, "taint")
 }

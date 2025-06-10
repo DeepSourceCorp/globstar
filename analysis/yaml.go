@@ -50,7 +50,7 @@ type PathFilter struct {
 type AnalysisFunction struct {
 	Name       string              `yaml:"name"`
 	Parameters map[string][]string `yaml:"parameters"`
-	Run        func(args ...interface{}) (Analyzer, error)
+	Run        func(args ...interface{}) Analyzer
 }
 
 type Yaml struct {
