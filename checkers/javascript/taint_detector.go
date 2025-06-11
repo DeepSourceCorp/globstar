@@ -17,9 +17,37 @@ import (
 // 	Run:         detectTaint([]string{"sink"}, []string{"source"}),
 // }
 
-func detectTaint(sink []string, source []string) func(pass *analysis.Pass) (any, error) {
+// var TaintDetector = &analysis.Analyzer{
+// 	Name:        "taint_detector",
+// 	Language:    analysis.LangJs,
+// 	Description: "Taint detector",
+// 	Category:    analysis.CategorySecurity,
+// 	Severity:    analysis.SeverityCritical,
+// 	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
+// 	Run: detectTaint([]string{`
+// 	(expression_statement
+// 		(assignment_expression
+// 		  	right: (call_expression
+//              			function: (identifier) @sourceName 
+//                			  ))(#eq? @sourceName "getUserInput"))`}, []string{`
+// 		(call_expression
+//             function: (identifier) @sinkName
+//               (#eq? @sinkName "perform_db_operation"))`}),
+// }
+
+func detectTaint(source []string, sink []string) func(pass *analysis.Pass) (any, error) {
 
 	return func(pass *analysis.Pass) (interface{}, error) {
+		dfg := pass.ResultOf[DataFlowAnalyzer].(*DataFlowGraph)
+		if dfg == nil {
+			return nil, fmt.Errorf("no data flow graph found")
+		}
+		scopeTree := dfg.ScopeTree
+		if scopeTree == nil {
+			fmt.Println("no scope tree found")
+			return nil, fmt.Errorf("no scope tree found")
+		}
+
 		var sinkPatterns []*sitter.Query
 		for _, sink := range sink {
 			sinkPattern, err := sitter.NewQuery([]byte(sink), analysis.LangJs.Grammar())
@@ -82,6 +110,78 @@ func detectTaint(sink []string, source []string) func(pass *analysis.Pass) (any,
 		if len(sinkNodes) == 0 || len(sourceNodes) == 0 {
 			return nil, fmt.Errorf("no sink or source pattern matched")
 		}
+
+		// Get the data flow graph to track variable relationships
+
+		// Track source variables that flow into sinks
+		// var taintedFlows []struct {
+		// 	source *sitter.Node
+		// 	sink   *sitter.Node
+		// }
+
+		// For each source node, get its variable
+		// for _, sourceNode := range sourceNodes {
+		// 	// Get the assignment node (parent.parent.parent of source capture)
+		// 	assignNode := sourceNode.Parent().Parent().Parent()
+		// 	if assignNode == nil {
+		// 		continue
+		// 	}
+
+		// 	// Get the identifier node and its scope
+		// 	idNode := assignNode.ChildByFieldName("left")
+		// 	if idNode == nil {
+		// 		continue
+		// 	}
+
+		// 	idScope := scopeTree.GetScope(idNode)
+		// 	if idScope == nil {
+		// 		continue
+		// 	}
+
+		// 	// Look up the variable for the identifier
+		// 	sourceVar := idScope.Lookup(idNode.Content(pass.FileContext.Source))
+		// 	if sourceVar == nil {
+		// 		continue
+		// 	}
+
+		// 	// For each sink, check if it uses the source variable
+		// 	for _, sinkNode := range sinkNodes {
+		// 		// Get the call expression node
+		// 		callNode, err := analysis.GetRootNode(sinkNode)
+		// 		if err != nil {
+		// 			continue
+		// 		}
+
+		// 		// Get the argument node and its variable
+		// 		argsNode := callNode.ChildByFieldName("arguments")
+		// 		if argsNode == nil || argsNode.NamedChildCount() == 0 {
+		// 			continue
+		// 		}
+		// 		argNode := argsNode.NamedChild(0)
+
+		// 		argScope := scopeTree.GetScope(callNode)
+		// 		if argScope == nil {
+		// 			continue
+		// 		}
+
+		// 		argVar := argScope.Lookup(argNode.Content(pass.FileContext.Source))
+		// 		if argVar == nil {
+		// 			continue
+		// 		}
+
+		// 		// If the argument variable matches the source variable, we found a tainted flow
+		// 		if argVar == sourceVar {
+		// 			taintedFlows = append(taintedFlows, struct {
+		// 				source *sitter.Node
+		// 				sink   *sitter.Node
+		// 			}{sourceNode, sinkNode})
+		// 		}
+		// 	}
+		// }
+
+		// for _, tainted := range taintedFlows {
+		// 	pass.Report(pass, tainted.sink, "")
+		// }
 
 		return map[string]interface{}{
 			"sinkNodes":      sinkNodes,
