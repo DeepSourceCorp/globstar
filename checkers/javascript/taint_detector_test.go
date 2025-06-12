@@ -6,7 +6,6 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"globstar.dev/analysis"
-	ana "globstar.dev/analysis"
 )
 
 func TestPatternDetection(t *testing.T) {
@@ -43,7 +42,7 @@ perform_db_operation(userInput)
               (#eq? @sinkName "perform_db_operation"))`}),
 	}
 	parseRes := parseJsCode(t, []byte(source))
-	pass := &ana.Pass{
+	pass := &analysis.Pass{
 		FileContext: parseRes,
 		Analyzer:    TaintDetector,
 	}
@@ -61,7 +60,7 @@ perform_db_operation(userInput)
 	assert.Len(t, patterns.(map[string]interface{})["sinkPatterns"], 1)
 	assert.Len(t, patterns.(map[string]interface{})["sourcePatterns"], 1)
 
-	var sourceVar *ana.Variable
+	var sourceVar *analysis.Variable
 
 	for _, node := range patterns.(map[string]interface{})["sourceNodes"].([]*sitter.Node) {
 		parentNode := node.Parent().Parent().Parent()
@@ -76,7 +75,7 @@ perform_db_operation(userInput)
 	}
 
 	for _, node := range patterns.(map[string]interface{})["sinkNodes"].([]*sitter.Node) {
-		parentNode, err := ana.GetRootNode(node)
+		parentNode, err := analysis.GetRootNode(node)
 		assert.NoError(t, err)
 		arg := parentNode.ChildByFieldName("arguments").NamedChild(0)
 

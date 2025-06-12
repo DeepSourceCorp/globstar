@@ -1,5 +1,9 @@
 package analysis
 
+type TaintAnalyzer interface {
+	GetAnalyzer(sources, sinks []string) Analyzer
+}
+
 func TaintRun(args ...interface{}) Analyzer {
 	sources := args[0].([]string)
 	sinks := args[1].([]string)
@@ -9,9 +13,7 @@ func TaintRun(args ...interface{}) Analyzer {
 }
 
 func NewTaintAnalyzer(sources, sinks []string) Analyzer {
-	return Analyzer{
-		Name: "taint_analyzer",
-	}
+	var taintAnalyzer TaintAnalyzer
+	analyzer := taintAnalyzer.GetAnalyzer(sources, sinks)
+	return analyzer
 }
-
-

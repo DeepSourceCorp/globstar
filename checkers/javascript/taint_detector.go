@@ -7,15 +7,17 @@ import (
 	"globstar.dev/analysis"
 )
 
-// var TaintDetector = &analysis.Analyzer{
-// 	Name:        "taint_detector",
-// 	Language:    analysis.LangJs,
-// 	Description: "Taint detector",
-// 	Category:    analysis.CategorySecurity,
-// 	Severity:    analysis.SeverityCritical,
-// 	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
-// 	Run:         detectTaint([]string{"sink"}, []string{"source"}),
-// }
+func GetAnalyzer(sources, sinks []string) analysis.Analyzer {
+	return analysis.Analyzer{
+		Name:        "taint_detector",
+		Language:    analysis.LangJs,
+		Description: "Taint detector",
+		Category:    analysis.CategorySecurity,
+		Severity:    analysis.SeverityCritical,
+		Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
+		Run:         detectTaint(sources, sinks),
+	}
+}
 
 // var TaintDetector = &analysis.Analyzer{
 // 	Name:        "taint_detector",
@@ -28,7 +30,7 @@ import (
 // 	(expression_statement
 // 		(assignment_expression
 // 		  	right: (call_expression
-//              			function: (identifier) @sourceName 
+//              			function: (identifier) @sourceName
 //                			  ))(#eq? @sourceName "getUserInput"))`}, []string{`
 // 		(call_expression
 //             function: (identifier) @sinkName
