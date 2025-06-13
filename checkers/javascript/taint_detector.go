@@ -19,23 +19,23 @@ func GetAnalyzer(sources, sinks []string) analysis.Analyzer {
 	}
 }
 
-// var TaintDetector = &analysis.Analyzer{
-// 	Name:        "taint_detector",
-// 	Language:    analysis.LangJs,
-// 	Description: "Taint detector",
-// 	Category:    analysis.CategorySecurity,
-// 	Severity:    analysis.SeverityCritical,
-// 	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
-// 	Run: detectTaint([]string{`
-// 	(expression_statement
-// 		(assignment_expression
-// 		  	right: (call_expression
-//              			function: (identifier) @sourceName
-//                			  ))(#eq? @sourceName "getUserInput"))`}, []string{`
-// 		(call_expression
-//             function: (identifier) @sinkName
-//               (#eq? @sinkName "perform_db_operation"))`}),
-// }
+var TaintDetector = &analysis.Analyzer{
+	Name:        "taint_detector",
+	Language:    analysis.LangJs,
+	Description: "Taint detector",
+	Category:    analysis.CategorySecurity,
+	Severity:    analysis.SeverityCritical,
+	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
+	Run: detectTaint([]string{`
+	(expression_statement
+		(assignment_expression
+		  	right: (call_expression
+             			function: (identifier) @sourceName
+               			  ))(#eq? @sourceName "getUserInput"))`}, []string{`
+		(call_expression
+            function: (identifier) @sinkName
+              (#eq? @sinkName "perform_db_operation"))`}),
+}
 
 func detectTaint(source []string, sink []string) func(pass *analysis.Pass) (any, error) {
 
