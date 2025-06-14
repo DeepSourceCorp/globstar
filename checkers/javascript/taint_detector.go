@@ -7,34 +7,16 @@ import (
 	"globstar.dev/analysis"
 )
 
-func GetAnalyzer(sources, sinks []string) analysis.Analyzer {
-	return analysis.Analyzer{
+func GetTaintFunction(source, sink []string) *analysis.Analyzer {
+	return &analysis.Analyzer{
 		Name:        "taint_detector",
 		Language:    analysis.LangJs,
 		Description: "Taint detector",
 		Category:    analysis.CategorySecurity,
 		Severity:    analysis.SeverityCritical,
 		Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
-		Run:         detectTaint(sources, sinks),
+		Run:         detectTaint(source, sink),
 	}
-}
-
-var TaintDetector = &analysis.Analyzer{
-	Name:        "taint_detector",
-	Language:    analysis.LangJs,
-	Description: "Taint detector",
-	Category:    analysis.CategorySecurity,
-	Severity:    analysis.SeverityCritical,
-	Requires:    []*analysis.Analyzer{DataFlowAnalyzer},
-	Run: detectTaint([]string{`
-	(expression_statement
-		(assignment_expression
-		  	right: (call_expression
-             			function: (identifier) @sourceName
-               			  ))(#eq? @sourceName "getUserInput"))`}, []string{`
-		(call_expression
-            function: (identifier) @sinkName
-              (#eq? @sinkName "perform_db_operation"))`}),
 }
 
 func detectTaint(source []string, sink []string) func(pass *analysis.Pass) (any, error) {
@@ -113,15 +95,16 @@ func detectTaint(source []string, sink []string) func(pass *analysis.Pass) (any,
 			return nil, fmt.Errorf("no sink or source pattern matched")
 		}
 
-		// Get the data flow graph to track variable relationships
+		pass.Report(pass, sinkNodes[0], "sink node found")
+		// // Get the data flow graph to track variable relationships
 
-		// Track source variables that flow into sinks
+		// // Track source variables that flow into sinks
 		// var taintedFlows []struct {
 		// 	source *sitter.Node
 		// 	sink   *sitter.Node
 		// }
 
-		// For each source node, get its variable
+		// // For each source node, get its variable
 		// for _, sourceNode := range sourceNodes {
 		// 	// Get the assignment node (parent.parent.parent of source capture)
 		// 	assignNode := sourceNode.Parent().Parent().Parent()

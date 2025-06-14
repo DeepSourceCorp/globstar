@@ -1,19 +1,16 @@
 package analysis
 
-type TaintAnalyzer interface {
-	GetAnalyzer(sources, sinks []string) Analyzer
+func TaintRun(args ...interface{}) func(*Pass) (any, error) {
+	return func(pass *Pass) (any, error) {
+		sources := args[0].([]string)
+		sinks := args[1].([]string)
+
+		return NewTaintAnalyzer(sources, sinks), nil
+	}
 }
 
-func TaintRun(args ...interface{}) Analyzer {
-	sources := args[0].([]string)
-	sinks := args[1].([]string)
+func NewTaintAnalyzer(sources, sinks []string) *Analyzer {
+	analyzer := &Analyzer{}
 
-	analyzer := NewTaintAnalyzer(sources, sinks)
-	return analyzer
-}
-
-func NewTaintAnalyzer(sources, sinks []string) Analyzer {
-	var taintAnalyzer TaintAnalyzer
-	analyzer := taintAnalyzer.GetAnalyzer(sources, sinks)
 	return analyzer
 }
