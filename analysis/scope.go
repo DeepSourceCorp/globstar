@@ -147,9 +147,9 @@ func buildScopeTree(
 	if builder.NodeCreatesScope(node) {
 		nextScope = NewScope(scope)
 		scopeOfNode[node] = nextScope
-		scope.AstNode = node
 		if scope != nil {
 			scope.Children = append(scope.Children, nextScope)
+			scope.AstNode = node
 		} else {
 			scope = nextScope // root
 		}

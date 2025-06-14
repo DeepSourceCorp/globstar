@@ -60,7 +60,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 
 	scopeResult, err := buildScopeTree(pass)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build the scope tree \n")
+		return nil, fmt.Errorf("failed to build the scope tree: %v", err)
 	}
 
 	scopeTree := scopeResult.(*analysis.ScopeTree)

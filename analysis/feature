@@ -1,0 +1,62 @@
+type AnalysisFunction struct {
+	Name 	  string
+	Parameters []reflect.Type
+	Run func(args ...interface{}) (Analyzer, error)
+}
+
+---
+functions/run_taint_analysis.go
+---
+TaintAnalysisFunction := AnalysisFunction{
+	Name: "taint",
+	Parameters: []reflect.Type{
+		reflect.TypeOf([]string{}), // sources
+		reflect.TypeOf([]string{}), // sinks
+	},
+	Description: "Runs a taint analysis on the provided function and its parameters.",
+	Run: func(args ...interface{}) (Analyzer, error) {
+		sources := args[0].([]string)
+		sinks := args[1].([]string)
+
+		analyzer := NewTaintAnalyzer(sources, sinks)
+		return analyzer, nil
+	}
+}
+
+func NewTaintAnalyzer(sources, sinks []string) Analyzer {
+	return &TaintAnalyzer{
+		Sources: sources,
+		Sinks:   sinks,
+	}
+}
+
+---
+directory.go
+---
+functions := []AnalysisFunction{
+	TaintAnalysisFunction,
+}
+
+for _, function := range functions {
+	analyzer, err := function.Run(function.Parameters...)
+	analyzers = append(analyzers, analyzer)
+}
+
+
+
+---
+name: "run_taint_analysis"
+language: go
+description: "Runs a taint analysis on the provided function and its parameters."
+analysisFunction:
+	name: taint
+	parameters:
+		sources:
+			- (query)
+		sinks:
+			- (
+	(callexpression method @methodname (parameterList))
+	#match @methodname "get_user_input"
+	)
+		- (function (parameterList))
+		- (function (parameterList))

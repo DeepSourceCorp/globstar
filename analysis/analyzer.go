@@ -208,6 +208,65 @@ func RunAnalyzers(path string, analyzers []*Analyzer, fileFilter func(string) bo
 	return raisedIssues, nil
 }
 
+func RunAnalysisFunction(path string, analyzers []*Analyzer, fileFilter func(string) bool) ([]*Issue, error) {
+	raisedIssues := []*Issue{}
+	langAnalyzerMap := make(map[Language][]*Analyzer)
+
+	for _, analyzer := range analyzers {
+		langAnalyzerMap[analyzer.Language] = append(langAnalyzerMap[analyzer.Language], findAnalyzers(analyzer)...)
+	}
+
+	file, err := ParseFile(path)
+	if err != nil {
+		if err != ErrUnsupportedLanguage {
+			fmt.Println(err)
+		}
+		return raisedIssues, err
+	}
+
+	fileSkipInfo := GatherSkipInfo(file)
+
+	reportFunc := func(pass *Pass, node *sitter.Node, message string) {
+		raisedIssue := &Issue{
+			Id:       &pass.Analyzer.Name,
+			Node:     node,
+			Message:  message,
+			Filepath: pass.FileContext.FilePath,
+		}
+
+		skipLines := fileSkipInfo
+		if !ContainsSkipcq(skipLines, raisedIssue) {
+			raisedIssues = append(raisedIssues, raisedIssue)
+		}
+	}
+
+	for _, analyzers := range langAnalyzerMap {
+		pass := &Pass{
+			FileContext: file,
+			Report:      reportFunc,
+			ResultOf:    make(map[*Analyzer]any),
+			ResultCache: make(map[*Analyzer]map[*ParseResult]any),
+		}
+
+		for _, analyzer := range analyzers {
+			pass.Analyzer = analyzer
+
+			result, err := analyzer.Run(pass)
+			if err != nil {
+				return raisedIssues, err
+			}
+
+			pass.ResultOf[analyzer] = result
+			if _, ok := pass.ResultCache[analyzer]; !ok {
+				pass.ResultCache[analyzer] = make(map[*ParseResult]any)
+			}
+			pass.ResultCache[analyzer][file] = result
+		}
+	}
+
+	return raisedIssues, nil
+}
+
 func ReportIssues(issues []*Issue, format string) ([]byte, error) {
 	switch format {
 	case "json":
