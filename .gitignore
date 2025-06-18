@@ -50,3 +50,4 @@ dist/
 .globstar/
 checkers/registry.go
 .idea/
+.vscode/
