@@ -8,7 +8,7 @@ import (
 	ana "globstar.dev/analysis"
 )
 
-func parseJsCode(t *testing.T, source []byte) *ana.ParseResult {
+func ParseJsCode(t *testing.T, source []byte) *ana.ParseResult {
 	pass, err := ana.Parse("", source, ana.LangJs, ana.LangJs.Grammar())
 	require.NoError(t, err)
 
@@ -144,7 +144,7 @@ func TestDataFlowAnalysis(t *testing.T) {
 		f(x)
 		`
 
-		parseResult := parseJsCode(t, []byte(source))
+		parseResult := ParseJsCode(t, []byte(source))
 		pass := &ana.Pass{
 			Analyzer:    DataFlowAnalyzer,
 			FileContext: parseResult,
@@ -187,7 +187,7 @@ func TestClassDataFlow(t *testing.T) {
 
 		`
 
-	parseResult := parseJsCode(t, []byte(source))
+	parseResult := ParseJsCode(t, []byte(source))
 	pass := &ana.Pass{
 		Analyzer:    DataFlowAnalyzer,
 		FileContext: parseResult,
