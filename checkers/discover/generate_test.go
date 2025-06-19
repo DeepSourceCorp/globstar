@@ -2,6 +2,8 @@ package discover
 
 import (
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestGenerateAnalyzerRegistry(t *testing.T) {
@@ -17,6 +19,7 @@ func TestGenerateAnalyzerRegistry(t *testing.T) {
 
 import (
 	"globstar.dev/analysis"
+	"globstar.dev/customanalyzer/checkers"
 )
 
 var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{}`,
@@ -28,6 +31,7 @@ var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{}`,
 
 import (
 	"globstar.dev/analysis"
+	"globstar.dev/customanalyzer/checkers"
 )
 
 var customCheckers []*analysis.Analyzer = []*analysis.Analyzer{
@@ -53,7 +57,7 @@ func TestGenerateBuiltinCheckerRegistry(t *testing.T) {
 	}{
 		{
 			name:       "empty checkers",
-			goCheckers: map[string][]string{},
+			goCheckers: map[string][]string{"javascript": []string{}, "python": []string{}},
 			want: `// AUTOMATICALLY GENERATED: DO NOT EDIT
 
 package checkers
@@ -64,18 +68,7 @@ import (
 	goAnalysis "globstar.dev/analysis"
 )
 
-var AnalyzerRegistry = []Analyzer{
-	{
-		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{
-		},
-	},
-	{
-		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{
-		},
-	},
-}
+var AnalyzerRegistry = []Analyzer{}
 `,
 		},
 		{
@@ -98,16 +91,11 @@ import (
 
 var AnalyzerRegistry = []Analyzer{
 	{
-		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{
+		TestDir:	"javascript/testdata", // relative to the repository root
+		Analyzers:	[]*goAnalysis.Analyzer{
 			javascript.NoDoubleEq,
 			javascript.SQLInjection,
 
-		},
-	},
-	{
-		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{
 		},
 	},
 }
@@ -133,13 +121,8 @@ import (
 
 var AnalyzerRegistry = []Analyzer{
 	{
-		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{
-		},
-	},
-	{
-		TestDir: "checkers/python/testdata",
-		Analyzers: []*goAnalysis.Analyzer{
+		TestDir:	"python/testdata", // relative to the repository root
+		Analyzers:	[]*goAnalysis.Analyzer{
 			python.DjangoSQLInjection,
 			python.DjangoCSVWriterInjection,
 
@@ -173,16 +156,17 @@ import (
 
 var AnalyzerRegistry = []Analyzer{
 	{
-		TestDir:   "checkers/javascript/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{
+		TestDir:	"javascript/testdata", // relative to the repository root
+		Analyzers:	[]*goAnalysis.Analyzer{
 			javascript.SQLInjection,
 			javascript.NoDoubleEq,
 
 		},
 	},
+
 	{
-		TestDir: "checkers/python/testdata", // relative to the repository root
-		Analyzers: []*goAnalysis.Analyzer{
+		TestDir:	"python/testdata", // relative to the repository root
+		Analyzers:	[]*goAnalysis.Analyzer{
 			python.DjangoSQLInjection,
 			python.DjangoCSVWriterInjection,
 			python.InsecureUrllibFtp,
@@ -196,8 +180,9 @@ var AnalyzerRegistry = []Analyzer{
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := generateBuiltinCheckerRegistry(tt.goCheckers); got != tt.want {
-				t.Errorf("generateBuiltinAnalyzerRegistry() = \n%v, want \n%v", got, tt.want)
+			got := generateBuiltinCheckerRegistry(tt.goCheckers)
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

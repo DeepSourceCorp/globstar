@@ -73,19 +73,19 @@ const (
 package checkers
 
 import (
-    "globstar.dev/checkers/javascript"
-    "globstar.dev/checkers/python"
-    goAnalysis "globstar.dev/analysis"
+	"globstar.dev/checkers/javascript"
+	"globstar.dev/checkers/python"
+	goAnalysis "globstar.dev/analysis"
 )
 
 var AnalyzerRegistry = []Analyzer{`
 
 	entryTemplate = `
 	{
-        TestDir:   "%[1]s/testdata", // relative to the repository root
-        Analyzers: []*goAnalysis.Analyzer{%[2]s
-        },
-    },
+		TestDir:	"%[1]s/testdata", // relative to the repository root
+		Analyzers:	[]*goAnalysis.Analyzer{%[2]s
+		},
+	},
 `
 
 	footerTemplate = "}\n"
@@ -93,6 +93,7 @@ var AnalyzerRegistry = []Analyzer{`
 
 func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) string {
 	var builder strings.Builder
+
 	// write the header
 	builder.WriteString(headerTemplate)
 
@@ -110,7 +111,6 @@ func generateBuiltinCheckerRegistry(builtinCheckerMap map[string][]string) strin
 	}
 
 	builder.WriteString(footerTemplate)
-
 	return builder.String()
 }
 

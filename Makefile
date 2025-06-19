@@ -55,7 +55,7 @@ release:
 
 .PHONY: test
 test:
-	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic ./cmd/... ./pkg/... ./analysis/...
+	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic $$(go list -e ./... | grep -v -E "(checkers/go|checkers/discover/custom_analyzer_stub)")
 	@go tool cover -func=coverage.out | grep total: | awk '{print "Total coverage: " $$3}'
 
 .PHONY: fmt
