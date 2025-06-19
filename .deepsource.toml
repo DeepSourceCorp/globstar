@@ -16,5 +16,9 @@ name = "go"
   [analyzers.meta]
   import_root = "globstar.dev"
 
+[[analyzers]]
+name = "test-coverage"
+enabled = true
+
 [[transformers]]
 name = "gofmt"

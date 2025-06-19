@@ -55,9 +55,8 @@ release:
 
 .PHONY: test
 test:
-	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic ./cmd/... ./pkg/...
+	@CGO_CFLAGS="-w" go test -coverprofile=coverage.out -covermode=atomic ./cmd/... ./pkg/... ./analysis/...
 	@go tool cover -func=coverage.out | grep total: | awk '{print "Total coverage: " $$3}'
-	@rm coverage.out
 
 .PHONY: fmt
 fmt:
