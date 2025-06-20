@@ -5,9 +5,13 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    permissions: 
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha}}
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -19,3 +23,9 @@ jobs:
 
       - name: test
         run: make testall
+
+      - name: Report result to DeepSource
+        run: |
+          curl https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key go --value-file ./coverage.out --use-oidc
+    
