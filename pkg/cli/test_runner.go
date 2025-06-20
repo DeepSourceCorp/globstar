@@ -9,7 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"globstar.dev/pkg/analysis"
+	ana "globstar.dev/analysis"
+	js "globstar.dev/checkers/javascript"
 )
 
 func runTests(dir string) (bool, error) {
@@ -49,13 +50,13 @@ func findTestCases(dir string) ([]testCase, error) {
 			return nil
 		}
 
-		patternChecker, err := analysis.ReadFromFile(path)
+		patternChecker, _, err := ana.ReadFromFile(path)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "invalid checker '%s': %s\n", d.Name(), err.Error())
 			return nil
 		}
 
-		testFile := strings.TrimSuffix(path, fileExt) + ".test" + analysis.GetExtFromLanguage(patternChecker.Language())
+		testFile := strings.TrimSuffix(path, fileExt) + ".test" + ana.GetExtFromLanguage(patternChecker.Language)
 
 		if _, err := os.Stat(testFile); os.IsNotExist(err) {
 			testFile = ""
@@ -91,28 +92,35 @@ func runTestCases(dir string) (passed bool, err error) {
 
 		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(tc.yamlCheckerPath))
 		// Read and parse the checker definition
-		checker, err := analysis.ReadFromFile(tc.yamlCheckerPath)
+		checker, yamlAnalyzer, err := ana.ReadFromFile(tc.yamlCheckerPath)
 		if err != nil {
 			return false, err
 		}
-
-		// Parse the test file
-		analyzer, err := analysis.FromFile(tc.testFile, []analysis.Checker{})
-		if err != nil {
-			return false, err
-		}
-		analyzer.WorkDir = dir
-		analyzer.YamlCheckers = append(analyzer.YamlCheckers, checker)
-		issues := analyzer.Analyze()
 
 		want, err := findExpectedLines(tc.testFile)
 		if err != nil {
 			return false, err
 		}
 
+		issues, err := ana.RunAnalyzers(tc.testFile, []*ana.Analyzer{&checker}, nil)
+		if err != nil {
+			return false, err
+		}
+
+		var analysisFuncAnalyzer *ana.Analyzer
+		if yamlAnalyzer.AnalysisFunction != nil {
+			analysisFuncAnalyzer = GetAnalysisFunction(&yamlAnalyzer)
+			analysisFunctionIssues, err := ana.RunAnalysisFunction(tc.testFile, []*ana.Analyzer{analysisFuncAnalyzer}, nil)
+			if err != nil {
+				return false, err
+			}
+
+			issues = append(issues, analysisFunctionIssues...)
+		}
+
 		var got []int
 		for _, issue := range issues {
-			got = append(got, int(issue.Range.StartPoint.Row)+1) // 0-indexed to 1-indexed
+			got = append(got, int(issue.Node.Range().StartPoint.Row)+1) // 0-indexed to 1-indexed
 		}
 
 		slices.Sort(got)
@@ -177,4 +185,16 @@ func findExpectedLines(filePath string) ([]int, error) {
 	}
 
 	return expectedLines, nil
+}
+
+func GetAnalysisFunction(yamlAnalyzer *ana.YamlAnalyzer) *ana.Analyzer {
+	analysisFunction := yamlAnalyzer.AnalysisFunction
+
+	switch analysisFunction.Name {
+	case "taint":
+		return js.GetTaintFunction(yamlAnalyzer.AnalysisFunction.Parameters["sources"], yamlAnalyzer.AnalysisFunction.Parameters["sinks"])
+	default:
+		return nil
+	}
+
 }

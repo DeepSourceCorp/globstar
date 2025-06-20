@@ -17,7 +17,8 @@ import (
 	goAnalysis "globstar.dev/analysis"
 	"globstar.dev/checkers"
 	"globstar.dev/checkers/discover"
-	"globstar.dev/pkg/analysis"
+
+	// "globstar.dev/pkg/analysis"
 	"globstar.dev/pkg/config"
 	"globstar.dev/util"
 )
@@ -26,9 +27,9 @@ type Cli struct {
 	// RootDirectory is the target directory to analyze
 	RootDirectory string
 	// Checkers is a list of checkers that are applied to the files in `RootDirectory`
-	Checkers []analysis.Checker
-	Config   *config.Config
-	CmpHash  string
+	// Checkers []analysis.Checker
+	Config  *config.Config
+	CmpHash string
 }
 
 func (c *Cli) loadConfig() error {
@@ -193,7 +194,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					// Track test failures but continue running all tests
 					var testsFailed bool
 
-					yamlPassed, err := runTests(analysisDir)
+					yamlPassed, err := runTestCases(analysisDir)
 					if err != nil {
 						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())
@@ -201,6 +202,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					}
 					if !yamlPassed {
 						testsFailed = true
+						return fmt.Errorf("YAML tests failed ")
 					}
 
 					goPassed := true
@@ -294,46 +296,46 @@ func (c *Cli) buildCustomGoCheckers() error {
 	return nil
 }
 
-func (c *Cli) CheckFile(
-	checkersMap map[analysis.Language][]analysis.Checker,
-	patternCheckers map[analysis.Language][]analysis.YamlChecker,
-	path string,
-) ([]*analysis.Issue, error) {
-	lang := analysis.LanguageFromFilePath(path)
-	checkers := checkersMap[lang]
-	if checkers == nil && patternCheckers == nil {
-		// no checkers are registered for this language
-		return nil, nil
-	}
+// func (c *Cli) CheckFile(
+// 	checkersMap map[goAnalysis.Language][]goAnalysis.Analyzer,
+// 	patternCheckers map[goAnalysis.Language][]goAnalysis.Analyzer,
+// 	path string,
+// ) ([]*goAnalysis.Issue, error) {
+// 	lang := goAnalysis.LanguageFromFilePath(path)
+// 	checkers := checkersMap[lang]
+// 	if checkers == nil && patternCheckers == nil {
+// 		// no checkers are registered for this language
+// 		return nil, nil
+// 	}
 
-	analyzer, err := analysis.FromFile(path, checkers)
-	if err != nil {
-		return nil, err
-	}
-	analyzer.WorkDir = c.RootDirectory
+// 	analyzer, err := analysis.FromFile(path, checkers)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	analyzer.WorkDir = c.RootDirectory
 
-	if patternCheckers != nil {
-		analyzer.YamlCheckers = patternCheckers[lang]
-	}
+// 	if patternCheckers != nil {
+// 		analyzer.YamlCheckers = patternCheckers[lang]
+// 	}
 
-	return analyzer.Analyze(), nil
-}
+// 	return analyzer.Analyze(), nil
+// }
 
 type checkResult struct {
-	issues          []*analysis.Issue
+	issues          []*goAnalysis.Issue
 	numFilesChecked int
 }
 
 func (lr *checkResult) GetExitStatus(conf *config.Config) int {
 	for _, issue := range lr.issues {
 		for _, failCategory := range conf.FailWhen.CategoryIn {
-			if issue.Category == failCategory {
+			if issue.Category == goAnalysis.Category(failCategory) {
 				return conf.FailWhen.ExitCode
 			}
 		}
 
 		for _, failSeverity := range conf.FailWhen.SeverityIn {
-			if issue.Severity == failSeverity {
+			if issue.Severity == goAnalysis.Severity(failSeverity) {
 				return conf.FailWhen.ExitCode
 			}
 		}
@@ -360,7 +362,7 @@ var defaultIgnoreDirs = []string{
 func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	patternCheckers := make(map[analysis.Language][]analysis.YamlChecker)
+	patternCheckers := make(map[goAnalysis.Language][]goAnalysis.Analyzer)
 
 	var goAnalyzers []*goAnalysis.Analyzer
 	if runBuiltinCheckers {
@@ -443,8 +445,8 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			}
 		}
 
-		language := analysis.LanguageFromFilePath(path)
-		if language == analysis.LangUnknown {
+		language := goAnalysis.LanguageFromFilePath(path)
+		if language == goAnalysis.LangUnknown {
 			return nil
 		}
 
@@ -453,20 +455,35 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		// run checker
 		// the first arg is empty, since the format for inbuilt Go-based checkers has changed
 		// TODO: factor it in later
-		issues, err := c.CheckFile(map[analysis.Language][]analysis.Checker{}, patternCheckers, path)
-		if err != nil {
-			// parse error on a single file should not exit the entire analysis process
-			// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
-			// fmt.Fprintf(os.Stderr, "Error parsing file %s: %s\n", path, err)
-			return nil
-		}
+		// nonYamlAnalyzers := []*goAnalysis.Analyzer{}
+		// issues, err := goAnalysis.RunAnalyzers(c.RootDirectory, nonYamlAnalyzers, func(filename string) bool {
+		// 	if c.CmpHash != "" {
+		// 		_, isChanged := changedFileMap[filename]
+		// 		return isChanged
+		// 	}
+		// 	return true
+		// })
 
-		for _, issue := range issues {
-			txt, _ := issue.AsText()
-			log.Error().Msg(string(txt))
+		// if err != nil {
+		// 	// parse error on a single file should not exit the entire analysis process
+		// 	// TODO: logging the below error message is not helpful, as it logs unsupported file types as well
+		// 	// fmt.Fprintf(os.Stderr, "Error parsing file %s: %s\n", path, err)
+		// 	return nil
+		// }
 
-			result.issues = append(result.issues, issue)
-		}
+		// for _, issue := range issues {
+		// 	txt, _ := issue.AsText()
+		// 	log.Error().Msg(string(txt))
+
+		// 	result.issues = append(result.issues, &goAnalysis.Issue{
+		// 		Filepath: issue.Filepath,
+		// 		Message:  issue.Message,
+		// 		Severity: goAnalysis.Severity(issue.Severity),
+		// 		Category: goAnalysis.Category(issue.Category),
+		// 		Node:     issue.Node,
+		// 		Id:       issue.Id,
+		// 	})
+		// }
 
 		return nil
 	})
@@ -494,11 +511,11 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			txt, _ := issue.AsText()
 			log.Error().Msg(string(txt))
 
-			result.issues = append(result.issues, &analysis.Issue{
+			result.issues = append(result.issues, &goAnalysis.Issue{
 				Filepath: issue.Filepath,
 				Message:  issue.Message,
-				Severity: config.Severity(issue.Severity),
-				Category: config.Category(issue.Category),
+				Severity: goAnalysis.Severity(issue.Severity),
+				Category: goAnalysis.Category(issue.Category),
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})
@@ -516,11 +533,11 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 
 		for _, issue := range customGoIssues {
-			result.issues = append(result.issues, &analysis.Issue{
+			result.issues = append(result.issues, &goAnalysis.Issue{
 				Filepath: issue.Filepath,
 				Message:  issue.Message,
-				Severity: config.Severity(issue.Severity),
-				Category: config.Category(issue.Category),
+				Severity: goAnalysis.Severity(issue.Severity),
+				Category: goAnalysis.Category(issue.Category),
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})

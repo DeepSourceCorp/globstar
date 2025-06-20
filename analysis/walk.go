@@ -1,6 +1,8 @@
 package analysis
 
 import (
+	"fmt"
+
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -93,4 +95,17 @@ func FirstChildOfType(node *sitter.Node, nodeType string) *sitter.Node {
 	}
 
 	return nil
+}
+
+func GetRootNode(node *sitter.Node) (*sitter.Node, error) {
+	current := node
+
+	if current.Parent() == nil {
+		return current, fmt.Errorf("at the top-most level for the node")
+	}
+	for current.Parent() != nil {
+		current = current.Parent()
+	}
+
+	return current, nil
 }
