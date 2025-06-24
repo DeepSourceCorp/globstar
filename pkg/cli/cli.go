@@ -296,31 +296,6 @@ func (c *Cli) buildCustomGoCheckers() error {
 	return nil
 }
 
-// func (c *Cli) CheckFile(
-// 	checkersMap map[goAnalysis.Language][]goAnalysis.Analyzer,
-// 	patternCheckers map[goAnalysis.Language][]goAnalysis.Analyzer,
-// 	path string,
-// ) ([]*goAnalysis.Issue, error) {
-// 	lang := goAnalysis.LanguageFromFilePath(path)
-// 	checkers := checkersMap[lang]
-// 	if checkers == nil && patternCheckers == nil {
-// 		// no checkers are registered for this language
-// 		return nil, nil
-// 	}
-
-// 	analyzer, err := analysis.FromFile(path, checkers)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	analyzer.WorkDir = c.RootDirectory
-
-// 	if patternCheckers != nil {
-// 		analyzer.YamlCheckers = patternCheckers[lang]
-// 	}
-
-// 	return analyzer.Analyze(), nil
-// }
-
 type checkResult struct {
 	issues          []*goAnalysis.Issue
 	numFilesChecked int
