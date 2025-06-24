@@ -96,12 +96,6 @@ func runTestCases(dir string) (passed bool, err error) {
 			return false, err
 		}
 
-		// Parse the test file
-		// analyzer, err := analysis.FromFile(tc.testFile, []analysis.Checker{})
-		// if err != nil {
-		// return false, err
-		// }
-
 		want, err := findExpectedLines(tc.testFile)
 		if err != nil {
 			return false, err

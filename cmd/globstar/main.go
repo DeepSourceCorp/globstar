@@ -16,7 +16,6 @@ func main() {
 
 	cli := cli.Cli{
 		RootDirectory: cwd,
-		// Checkers:      nil, // no custom checker set
 	}
 
 	err = cli.Run()
