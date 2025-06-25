@@ -210,6 +210,13 @@ func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, string, bo
 
 	// if there's a test file in the testDir for which there's no analyzer,
 	// it's most likely a YAML checker test, so skip it
+
+	// yamlAnalyzers, err := discoverYamlAnalyzers(testDir)
+	// if err != nil {
+	// 	return "", "", false, err
+	// }
+	// analyzers = append(analyzers, yamlAnalyzers...)
+
 	likelyTestFiles := []string{}
 	for _, analyzer := range analyzers {
 		likelyTestFiles = append(likelyTestFiles, fmt.Sprintf("%s.test%s", analyzer.Name, GetExtFromLanguage(analyzer.Language)))
