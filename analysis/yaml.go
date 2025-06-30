@@ -18,7 +18,7 @@ import (
 //   - pattern-inside: (call_expression)
 //   - pattern-not-inside: (catch_block)
 //
-// We need a to append a key name at the end of the pattern written by the user.
+// We need to append a key name at the end of the pattern written by the user.
 // This is the key that we will use.
 const filterPatternKey = "__filter__key__"
 
@@ -33,7 +33,7 @@ type pathFilterYaml struct {
 }
 
 // NodeFilter is a filter that can be applied to a PatternChecker to restrict
-// the the nodes that the checker is applied to.
+// the nodes that the checker is applied to.
 // The checker is only applied to nodes that have a parent matching (or not matching) the query.
 type NodeFilter struct {
 	query       *sitter.Query
@@ -63,7 +63,7 @@ type Yaml struct {
 }
 
 type YamlAnalyzer struct {
-	Analyzer   Analyzer
+	Analyzer   *Analyzer
 	Patterns   []*sitter.Query
 	NodeFilter []NodeFilter
 	PathFilter *PathFilter
@@ -180,7 +180,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 		}
 	}
 
-	patternChecker := &Analyzer{
+	patternChecker := Analyzer{
 		Name:        checker.Code,
 		Language:    lang,
 		Description: checker.Description,
@@ -189,13 +189,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	}
 
 	yamlAnalyzer := &YamlAnalyzer{
-		Analyzer: Analyzer{
-			Name:        checker.Code,
-			Language:    lang,
-			Description: checker.Description,
-			Category:    checker.Category,
-			Severity:    checker.Severity,
-		},
+		Analyzer:   &patternChecker,
 		Patterns:   patterns,
 		NodeFilter: filters,
 		PathFilter: pathFilter,
@@ -203,7 +197,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	}
 
 	patternChecker.Run = RunYamlAnalyzer(yamlAnalyzer)
-	return *patternChecker, *yamlAnalyzer, nil
+	return patternChecker, *yamlAnalyzer, nil
 }
 
 func RunYamlAnalyzer(YamlAnalyzer *YamlAnalyzer) func(pass *Pass) (any, error) {

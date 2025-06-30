@@ -1,0 +1,11 @@
+language: javascript
+name: test_fail
+message: "Checker test_fail"
+category: style
+severity: info
+pattern: >
+  (call_expression
+    function: (identifier) @func
+    (#eq? @func "log")
+    arguments: (arguments))@test_fail
+description: "Test checker test_fail"

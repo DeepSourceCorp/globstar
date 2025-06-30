@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v3"
-	goAnalysis "globstar.dev/analysis"
+	"globstar.dev/analysis"
 	"globstar.dev/checkers"
 	"globstar.dev/checkers/discover"
 
@@ -66,9 +66,9 @@ func (c *Cli) runCustomGoAnalyzerTests() (bool, error) {
 	return true, nil
 }
 
-func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
+func (c *Cli) runCustomGoAnalyzers() ([]*analysis.Issue, []string, error) {
 
-	issues := []*goAnalysis.Issue{}
+	issues := []*analysis.Issue{}
 	issuesAsText := []string{}
 
 	if err := c.buildCustomGoCheckers(); err != nil {
@@ -91,13 +91,13 @@ func (c *Cli) runCustomGoAnalyzers() ([]*goAnalysis.Issue, []string, error) {
 	scanner := bufio.NewScanner(strings.NewReader(stderr))
 	for scanner.Scan() {
 		scannedIssue := []byte(scanner.Text())
-		issue, err := goAnalysis.IssueFromJson(scannedIssue)
+		issue, err := analysis.IssueFromJson(scannedIssue)
 		if err != nil {
 			continue
 		}
 		issues = append(issues, issue)
 
-		txt, _ := goAnalysis.IssueAsTextFromJson(scannedIssue)
+		txt, _ := analysis.IssueAsTextFromJson(scannedIssue)
 		issuesAsText = append(issuesAsText, string(txt))
 	}
 
@@ -191,7 +191,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					// Track test failures but continue running all tests
 					var testsFailed bool
 
-					yamlPassed, err := runTestCases(analysisDir)
+					yamlPassed, err := analysis.RunYamlTests(analysisDir)
 					if err != nil {
 						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())
@@ -199,7 +199,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					}
 					if !yamlPassed {
 						testsFailed = true
-						return fmt.Errorf("YAML tests failed ")
+						fmt.Fprintln(os.Stderr, "YAML tests failed.")
 					}
 
 					goPassed := true
@@ -294,20 +294,20 @@ func (c *Cli) buildCustomGoCheckers() error {
 }
 
 type checkResult struct {
-	issues          []*goAnalysis.Issue
+	issues          []*analysis.Issue
 	numFilesChecked int
 }
 
 func (lr *checkResult) GetExitStatus(conf *config.Config) int {
 	for _, issue := range lr.issues {
 		for _, failCategory := range conf.FailWhen.CategoryIn {
-			if issue.Category == goAnalysis.Category(failCategory) {
+			if issue.Category == analysis.Category(failCategory) {
 				return conf.FailWhen.ExitCode
 			}
 		}
 
 		for _, failSeverity := range conf.FailWhen.SeverityIn {
-			if issue.Severity == goAnalysis.Severity(failSeverity) {
+			if issue.Severity == analysis.Severity(failSeverity) {
 				return conf.FailWhen.ExitCode
 			}
 		}
@@ -334,9 +334,9 @@ var defaultIgnoreDirs = []string{
 func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
-	patternCheckers := make(map[goAnalysis.Language][]goAnalysis.Analyzer)
+	patternCheckers := make(map[analysis.Language][]analysis.Analyzer)
 
-	var goAnalyzers []*goAnalysis.Analyzer
+	var goAnalyzers []*analysis.Analyzer
 	if runBuiltinCheckers {
 		goAnalyzers = checkers.LoadGoCheckers()
 		builtInPatternCheckers, err := checkers.LoadBuiltinYamlCheckers()
@@ -417,8 +417,8 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			}
 		}
 
-		language := goAnalysis.LanguageFromFilePath(path)
-		if language == goAnalysis.LangUnknown {
+		language := analysis.LanguageFromFilePath(path)
+		if language == analysis.LangUnknown {
 			return nil
 		}
 
@@ -432,7 +432,7 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 	}
 
 	if len(goAnalyzers) > 0 {
-		goIssues, err := goAnalysis.RunAnalyzers(
+		goIssues, err := analysis.RunAnalyzers(
 			c.RootDirectory,
 			goAnalyzers,
 			func(filename string) bool {
@@ -450,11 +450,11 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 			txt, _ := issue.AsText()
 			log.Error().Msg(string(txt))
 
-			result.issues = append(result.issues, &goAnalysis.Issue{
+			result.issues = append(result.issues, &analysis.Issue{
 				Filepath: issue.Filepath,
 				Message:  issue.Message,
-				Severity: goAnalysis.Severity(issue.Severity),
-				Category: goAnalysis.Category(issue.Category),
+				Severity: analysis.Severity(issue.Severity),
+				Category: analysis.Category(issue.Category),
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})
@@ -472,11 +472,11 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 
 		for _, issue := range customGoIssues {
-			result.issues = append(result.issues, &goAnalysis.Issue{
+			result.issues = append(result.issues, &analysis.Issue{
 				Filepath: issue.Filepath,
 				Message:  issue.Message,
-				Severity: goAnalysis.Severity(issue.Severity),
-				Category: goAnalysis.Category(issue.Category),
+				Severity: analysis.Severity(issue.Severity),
+				Category: analysis.Category(issue.Category),
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})

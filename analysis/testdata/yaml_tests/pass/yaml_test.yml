@@ -1,0 +1,8 @@
+language: javascript
+name: yaml_test
+message: "Checker yaml_test"
+category: style
+severity: info
+pattern: >
+  (lexical_declaration) @yaml_test
+description: "Test checker yaml_test"
