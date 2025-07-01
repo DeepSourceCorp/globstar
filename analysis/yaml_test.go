@@ -362,4 +362,11 @@ func TestReadFromBytes(t *testing.T) {
 
 	assert.Error(t, err)
 
+	src = `language: javascript
+		name:test
+	`
+	_, _, err = ReadFromBytes([]byte(src))
+
+	assert.Error(t, err)
+
 }
