@@ -1,0 +1,7 @@
+language: javascript
+name: no-pattern
+message: "Checking absence of Patterns"
+category: style
+severity: info
+pattern: 
+description: "Test checker no-pattern"

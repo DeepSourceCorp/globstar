@@ -87,17 +87,9 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 		return Analyzer{}, YamlAnalyzer{}, err
 	}
 
-	lang := DecodeLanguage(checker.Language)
-	if lang == LangUnknown {
-		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("unknown language code: '%s'", checker.Language)
-	}
-
-	if checker.Code == "" {
-		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no name provided in checker definition")
-	}
-
-	if checker.Message == "" {
-		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no message provided in checker '%s'", checker.Code)
+	lang, code, message, err := verifyChecker(checker)
+	if err != nil {
+		return Analyzer{}, YamlAnalyzer{}, err
 	}
 
 	var patterns []*sitter.Query
@@ -116,7 +108,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 			patterns = append(patterns, pattern)
 		}
 	} else {
-		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no pattern provided in checker '%s'", checker.Code)
+		return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("no pattern provided in checker '%s'", code)
 	}
 
 	if checker.Pattern != "" && len(checker.Patterns) > 0 {
@@ -134,7 +126,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 		for _, exclude := range checker.Exclude {
 			g, err := glob.Compile(exclude)
 			if err != nil {
-				return Analyzer{}, YamlAnalyzer{}, err
+				return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("invalid exclude pattern in yaml checker")
 			}
 			pathFilter.ExcludeGlobs = append(pathFilter.ExcludeGlobs, g)
 		}
@@ -156,7 +148,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 				queryStr := filter.PatternInside + " @" + filterPatternKey
 				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
 				if err != nil {
-					return Analyzer{}, YamlAnalyzer{}, err
+					return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("invalid tree-sitter pattern inside 'pattern-inside' field")
 				}
 
 				filters = append(filters, NodeFilter{
@@ -169,7 +161,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 				queryStr := filter.PatternNotInside + " @" + filterPatternKey
 				query, err := sitter.NewQuery([]byte(queryStr), lang.Grammar())
 				if err != nil {
-					return Analyzer{}, YamlAnalyzer{}, err
+					return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("invalid tree-sitter pattern inside 'pattern-not-inside' field")
 				}
 
 				filters = append(filters, NodeFilter{
@@ -181,7 +173,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	}
 
 	patternChecker := Analyzer{
-		Name:        checker.Code,
+		Name:        code,
 		Language:    lang,
 		Description: checker.Description,
 		Category:    checker.Category,
@@ -193,7 +185,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 		Patterns:   patterns,
 		NodeFilter: filters,
 		PathFilter: pathFilter,
-		Message:    checker.Message,
+		Message:    message,
 	}
 
 	patternChecker.Run = RunYamlAnalyzer(yamlAnalyzer)
@@ -284,4 +276,20 @@ func filterMatchesParent(filter *NodeFilter, parent *sitter.Node, source []byte)
 	}
 
 	return false
+}
+
+func verifyChecker(checker Yaml) (Language, string, string, error) {
+	lang := DecodeLanguage(checker.Language)
+	code := checker.Code
+	msg := checker.Message
+
+	if lang == LangUnknown {
+		return lang, code, msg, fmt.Errorf("unknown language code: %v", lang)
+	}
+
+	if (code == "") || (msg == "") {
+		return lang, code, msg, fmt.Errorf("missing necessary field in checker definition")
+	}
+
+	return lang, code, msg, nil
 }
