@@ -103,7 +103,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 		for _, patternStr := range checker.Patterns {
 			pattern, err := sitter.NewQuery([]byte(patternStr), lang.Grammar())
 			if err != nil {
-				return Analyzer{}, YamlAnalyzer{}, err
+				return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("invalid tree-sitter query in one of the patterns")
 			}
 			patterns = append(patterns, pattern)
 		}
@@ -134,7 +134,7 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 		for _, include := range checker.Include {
 			g, err := glob.Compile(include)
 			if err != nil {
-				return Analyzer{}, YamlAnalyzer{}, err
+				return Analyzer{}, YamlAnalyzer{}, fmt.Errorf("invalid include pattern in yaml checker")
 			}
 			pathFilter.IncludeGlobs = append(pathFilter.IncludeGlobs, g)
 		}

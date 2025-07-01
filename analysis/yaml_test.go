@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	"fmt"
 	"testing"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -25,6 +24,16 @@ func TestReadFile(t *testing.T) {
 	assert.Equal(t, severity, SeverityInfo)
 	assert.Equal(t, anaYaml.Message, "This is just a mock checker")
 	assert.Equal(t, len(anaYaml.Patterns), 1)
+
+	path = "./testdata/mock-wrong-checker.yml"
+	_, _, err = ReadFromFile(path)
+
+	assert.Error(t, err)
+
+	path = "wrong_path.yml"
+	_, _, err = ReadFromFile(path)
+
+	assert.Error(t, err)
 }
 
 func TestNodeFiltersInside(t *testing.T) {
@@ -205,6 +214,12 @@ func TestPatterns(t *testing.T) {
 			expectError:    true,
 			expectEmpty:    true,
 		},
+		{
+			name:           "InvalidPatterns",
+			path:           "./testdata/yaml_tests/patterns/invalid-patterns.yml",
+			expectError:    true,
+			expectedErrMsg: "invalid tree-sitter query in one of the patterns",
+		},
 	}
 
 	for _, tt := range tests {
@@ -234,39 +249,86 @@ func TestPatterns(t *testing.T) {
 	}
 }
 
-func TestCheckerVerify(t *testing.T) {
-	noLang :=
-		`language: javascri	
+func TestVerifyChecker(t *testing.T) {
+	tests := []struct {
+		name           string
+		yamlContent    string
+		expectError    bool
+		expectedErrMsg string
+		expectedLang   Language
+		expectedCode   string
+		expectedMsg    string
+	}{
+		{
+			name: "UnknownLanguage",
+			yamlContent: `language: javascri	
 name: wrong-pattern
 message: "Checking wrong pattern presence"
 category: style
 severity: info
 pattern: 
-description: "Test checker no-pattern"`
-	var noLangChecker Yaml
-	err := yaml.Unmarshal([]byte(noLang), &noLangChecker)
-
-	assert.NoError(t, err)
-
-	_, _, _, err = verifyChecker(noLangChecker)
-
-	assert.Error(t, err, fmt.Sprintf("unknown language code: %v", noLangChecker.Language))
-
-	missingField :=
-		`language: javascri	
+description: "Test checker no-pattern"`,
+			expectError:    true,
+			expectedErrMsg: "unknown language code",
+		},
+		{
+			name: "MissingNameField",
+			yamlContent: `language: javascript
 message: "Checking wrong pattern presence"
 category: style
 severity: info
 pattern: 
-description: "Test checker no-pattern"`
-	var missingFieldChecker Yaml
-	err = yaml.Unmarshal([]byte(missingField), &missingFieldChecker)
-	assert.NoError(t, err)
+description: "Test checker no-pattern"`,
+			expectError:    true,
+			expectedErrMsg: "missing necessary field",
+		},
+		{
+			name: "MissingMessageField",
+			yamlContent: `language: javascript
+name: test-checker
+category: style
+severity: info
+pattern: 
+description: "Test checker no-message"`,
+			expectError:    true,
+			expectedErrMsg: "missing necessary field",
+		},
+		{
+			name: "ValidChecker",
+			yamlContent: `language: javascript
+name: test-checker
+message: "Test message"
+category: style
+severity: info
+pattern: some-pattern
+description: "Valid test checker"`,
+			expectError:  false,
+			expectedCode: "test-checker",
+			expectedMsg:  "Test message",
+		},
+	}
 
-	_, _, _, err = verifyChecker(missingFieldChecker)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var checker Yaml
+			err := yaml.Unmarshal([]byte(tt.yamlContent), &checker)
+			assert.NoError(t, err)
 
-	assert.Error(t, err, "missing necessary field in checker definition")
+			lang, code, msg, err := verifyChecker(checker)
 
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.expectedErrMsg != "" {
+					assert.Contains(t, err.Error(), tt.expectedErrMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotEqual(t, LangUnknown, lang)
+				assert.Equal(t, tt.expectedCode, code)
+				assert.Equal(t, tt.expectedMsg, msg)
+			}
+		})
+	}
 }
 
 func TestInvalidPath(t *testing.T) {
@@ -274,6 +336,12 @@ func TestInvalidPath(t *testing.T) {
 	_, _, err := ReadFromFile(path)
 
 	assert.EqualError(t, err, "invalid exclude pattern in yaml checker")
+
+	path = "./testdata/yaml_tests/path_filters/malformed_path_include.yml"
+	_, _, err = ReadFromFile(path)
+
+	assert.EqualError(t, err, "invalid include pattern in yaml checker")
+
 }
 
 func TestPathFilters(t *testing.T) {
@@ -284,4 +352,14 @@ func TestPathFilters(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(yamlAna.PathFilter.ExcludeGlobs), 4)
 	assert.Equal(t, len(yamlAna.PathFilter.IncludeGlobs), 1)
+}
+
+func TestReadFromBytes(t *testing.T) {
+	src :=
+		`Name: unmarshal-error`
+
+	_, _, err := ReadFromBytes([]byte(src))
+
+	assert.Error(t, err)
+
 }
