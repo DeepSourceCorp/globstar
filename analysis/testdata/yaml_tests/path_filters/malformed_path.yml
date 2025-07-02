@@ -1,0 +1,24 @@
+language: java
+name: malformed_path
+message: "Testing"
+category: security
+severity: critical
+
+pattern: >
+  (method_invocation
+    object: (identifier) @cipherClass
+    name: (identifier) @instanceMethod
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @str))
+    (#match? @str ".*CBC.*PKCS5Padding")
+    (#eq? @cipherClass "Cipher")
+    (#eq? @instanceMethod "getInstance")) @cbc-padding-oracle
+
+  
+exclude:
+  - "file[.js"
+
+description: >
+  test
+  

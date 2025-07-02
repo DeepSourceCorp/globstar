@@ -1,0 +1,9 @@
+language: javascript
+name: node-filter-checker
+message: "Variable @var found inside function"
+category: style
+severity: info
+pattern: (variable_declarator) @var @node-filter-checker
+filters:
+  - pattern-inside: (function_declaration)
+description: "Check for variables declared inside functions"

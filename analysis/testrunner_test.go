@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	sitter "github.com/smacker/go-tree-sitter"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVerifyIssues(t *testing.T) {
@@ -189,6 +190,30 @@ func TestGetExpectedIssuesInFile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFindYamlTestFiles(t *testing.T) {
+	testDir := "testdata/yaml_tests/pass"
+	tests, err := FindYamlTestFiles(testDir)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(tests))
+	assert.Equal(t, "testdata/yaml_tests/pass/yaml_test.yml", tests[0].YamlCheckerPath)
+	assert.Equal(t, "testdata/yaml_tests/pass/yaml_test.test.js", tests[0].TestFile)
+}
+
+func TestRunYamlTestsPass(t *testing.T) {
+	testDir := "testdata/yaml_tests/pass"
+	passed, err := RunYamlTests(testDir)
+	assert.NoError(t, err)
+	assert.True(t, passed)
+}
+
+func TestRunYamlTestsFail(t *testing.T) {
+	testDir := "testdata/yaml_tests/fail"
+	passed, err := RunYamlTests(testDir)
+	assert.NoError(t, err)
+	assert.False(t, passed)
 }
 
 // Helper function to compare maps

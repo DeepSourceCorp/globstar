@@ -1,0 +1,11 @@
+language: javascript
+name: invalid-pattern
+message: "Checking precense of invalid patterns" 
+category: style
+severity: info
+patterns:
+  - >
+    (call_expression)
+  - >
+    "hello"
+description: "Test checker invalid-pattern"

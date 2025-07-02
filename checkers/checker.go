@@ -7,14 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
-	goAnalysis "globstar.dev/analysis"
-	"globstar.dev/pkg/analysis"
+	"globstar.dev/analysis"
 )
 
 //go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
-func findYamlCheckers(checkersMap map[analysis.Language][]analysis.YamlChecker) func(path string, d fs.DirEntry, err error) error {
+func findYamlCheckers(checkersMap map[analysis.Language][]analysis.Analyzer) func(path string, d fs.DirEntry, err error) error {
 	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -35,36 +34,36 @@ func findYamlCheckers(checkersMap map[analysis.Language][]analysis.YamlChecker) 
 			return nil
 		}
 
-		patternChecker, err := analysis.ReadFromBytes(fileContent)
+		patternChecker, _, err := analysis.ReadFromBytes(fileContent)
 		if err != nil {
 			return fmt.Errorf("invalid checker '%s': %s", d.Name(), err.Error())
 		}
 
-		lang := patternChecker.Language()
+		lang := patternChecker.Language
 		checkersMap[lang] = append(checkersMap[lang], patternChecker)
 		return nil
 	}
 }
 
-func LoadBuiltinYamlCheckers() (map[analysis.Language][]analysis.YamlChecker, error) {
-	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+func LoadBuiltinYamlCheckers() (map[analysis.Language][]analysis.Analyzer, error) {
+	checkersMap := make(map[analysis.Language][]analysis.Analyzer)
 	err := fs.WalkDir(builtinCheckers, ".", findYamlCheckers(checkersMap))
 	return checkersMap, err
 }
 
-func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.YamlChecker, error) {
-	checkersMap := make(map[analysis.Language][]analysis.YamlChecker)
+func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.Analyzer, error) {
+	checkersMap := make(map[analysis.Language][]analysis.Analyzer)
 	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap))
 	return checkersMap, err
 }
 
 type Analyzer struct {
 	TestDir   string
-	Analyzers []*goAnalysis.Analyzer
+	Analyzers []*analysis.Analyzer
 }
 
-func LoadGoCheckers() []*goAnalysis.Analyzer {
-	analyzers := []*goAnalysis.Analyzer{}
+func LoadGoCheckers() []*analysis.Analyzer {
+	analyzers := []*analysis.Analyzer{}
 
 	for _, analyzer := range AnalyzerRegistry {
 		analyzers = append(analyzers, analyzer.Analyzers...)
@@ -86,7 +85,7 @@ func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
 		fmt.Printf("Running tests in %s for analyzers:\n", analyzerReg.TestDir)
 		testDir := filepath.Join(cwd, analyzerReg.TestDir)
 
-		diff, log, isPassed, err := goAnalysis.RunAnalyzerTests(testDir, analyzerReg.Analyzers)
+		diff, log, isPassed, err := analysis.RunAnalyzerTests(testDir, analyzerReg.Analyzers)
 		if err != nil {
 			errors = append(errors, err)
 		}

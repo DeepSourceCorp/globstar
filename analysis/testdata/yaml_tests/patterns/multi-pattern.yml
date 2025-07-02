@@ -1,0 +1,11 @@
+language: javascript
+name: multi-pattern
+message: "Checking precense of multiple patterns"
+category: style
+severity: info
+patterns:
+  - >
+    (call_expression)
+  - >
+    (function_declaration)
+description: "Test checker no-pattern"

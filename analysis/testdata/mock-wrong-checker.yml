@@ -1,0 +1,10 @@
+language: javascript
+name: mock-checker
+category: style
+severity: info
+pattern: 
+  (call_expression) @mock-checker
+description: |
+  This is a mock checker.
+
+

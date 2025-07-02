@@ -1,0 +1,7 @@
+language: javascript
+name: wrong-pattern
+message: "Checking wrong pattern presence"
+category: style
+severity: info
+pattern: "hello world"
+description: "Test checker no-pattern"

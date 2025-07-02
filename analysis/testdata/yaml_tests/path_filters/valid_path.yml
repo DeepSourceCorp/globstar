@@ -1,0 +1,29 @@
+language: java
+name: cbc-padding-oracle
+message: "Using CBC mode with PKCS5Padding can cause padding oracle attacks"
+category: security
+severity: critical
+
+pattern: >
+  (method_invocation
+    object: (identifier) @cipherClass
+    name: (identifier) @instanceMethod
+    arguments: (argument_list
+      (string_literal
+        (string_fragment) @str))
+    (#match? @str ".*CBC.*PKCS5Padding")
+    (#eq? @cipherClass "Cipher")
+    (#eq? @instanceMethod "getInstance")) @cbc-padding-oracle
+
+  
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+include:
+  - "*.java"
+
+description: >
+  Java applications using CBC mode with PKCS5Padding for encryption are vulnerable to padding oracle attacks, where attackers can distinguish between valid and invalid padding to potentially decrypt sensitive data without knowing the encryption key. This vulnerability is compounded by CBC mode's lack of built-in integrity checks. The recommended approach is using AES/GCM/NoPadding instead, which provides both confidentiality and integrity protection through authenticated encryption.

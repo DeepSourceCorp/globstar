@@ -1,10 +1,13 @@
 package analysis
 
 import (
+	"bufio"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -210,6 +213,7 @@ func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, string, bo
 
 	// if there's a test file in the testDir for which there's no analyzer,
 	// it's most likely a YAML checker test, so skip it
+
 	likelyTestFiles := []string{}
 	for _, analyzer := range analyzers {
 		likelyTestFiles = append(likelyTestFiles, fmt.Sprintf("%s.test%s", analyzer.Name, GetExtFromLanguage(analyzer.Language)))
@@ -274,4 +278,149 @@ func RunAnalyzerTests(testDir string, analyzers []*Analyzer) (string, string, bo
 	}
 
 	return diff, log.String(), passed, nil
+}
+
+type YamlTestCase struct {
+	YamlCheckerPath string
+	TestFile        string
+}
+
+func RunYamlTests(testDir string) (passed bool, err error) {
+	tests, err := FindYamlTestFiles(testDir)
+	if err != nil {
+		return false, err
+	}
+
+	if len(tests) == 0 {
+		return false, fmt.Errorf("no test files found")
+	}
+
+	passed = true
+	for _, test := range tests {
+		if test.TestFile == "" {
+			fmt.Fprintf(os.Stderr, "No test file found for checker '%s'\n", test.YamlCheckerPath)
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(test.YamlCheckerPath))
+
+		checker, _, err := ReadFromFile(test.YamlCheckerPath)
+		if err != nil {
+			return false, err
+		}
+
+		want, err := findExpectedLines(test.TestFile)
+		if err != nil {
+			return false, err
+		}
+
+		gotIssues, err := RunAnalyzers(test.TestFile, []*Analyzer{&checker}, nil)
+		if err != nil {
+			return false, err
+		}
+
+		var got []int
+		for _, issue := range gotIssues {
+			got = append(got, int(issue.Node.Range().StartPoint.Row)+1)
+		}
+
+		slices.Sort(got)
+
+		if len(want) != len(got) {
+			testName := filepath.Base(test.YamlCheckerPath)
+			message := fmt.Sprintf(
+				"(%s): expected issues on the following lines: %v\nbut issues were raised on lines: %v\n",
+				testName,
+				want,
+				got,
+			)
+			fmt.Fprintf(os.Stderr, "%s", message)
+			passed = false
+			continue
+		}
+		for j := 0; j < len(want); j++ {
+			if want[j] != got[j] {
+				testName := filepath.Base(test.YamlCheckerPath)
+				message := fmt.Sprintf(
+					"(%s): expected issue on line %d, but next occurrence is on line %d\n",
+					testName,
+					want[j],
+					got[j],
+				)
+				fmt.Fprintf(os.Stderr, "%s\n", message)
+				passed = false
+			}
+
+		}
+	}
+
+	return passed, nil
+}
+
+func FindYamlTestFiles(testDir string) ([]YamlTestCase, error) {
+	var pairs []YamlTestCase
+
+	err := filepath.Walk(testDir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if info.Mode()&fs.ModeSymlink != 0 {
+			return nil
+		}
+
+		fileExt := filepath.Ext(path)
+		isYamlFile := fileExt == ".yaml" || fileExt == ".yml"
+		if !isYamlFile {
+			return nil
+		}
+
+		patternChecker, _, err := ReadFromFile(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid checker '%s': %s\n", filepath.Base(path), err.Error())
+			return nil
+		}
+
+		testFile := strings.TrimSuffix(path, fileExt) + ".test" + GetExtFromLanguage(patternChecker.Language)
+
+		if _, err := os.Stat(testFile); os.IsNotExist(err) {
+			testFile = ""
+		}
+
+		pairs = append(pairs, YamlTestCase{YamlCheckerPath: path, TestFile: testFile})
+		return nil
+	})
+
+	return pairs, err
+}
+
+func findExpectedLines(filePath string) ([]int, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var expectedLines []int
+	scanner := bufio.NewScanner(file)
+
+	lineNumber := 0
+	for scanner.Scan() {
+		text := strings.ToLower(scanner.Text())
+		lineNumber++
+		if strings.Contains(text, "<expect-error>") || strings.Contains(text, "<expect error>") {
+			expectedLines = append(expectedLines, lineNumber+1)
+		}
+	}
+
+	// Check for scanner errors
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return expectedLines, nil
 }
