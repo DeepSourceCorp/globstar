@@ -70,11 +70,12 @@ type Yaml struct {
 }
 
 type YamlAnalyzer struct {
-	Analyzer   *Analyzer
-	Patterns   []*sitter.Query
-	NodeFilter []NodeFilter
-	PathFilter *PathFilter
-	Message    string
+	Analyzer         *Analyzer
+	Patterns         []*sitter.Query
+	NodeFilter       []NodeFilter
+	PathFilter       *PathFilter
+	Message          string
+	AnalysisFunction *AnalysisFunction
 }
 
 // ReadFromFile reads a pattern checker definition from a YAML config file.
@@ -101,7 +102,11 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 
 	if checker.AnalysisFunction != nil {
 		name := checker.AnalysisFunction.Name
-		AnalysisFuncDirectory.Pool[name] = checker.AnalysisFunction
+		lang := DecodeLanguage(checker.Language)
+		if AnalysisFuncDirectory.Pool[name] == nil {
+			AnalysisFuncDirectory.Pool[name] = make(map[Language]*AnalysisFunction)
+		}
+		AnalysisFuncDirectory.Pool[name][lang] = checker.AnalysisFunction
 	}
 
 	var patterns []*sitter.Query
@@ -193,11 +198,12 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	}
 
 	yamlAnalyzer := &YamlAnalyzer{
-		Analyzer:   &patternChecker,
-		Patterns:   patterns,
-		NodeFilter: filters,
-		PathFilter: pathFilter,
-		Message:    message,
+		Analyzer:         &patternChecker,
+		Patterns:         patterns,
+		NodeFilter:       filters,
+		PathFilter:       pathFilter,
+		Message:          message,
+		AnalysisFunction: checker.AnalysisFunction,
 	}
 
 	patternChecker.Run = RunYamlAnalyzer(yamlAnalyzer)

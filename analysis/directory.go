@@ -3,11 +3,13 @@ package analysis
 import "fmt"
 
 type FunctionDirectory struct {
-	Pool map[string]*AnalysisFunction
+	// Different languages can have the same type of Analysis function.
+	// This first maps the Type of function-mode, then the specific language implementation
+	Pool map[string]map[Language]*AnalysisFunction
 }
 
 var AnalysisFuncDirectory = &FunctionDirectory{
-	Pool: make(map[string]*AnalysisFunction),
+	Pool: make(map[string]map[Language]*AnalysisFunction),
 }
 
 func (fd *FunctionDirectory) AddToDirectory(ana *Analyzer) error {
@@ -15,6 +17,6 @@ func (fd *FunctionDirectory) AddToDirectory(ana *Analyzer) error {
 	if anaFunc == nil {
 		return fmt.Errorf("%s method is not supported", ana.Name)
 	}
-	anaFunc.Analyzer = ana
+	anaFunc[ana.Language].Analyzer = ana
 	return nil
 }

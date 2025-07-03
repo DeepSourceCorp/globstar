@@ -32,4 +32,7 @@ description: "Runs a taint analysis on the provided function and its parameters.
 	_, _, err := ReadFromBytes([]byte(checker))
 	assert.NoError(t, err)
 	assert.NotNil(t, AnalysisFuncDirectory.Pool["taint"])
+	assert.NotNil(t, AnalysisFuncDirectory.Pool["taint"][LangJs])
+	fun := AnalysisFuncDirectory.Pool["taint"][LangJs]
+	assert.Equal(t, fun.Name, "taint")
 }
