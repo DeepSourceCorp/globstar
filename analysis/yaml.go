@@ -47,27 +47,35 @@ type PathFilter struct {
 	IncludeGlobs []glob.Glob
 }
 
+type AnalysisFunction struct {
+	Name       string              `yaml:"name"`
+	Parameters map[string][]string `yaml:"parameters"`
+	Analyzer   *Analyzer
+}
+
 type Yaml struct {
-	Language    string          `yaml:"language"`
-	Code        string          `yaml:"name"`
-	Message     string          `yaml:"message"`
-	Category    Category        `yaml:"category"`
-	Severity    Severity        `yaml:"severity"`
-	Pattern     string          `yaml:"pattern"`
-	Patterns    []string        `yaml:"patterns"`
-	Description string          `yaml:"description"`
-	Exclude     []string        `yaml:"exclude,omitempty"`
-	Include     []string        `yaml:"include,omitempty"`
-	Filters     []filterYaml    `yaml:"filters,omitempty"`
-	PathFilter  *pathFilterYaml `yaml:"path_filter,omitempty"`
+	Language         string            `yaml:"language"`
+	Code             string            `yaml:"name"`
+	Message          string            `yaml:"message"`
+	Category         Category          `yaml:"category"`
+	Severity         Severity          `yaml:"severity"`
+	Pattern          string            `yaml:"pattern"`
+	Patterns         []string          `yaml:"patterns"`
+	Description      string            `yaml:"description"`
+	Exclude          []string          `yaml:"exclude,omitempty"`
+	Include          []string          `yaml:"include,omitempty"`
+	Filters          []filterYaml      `yaml:"filters,omitempty"`
+	PathFilter       *pathFilterYaml   `yaml:"path_filter,omitempty"`
+	AnalysisFunction *AnalysisFunction `yaml:"analysisFunction,omitempty"`
 }
 
 type YamlAnalyzer struct {
-	Analyzer   *Analyzer
-	Patterns   []*sitter.Query
-	NodeFilter []NodeFilter
-	PathFilter *PathFilter
-	Message    string
+	Analyzer         *Analyzer
+	Patterns         []*sitter.Query
+	NodeFilter       []NodeFilter
+	PathFilter       *PathFilter
+	Message          string
+	AnalysisFunction *AnalysisFunction
 }
 
 // ReadFromFile reads a pattern checker definition from a YAML config file.
@@ -90,6 +98,15 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	lang, code, message, err := verifyChecker(checker)
 	if err != nil {
 		return Analyzer{}, YamlAnalyzer{}, err
+	}
+
+	if checker.AnalysisFunction != nil {
+		name := checker.AnalysisFunction.Name
+		lang := DecodeLanguage(checker.Language)
+		if AnalysisFuncDirectory.Pool[name] == nil {
+			AnalysisFuncDirectory.Pool[name] = make(map[Language]*AnalysisFunction)
+		}
+		AnalysisFuncDirectory.Pool[name][lang] = checker.AnalysisFunction
 	}
 
 	var patterns []*sitter.Query
@@ -181,11 +198,12 @@ func ReadFromBytes(fileContent []byte) (Analyzer, YamlAnalyzer, error) {
 	}
 
 	yamlAnalyzer := &YamlAnalyzer{
-		Analyzer:   &patternChecker,
-		Patterns:   patterns,
-		NodeFilter: filters,
-		PathFilter: pathFilter,
-		Message:    message,
+		Analyzer:         &patternChecker,
+		Patterns:         patterns,
+		NodeFilter:       filters,
+		PathFilter:       pathFilter,
+		Message:          message,
+		AnalysisFunction: checker.AnalysisFunction,
 	}
 
 	patternChecker.Run = RunYamlAnalyzer(yamlAnalyzer)
