@@ -8,6 +8,8 @@ import (
 	"globstar.dev/analysis"
 )
 
+var customCheckers []*analysis.Analyzer
+
 var (
 	path = flag.String("path", ".", "Path to the directory to analyze")
 	test = flag.Bool("test", false, "Run the tests")

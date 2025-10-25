@@ -1,0 +1,48 @@
+language: typescript
+name: no-explicit-any
+message: "Avoid explicit 'any' type annotation. Consider using 'unknown' or a specific type."
+category: best-practices
+severity: warning
+
+pattern: |
+  (type_annotation
+    (predefined_type) @explicit_any
+    (#eq? @explicit_any "any")) @no-explicit-any
+
+description: |
+  Issue:
+  Explicitly annotating with 'any' type removes all type safety for that value.
+  This defeats the purpose of using TypeScript and can hide bugs.
+
+  The 'any' type should be avoided except in very specific cases where you're
+  gradually migrating JavaScript code to TypeScript or dealing with truly
+  dynamic data structures.
+
+  Solution:
+  - Use 'unknown' when the type is truly unknown (forces type checking before use)
+  - Use specific types or interfaces when the structure is known
+  - Use generics for reusable components
+  - Use union types for multiple possible types
+  - Use type guards to narrow 'unknown' types safely
+
+  Example:
+  Bad:
+  function parseJson(json: string): any {
+    return JSON.parse(json);
+  }
+
+  Good:
+  function parseJson<T>(json: string): T {
+    return JSON.parse(json);
+  }
+
+  // Or with unknown:
+  function parseJson(json: string): unknown {
+    return JSON.parse(json);
+  }
+
+  const data = parseJson(jsonString);
+  if (isUser(data)) {
+    // TypeScript knows data is User here
+    console.log(data.name);
+  }

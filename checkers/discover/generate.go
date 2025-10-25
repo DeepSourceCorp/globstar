@@ -75,6 +75,7 @@ package checkers
 import (
 	"globstar.dev/checkers/javascript"
 	"globstar.dev/checkers/python"
+	"globstar.dev/checkers/typescript"
 	goAnalysis "globstar.dev/analysis"
 )
 

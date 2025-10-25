@@ -1,0 +1,49 @@
+language: typescript
+name: prefer-const-enum
+message: "Consider using 'const enum' instead of regular 'enum' for better performance."
+category: performance
+severity: info
+
+pattern: |
+  (enum_declaration
+    name: (identifier)) @enum
+    (#not-match? @enum "^const\\s+enum")
+
+description: |
+  Issue:
+  Regular enums in TypeScript generate additional JavaScript code at runtime.
+  This increases bundle size and can impact performance, especially for large enums
+  or when enums are used frequently.
+
+  const enums are completely removed during compilation and replaced with their
+  literal values, resulting in smaller bundle sizes and better performance.
+
+  Solution:
+  - Use 'const enum' when you don't need the enum object at runtime
+  - Use regular 'enum' only when you need runtime features (reverse mapping, iteration)
+  - Consider using union types of literals as an alternative
+
+
+  Note:
+  const enums have limitations:
+  - Cannot be used with computed members
+  - Cannot be merged with namespaces
+  - Limited support when isolatedModules is enabled
+
+  Example:
+   Less optimal:
+  enum Color {
+    Red = 'RED',
+    Green = 'GREEN',
+    Blue = 'BLUE'
+  }
+
+   Better:
+  const enum Color {
+    Red = 'RED',
+    Green = 'GREEN',
+    Blue = 'BLUE'
+  }
+
+   Alternative (union type):
+  type Color = 'RED' | 'GREEN' | 'BLUE';

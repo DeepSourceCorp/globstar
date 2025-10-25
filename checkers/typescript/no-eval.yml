@@ -1,0 +1,53 @@
+language: typescript
+name: no-eval
+message: "Avoid using 'eval()' as it poses security risks and performance issues."
+category: security
+severity: error
+
+pattern: |
+  (call_expression
+    function: (identifier) @eval_func
+    (#eq? @eval_func "eval")) @no-eval
+
+description: |
+  Issue:
+  Using 'eval()' is dangerous and should be avoided because:
+  - Security: Can execute arbitrary code, making it vulnerable to code injection attacks
+  - Performance: Prevents JavaScript engine optimizations
+  - Debugging: Makes code harder to debug and understand
+  - Maintainability: Creates unpredictable code behavior
+
+  eval() executes a string as JavaScript code, which means if user input is passed
+  to eval(), attackers can execute malicious code in your application.
+
+  Solution:
+  - Use JSON.parse() for parsing JSON strings
+  - Use Function constructor if you absolutely need dynamic code (still risky)
+  - Restructure your code to avoid dynamic code execution
+  - Use proper parsing libraries for specific data formats
+
+  Example:
+  Dangerous:
+  const userInput = getUserInput();
+  eval(userInput); // NEVER DO THIS!
+
+  const code = "alert('Hello')";
+  eval(code); // Avoid this
+
+  Safe alternatives:
+  // For JSON:
+  const data = JSON.parse(jsonString);
+
+  // For calculations:
+  const operators = {
+    '+': (a, b) => a + b,
+    '-': (a, b) => a - b,
+  };
+  const result = operators[operator](a, b);
+
+  // For configuration:
+  const config = {
+    development: { api: 'dev.api.com' },
+    production: { api: 'api.com' }
+  };
+  const settings = config[environment];

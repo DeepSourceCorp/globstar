@@ -1,0 +1,37 @@
+language: typescript
+name: no-non-null-assertion
+message: "Avoid using non-null assertion operator (!). This can lead to runtime errors."
+category: best-practices
+severity: warning
+
+pattern: |
+  (non_null_expression) @no-non-null-assertion
+
+exclude:
+  - "test/**"
+  - "*_test.ts"
+  - "*.test.ts"
+  - "tests/**"
+  - "__tests__/**"
+
+description: |
+  Issue:
+  The non-null assertion operator (!) tells TypeScript to ignore potential null or undefined 
+  values. This defeats the purpose of strict null checking and can lead to runtime errors.
+
+  Solution:
+  - Use optional chaining (?.) to safely access properties
+  - Use nullish coalescing (??) to provide default values
+  - Use explicit null checks (if statements)
+  - Use type guards to narrow types
+
+  Example:
+   Bad:
+  const value = possiblyNull!.property;
+  const element = document.getElementById('id')!;
+
+   Good:
+  const value = possiblyNull?.property;
+  const element = document.getElementById('id');
+  if (element) { /* use element */ }
+  const value = possiblyNull?.property ?? defaultValue;
