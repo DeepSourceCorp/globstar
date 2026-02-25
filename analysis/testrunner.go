@@ -285,17 +285,25 @@ type YamlTestCase struct {
 	TestFile        string
 }
 
-func RunYamlTests(testDir string) (passed bool, err error) {
+type YamlIssues struct {
+	YamlAnalyzer YamlAnalyzer
+	Got          []int
+	Want         []int
+}
+
+var IssuesYaml = make(map[YamlTestCase]*YamlIssues)
+
+func RunYamlTests(testDir string) (issues map[YamlTestCase]*YamlIssues, err error) {
 	tests, err := FindYamlTestFiles(testDir)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	if len(tests) == 0 {
-		return false, fmt.Errorf("no test files found")
+		return nil, fmt.Errorf("no test files found")
 	}
 
-	passed = true
+	// passed = true
 	for _, test := range tests {
 		if test.TestFile == "" {
 			fmt.Fprintf(os.Stderr, "No test file found for checker '%s'\n", test.YamlCheckerPath)
@@ -304,19 +312,19 @@ func RunYamlTests(testDir string) (passed bool, err error) {
 
 		fmt.Fprintf(os.Stderr, "Running test case: %s\n", filepath.Base(test.YamlCheckerPath))
 
-		checker, _, err := ReadFromFile(test.YamlCheckerPath)
+		checker, yamlChecker, err := ReadFromFile(test.YamlCheckerPath)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 
 		want, err := findExpectedLines(test.TestFile)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 
 		gotIssues, err := RunAnalyzers(test.TestFile, []*Analyzer{&checker}, nil)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 
 		var got []int
@@ -326,35 +334,46 @@ func RunYamlTests(testDir string) (passed bool, err error) {
 
 		slices.Sort(got)
 
-		if len(want) != len(got) {
-			testName := filepath.Base(test.YamlCheckerPath)
-			message := fmt.Sprintf(
-				"(%s): expected issues on the following lines: %v\nbut issues were raised on lines: %v\n",
-				testName,
-				want,
-				got,
-			)
-			fmt.Fprintf(os.Stderr, "%s", message)
-			passed = false
-			continue
-		}
-		for j := 0; j < len(want); j++ {
-			if want[j] != got[j] {
-				testName := filepath.Base(test.YamlCheckerPath)
-				message := fmt.Sprintf(
-					"(%s): expected issue on line %d, but next occurrence is on line %d\n",
-					testName,
-					want[j],
-					got[j],
-				)
-				fmt.Fprintf(os.Stderr, "%s\n", message)
-				passed = false
+		if IssuesYaml[test] == nil {
+			IssuesYaml[test] = &YamlIssues{
+				Want:         want,
+				Got:          got,
+				YamlAnalyzer: yamlChecker,
 			}
-
+		} else {
+			IssuesYaml[test].Want = append(IssuesYaml[test].Want, want...)
+			IssuesYaml[test].Got = append(IssuesYaml[test].Got, got...)
+			IssuesYaml[test].YamlAnalyzer = yamlChecker
 		}
+		// if len(want) != len(got) {
+		// 	testName := filepath.Base(test.YamlCheckerPath)
+		// 	message := fmt.Sprintf(
+		// 		"(%s): expected issues on the following lines: %v\nbut issues were raised on lines: %v\n",
+		// 		testName,
+		// 		want,
+		// 		got,
+		// 	)
+		// 	fmt.Fprintf(os.Stderr, "%s", message)
+		// 	passed = false
+		// 	continue
+		// }
+		// for j := 0; j < len(want); j++ {
+		// 	if want[j] != got[j] {
+		// 		testName := filepath.Base(test.YamlCheckerPath)
+		// 		message := fmt.Sprintf(
+		// 			"(%s): expected issue on line %d, but next occurrence is on line %d\n",
+		// 			testName,
+		// 			want[j],
+		// 			got[j],
+		// 		)
+		// 		fmt.Fprintf(os.Stderr, "%s\n", message)
+		// 		passed = false
+		// 	}
+
+		// }
 	}
 
-	return passed, nil
+	return IssuesYaml, nil
 }
 
 func FindYamlTestFiles(testDir string) ([]YamlTestCase, error) {

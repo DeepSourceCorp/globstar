@@ -191,7 +191,7 @@ to run only the built-in checkers, and --checkers=all to run both.`,
 					// Track test failures but continue running all tests
 					var testsFailed bool
 
-					yamlPassed, err := analysis.RunYamlTests(analysisDir)
+					yamlPassed, err := checkers.RunYamlAnalyzers(analysisDir)
 					if err != nil {
 						err = fmt.Errorf("error running YAML tests: %w", err)
 						fmt.Fprintln(os.Stderr, err.Error())

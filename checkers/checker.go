@@ -100,3 +100,62 @@ func RunAnalyzerTests(analyzerRegistry []Analyzer) (bool, []error) {
 
 	return passed, errors
 }
+
+func RunYamlAnalyzers(dir string) (passed bool, err error) {
+	issues, err := analysis.RunYamlTests(dir)
+	if err != nil {
+		return false, fmt.Errorf("error running yaml tests: %w", err)
+	}
+
+	passed = true
+
+	for test, yaml := range issues {
+
+		if yaml.YamlAnalyzer.AnalysisFunction != nil {
+			name := yaml.YamlAnalyzer.AnalysisFunction.Name
+			lang := yaml.YamlAnalyzer.Analyzer.Language
+			InitializeAnalysisFunctionDirectory(name, lang)
+			analysisFuncAnalyzer := yaml.YamlAnalyzer.AnalysisFunction.Analyzer
+			if analysisFuncAnalyzer == nil {
+				return false, fmt.Errorf("no analysis function found for %s in %v", name, lang)
+			}
+			funcIssues, err := analysis.RunAnalyzers(test.TestFile, []*analysis.Analyzer{analysisFuncAnalyzer}, nil)
+			if err != nil {
+				return false, fmt.Errorf("error running analysis function for %s: %w", name, err)
+			}
+			for _, issue := range funcIssues {
+				yaml.Got = append(yaml.Got, int(issue.Node.Range().StartPoint.Row)+1)
+			}
+		}
+
+		if len(yaml.Want) != len(yaml.Got) {
+			fmt.Println("Hmm... the number of issues raised is not as expected.")
+			testName := filepath.Base(test.YamlCheckerPath)
+			message := fmt.Sprintf(
+				"(%s): expected issues on the following lines: %v\nbut issues were raised on lines: %v\n",
+				testName,
+				yaml.Want,
+				yaml.Got,
+			)
+			fmt.Fprintf(os.Stderr, "%s", message)
+			passed = false
+			continue
+		}
+		for j := 0; j < len(yaml.Want); j++ {
+			if yaml.Want[j] != yaml.Got[j] {
+				testName := filepath.Base(test.YamlCheckerPath)
+				message := fmt.Sprintf(
+					"(%s): expected issue on line %d, but next occurrence is on line %d\n",
+					testName,
+					yaml.Want[j],
+					yaml.Got[j],
+				)
+				fmt.Fprintf(os.Stderr, "%s\n", message)
+				passed = false
+			}
+
+		}
+	}
+
+	return passed, nil
+}
