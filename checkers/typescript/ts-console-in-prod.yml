@@ -1,0 +1,52 @@
+language: typescript
+name: ts-console-in-prod
+message: "Avoid using console statements in production code."
+category: best-practices
+severity: info
+
+pattern: |
+  (call_expression
+    function: (member_expression
+      object: (identifier) @console
+      property: (property_identifier) @method)
+    (#eq? @console "console")) @ts-console-in-prod
+
+exclude:
+  - "test/**"
+  - "*_test.ts"
+  - "*.test.ts"
+  - "*.spec.ts"
+  - "tests/**"
+  - "__tests__/**"
+  - "scripts/**"
+
+description: |
+  Issue:
+  Console statements in production code can:
+  - Expose sensitive information in browser console
+  - Impact application performance
+  - Clutter the production console
+  - Create confusion for end users
+
+  Solution:
+  - Remove console statements before deployment
+  - Use a proper logging library (winston, pino, etc.)
+  - Use environment-based logging (only log in development)
+  - Set up build tools to strip console.log in production
+
+  Example:
+  ❌ Bad:
+  function login(user) {
+    console.log('User credentials:', user);
+    // ... login logic
+  }
+
+  ✅ Good:
+  import logger from './logger';
+
+  function login(user) {
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('Login attempt:', user.email);
+    }
+    // ... login logic
+  }

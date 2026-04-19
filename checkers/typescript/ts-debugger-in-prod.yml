@@ -1,0 +1,44 @@
+language: typescript
+name: ts-debugger-in-prod
+message: "Avoid using debugger statements in production code."
+category: best-practices
+severity: warning
+
+pattern: >
+  (debugger_statement) @ts-debugger-in-prod
+
+exclude:
+  - "test/**"
+  - "*_test.ts"
+  - "*.test.ts"
+  - "*.spec.ts"
+  - "tests/**"
+  - "__tests__/**"
+
+description: |
+  Issue: 
+  Using `debugger` statements in production code is considered poor practice. When executed 
+  in a browser with developer tools open, these statements pause execution and activate the 
+  debugger, which can significantly disrupt the user experience in production environments.
+
+  Debugger statements are useful during development but should be removed before deploying 
+  code to production.
+
+  Solution:
+  - Remove debugger statements before committing
+  - Use proper logging instead (console.log, logger libraries)
+  - Use breakpoints in your IDE during development
+  - Set up ESLint rules to catch these automatically
+
+  Example:
+  ❌ Bad:
+  function processData(data) {
+    debugger; // This will pause execution in production!
+    return data.map(x => x * 2);
+  }
+
+  ✅ Good:
+  function processData(data) {
+    console.log('Processing data:', data);
+    return data.map(x => x * 2);
+  }

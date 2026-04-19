@@ -461,6 +461,41 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		}
 	}
 
+	for lang, analyzers := range patternCheckers {
+		if len(analyzers) == 0 {
+			continue
+		}
+
+		var analyzerPtrs []*analysis.Analyzer
+		for i := range analyzers {
+			analyzerPtrs = append(analyzerPtrs, &analyzers[i])
+		}
+
+		
+
+		langIssues, err := analysis.RunAnalyzers(
+			c.RootDirectory,
+			analyzerPtrs,
+			func(filename string) bool {
+				if c.CmpHash != "" {
+					_, isChanged := changedFileMap[filename]
+					return isChanged
+				}
+				return true
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to run pattern analyzers for %v: %w", lang, err)
+		}
+
+		for _, issue := range langIssues {
+			txt, _ := issue.AsText()
+			log.Error().Msg(string(txt))
+
+			result.issues = append(result.issues, issue)
+		}
+	}
+
 	if runCustomCheckers {
 		customGoIssues, textIssues, err := c.runCustomGoAnalyzers()
 		if err != nil {

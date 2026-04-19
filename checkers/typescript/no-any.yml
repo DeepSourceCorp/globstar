@@ -1,0 +1,30 @@
+language: typescript
+name: no-any
+message: "Avoid using 'any' type. Use specific types or 'unknown' instead."
+category: best-practices
+severity: warning
+
+pattern: |
+  (type_annotation
+    (predefined_type) @any_type
+    (#eq? @any_type "any")) @no-any
+
+description: |
+  Issue:
+  Using the 'any' type defeats the purpose of TypeScript's type system. It disables type 
+  checking and can lead to runtime errors that could have been caught at compile time.
+
+  Solution:
+  - Use specific types when the shape is known
+  - Use 'unknown' for values of truly unknown type (safer than 'any')
+  - Use generics when appropriate
+  - Use union types for multiple possible types
+
+  Example:
+  Bad:
+  function process(data: any) { ... }
+
+  Good:
+  function process(data: User | Product) { ... }
+  function process(data: unknown) { ... }
+  function process<T>(data: T) { ... }

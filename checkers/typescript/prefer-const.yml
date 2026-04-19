@@ -1,0 +1,45 @@
+language: typescript
+name: prefer-const
+message: "Use 'const' instead of 'let' for variables that are never reassigned."
+category: best-practices
+severity: info
+
+pattern: |
+  (lexical_declaration
+    kind: "let" @let_keyword
+    (variable_declarator
+      name: (identifier) @var_name)) @prefer-const
+
+description: |
+  Issue:
+  Using 'let' for variables that are never reassigned makes code harder to reason about.
+  It suggests the variable might change when it actually doesn't, leading to confusion
+  and potential bugs.
+
+  Using 'const' clearly communicates that the variable binding is immutable, making
+  the code more predictable and easier to understand.
+
+  Solution:
+  - Use 'const' for variables that are never reassigned
+  - Use 'let' only when the variable needs to be reassigned
+  - Avoid 'var' entirely in modern TypeScript
+
+  Note:
+  This is a simplified pattern-based checker. For production use, a more sophisticated
+  checker would need to track all assignments to determine if a variable is truly
+  never reassigned.
+
+  Example:
+   Bad:
+  let userName = 'John';
+  let config = { api: 'https://api.example.com' };
+  console.log(userName, config);
+
+   Good:
+  const userName = 'John';
+  const config = { api: 'https://api.example.com' };
+  console.log(userName, config);
+
+  Also Good (when reassignment is needed):
+  let counter = 0;
+  counter += 1;
