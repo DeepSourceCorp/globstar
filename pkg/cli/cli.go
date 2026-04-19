@@ -431,17 +431,19 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 		return err
 	}
 
+	fileFilter := func(filename string) bool {
+		if c.CmpHash != "" {
+			_, isChanged := changedFileMap[filename]
+			return isChanged
+		}
+		return true
+	}
+
 	if len(goAnalyzers) > 0 {
 		goIssues, err := analysis.RunAnalyzers(
 			c.RootDirectory,
 			goAnalyzers,
-			func(filename string) bool {
-				if c.CmpHash != "" {
-					_, isChanged := changedFileMap[filename]
-					return isChanged
-				}
-				return true
-			},
+			fileFilter,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to run Go-based analyzers: %w", err)
@@ -455,6 +457,54 @@ func (c *Cli) RunCheckers(runBuiltinCheckers, runCustomCheckers bool) error {
 				Message:  issue.Message,
 				Severity: analysis.Severity(issue.Severity),
 				Category: analysis.Category(issue.Category),
+				Node:     issue.Node,
+				Id:       issue.Id,
+			})
+		}
+	}
+
+	// Flatten the per-language pattern checkers map into a slice and run them
+	// against the project. Without this step, YAML pattern checkers (both
+	// built-in and custom) are loaded but never executed.
+	var yamlAnalyzers []*analysis.Analyzer
+	yamlAnalyzerByName := make(map[string]*analysis.Analyzer)
+	for _, checkers := range patternCheckers {
+		for i := range checkers {
+			analyzer := &checkers[i]
+			yamlAnalyzers = append(yamlAnalyzers, analyzer)
+			yamlAnalyzerByName[analyzer.Name] = analyzer
+		}
+	}
+
+	if len(yamlAnalyzers) > 0 {
+		yamlIssues, err := analysis.RunAnalyzers(
+			c.RootDirectory,
+			yamlAnalyzers,
+			fileFilter,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to run YAML pattern analyzers: %w", err)
+		}
+		for _, issue := range yamlIssues {
+			txt, _ := issue.AsText()
+			log.Error().Msg(string(txt))
+
+			// Look up the originating analyzer so we can preserve severity
+			// and category on the reported issue.
+			severity := analysis.Severity(issue.Severity)
+			category := analysis.Category(issue.Category)
+			if issue.Id != nil {
+				if a, ok := yamlAnalyzerByName[*issue.Id]; ok {
+					severity = a.Severity
+					category = a.Category
+				}
+			}
+
+			result.issues = append(result.issues, &analysis.Issue{
+				Filepath: issue.Filepath,
+				Message:  issue.Message,
+				Severity: severity,
+				Category: category,
 				Node:     issue.Node,
 				Id:       issue.Id,
 			})
