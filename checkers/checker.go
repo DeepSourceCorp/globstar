@@ -13,7 +13,7 @@ import (
 //go:embed **/*.y*ml
 var builtinCheckers embed.FS
 
-func findYamlCheckers(checkersMap map[analysis.Language][]analysis.Analyzer) func(path string, d fs.DirEntry, err error) error {
+func findYamlCheckers(checkersMap map[analysis.Language][]analysis.Analyzer, readFile func(string) ([]byte, error)) func(path string, d fs.DirEntry, err error) error {
 	return func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -29,7 +29,7 @@ func findYamlCheckers(checkersMap map[analysis.Language][]analysis.Analyzer) fun
 			return nil
 		}
 
-		fileContent, err := builtinCheckers.ReadFile(path)
+		fileContent, err := readFile(path)
 		if err != nil {
 			return nil
 		}
@@ -47,13 +47,15 @@ func findYamlCheckers(checkersMap map[analysis.Language][]analysis.Analyzer) fun
 
 func LoadBuiltinYamlCheckers() (map[analysis.Language][]analysis.Analyzer, error) {
 	checkersMap := make(map[analysis.Language][]analysis.Analyzer)
-	err := fs.WalkDir(builtinCheckers, ".", findYamlCheckers(checkersMap))
+	err := fs.WalkDir(builtinCheckers, ".", findYamlCheckers(checkersMap, builtinCheckers.ReadFile))
 	return checkersMap, err
 }
 
 func LoadCustomYamlCheckers(dir string) (map[analysis.Language][]analysis.Analyzer, error) {
 	checkersMap := make(map[analysis.Language][]analysis.Analyzer)
-	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap))
+	err := fs.WalkDir(os.DirFS(dir), ".", findYamlCheckers(checkersMap, func(p string) ([]byte, error) {
+		return os.ReadFile(filepath.Join(dir, p))
+	}))
 	return checkersMap, err
 }
 
