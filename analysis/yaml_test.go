@@ -6,7 +6,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestReadFile(t *testing.T) {
