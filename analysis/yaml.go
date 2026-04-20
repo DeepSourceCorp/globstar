@@ -7,7 +7,7 @@ import (
 
 	"github.com/gobwas/glob"
 	sitter "github.com/smacker/go-tree-sitter"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // To get a node back from a tree-sitter query, it *must* have a capture name.
