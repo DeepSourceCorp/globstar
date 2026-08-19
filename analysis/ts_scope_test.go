@@ -135,6 +135,53 @@ func Test_BuildScopeTree(t *testing.T) {
 
 }
 
+func Test_ScopeAstNode(t *testing.T) {
+	// Scope.AstNode is documented as "the AST node that introduces this scope
+	// into the scope tree", so every scope in the tree must point at its own
+	// introducing node.
+	source := `
+		let x = 1
+		function f() {
+			let y = 2
+		}
+		{
+			let z = 3
+		}`
+	parsed := parseFile(t, source)
+	scopeTree := MakeScopeTree(parsed.Language, parsed.Ast, parsed.Source)
+	require.NotNil(t, scopeTree)
+
+	t.Run("every scope points at the node that introduces it", func(t *testing.T) {
+		for node, scope := range scopeTree.ScopeOfNode {
+			require.NotNil(t, scope.AstNode,
+				"scope introduced by %q has a nil AstNode", node.Type())
+			assert.Equal(t, node, scope.AstNode,
+				"scope introduced by %q points at %q instead",
+				node.Type(), scope.AstNode.Type())
+		}
+	})
+
+	t.Run("a parent scope is not overwritten by its children", func(t *testing.T) {
+		// The program scope has two scope-creating children (the function and
+		// the bare block); neither may claim the program scope's AstNode.
+		programScope := scopeTree.Root.Children[0]
+		require.NotNil(t, programScope.AstNode)
+		assert.Equal(t, "program", programScope.AstNode.Type())
+		require.Len(t, programScope.Children, 2)
+	})
+
+	t.Run("a function scope points at the function, not at its body", func(t *testing.T) {
+		globalScope := scopeTree.Root.Children[0]
+		funcVar := globalScope.Lookup("f")
+		require.NotNil(t, funcVar)
+
+		funcScope := scopeTree.GetScope(funcVar.DeclNode)
+		require.NotNil(t, funcScope)
+		require.NotNil(t, funcScope.AstNode)
+		assert.Equal(t, "function_declaration", funcScope.AstNode.Type())
+	})
+}
+
 func TestExportHandling(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -146,10 +146,11 @@ func buildScopeTree(
 	nextScope := scope
 	if builder.NodeCreatesScope(node) {
 		nextScope = NewScope(scope)
+		// AstNode belongs to the scope this node introduces, not to its parent.
+		nextScope.AstNode = node
 		scopeOfNode[node] = nextScope
 		if scope != nil {
 			scope.Children = append(scope.Children, nextScope)
-			scope.AstNode = node
 		} else {
 			scope = nextScope // root
 		}
