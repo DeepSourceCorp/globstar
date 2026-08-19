@@ -1,0 +1,60 @@
+language: java
+name: blowfish_insufficient_key_size
+message: "Use 128 bits or more for Blowfish encryption, or switch to use AES instead"
+category: security
+severity: warning
+
+pattern: >
+  (
+    (local_variable_declaration
+      type: (type_identifier) @type
+      declarator: (variable_declarator
+        name: (identifier) 
+        value: (method_invocation
+                object: (identifier)
+                name: (identifier) @method_name
+                arguments: (argument_list
+                  (string_literal
+                    (string_fragment) @arg) 
+                  )
+                )
+              ) 
+        )
+      )
+    (expression_statement
+      (method_invocation
+        object: (identifier) @variable
+        name: (identifier) @init
+        arguments: (argument_list
+          (decimal_integer_literal) @size))
+    (#eq? @type "KeyGenerator")
+    (#eq? @method_name "getInstance") 
+    (#eq? @arg "Blowfish")
+    (#eq? @init "init")
+    (#match? @size "^(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-7])$")
+  )@blowfish_insufficient_key_size
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/Test_*.java"
+  - "**/*Test.java"
+
+description: >
+  Using a key size of less than 128 bits for Blowfish encryption is cryptographically weak and susceptible to brute-force attacks. Modern cryptographic standards recommend a key size of at least 128 bits for symmetric ciphers like Blowfish to ensure adequate security.
+
+  Vulnerabilities arise because shorter keys can be cracked with moderate computational resources, compromising the confidentiality of the encrypted data.
+
+  Remediation:
+  Increase the key size to 128 bits or more. Alternatively, consider migrating to a stronger and more modern encryption algorithm like AES (Advanced Encryption Standard) with a key size of 128, 192, or 256 bits.
+
+  Example (using 128-bit key with Blowfish):
+  ```java
+  KeyGenerator keyGen = KeyGenerator.getInstance("Blowfish");
+  keyGen.init(128); 
+  ```
+
+  Example (migrating to AES):
+  ```java
+  KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+  keyGen.init(256); // Or 128, 192
+  ```
