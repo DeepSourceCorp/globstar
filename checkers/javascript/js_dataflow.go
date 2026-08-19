@@ -37,6 +37,12 @@ type FunctionDefinition struct {
 	Scope      *analysis.Scope
 }
 
+type FunctionCall struct {
+	Node    *sitter.Node
+	Sources []*DataFlowNode
+	DfNode  *DataFlowNode
+}
+
 type ClassDefinition struct {
 	Node       *sitter.Node
 	Properties []*analysis.Variable
@@ -49,10 +55,12 @@ type DataFlowGraph struct {
 	ScopeTree *analysis.ScopeTree
 	FuncDefs  map[string]*FunctionDefinition
 	ClassDefs map[*analysis.Variable]*ClassDefinition
+	FuncCalls map[*sitter.Node]*FunctionCall
 }
 
 var functionDefinitions = make(map[string]*FunctionDefinition)
 var classDefinitions = make(map[*analysis.Variable]*ClassDefinition)
+var functionCalls = make(map[*sitter.Node]*FunctionCall)
 
 // var DataFlowGraph = make(map[*analysis.Variable]*DataFlowNode)
 
@@ -85,6 +93,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		// Track variable declarations and assignments
+		// TODO: Add sources for the nameNode.
 		if node.Type() == "variable_declarator" || node.Type() == "assignment_expression" {
 			var nameNode, valueNode *sitter.Node
 
@@ -175,6 +184,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 					dfNode.FuncDef = funcDef
 
 				}
+
 				dataFlowGraph.Graph[variable] = dfNode
 
 			}
@@ -216,36 +226,66 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 			immidiateFunc := node.ChildByFieldName("function")
 			// Used to verify that the call_expression is actually pointing to an IIFE(immidiately invoked function expression)
 			// also filters out false positives of regular call expressions like console.log(), foo(x) etc.
-			if immidiateFunc == nil || immidiateFunc.Type() != "parenthesized_expression" {
-				return
-			}
+			if immidiateFunc != nil && immidiateFunc.Type() == "parenthesized_expression" {
+				funcExpr := immidiateFunc.NamedChild(0)
+				if funcExpr == nil {
+					return
+				}
 
-			funcExpr := immidiateFunc.NamedChild(0)
-			if funcExpr == nil {
-				return
-			}
+				funcDef := &FunctionDefinition{
+					Node:  funcExpr,
+					Body:  funcExpr.ChildByFieldName("body"),
+					Scope: currentScope,
+				}
 
-			funcDef := &FunctionDefinition{
-				Node:  funcExpr,
-				Body:  funcExpr.ChildByFieldName("body"),
-				Scope: currentScope,
-			}
+				params := node.ChildByFieldName("parameters")
+				if params != nil {
+					for i := 0; i < int(params.NamedChildCount()); i++ {
+						param := params.NamedChild(i)
+						if param.Type() == "identifier" {
+							paramName := param.Content(pass.FileContext.Source)
+							paramVar := currentScope.Lookup(paramName)
+							if paramVar != nil {
+								funcDef.Parameters = append(funcDef.Parameters, paramVar)
+							}
 
-			params := node.ChildByFieldName("parameters")
-			if params != nil {
-				for i := 0; i < int(params.NamedChildCount()); i++ {
-					param := params.NamedChild(i)
-					if param.Type() == "identifier" {
-						paramName := param.Content(pass.FileContext.Source)
-						paramVar := currentScope.Lookup(paramName)
-						if paramVar != nil {
-							funcDef.Parameters = append(funcDef.Parameters, paramVar)
 						}
-
 					}
 				}
+				// Create a data flow node for the IIFE
 			}
-			// Create a data flow node for the IIFE
+			if immidiateFunc != nil && immidiateFunc.Type() == "identifier" {
+
+				funcname := immidiateFunc.Content(pass.FileContext.Source)
+
+				_, exists := functionDefinitions[funcname]
+				if !exists {
+					funcVar := currentScope.Lookup(funcname)
+					if funcVar == nil {
+						return
+					}
+					dfNode := &DataFlowNode{
+						Node:     immidiateFunc,
+						Sources:  []*DataFlowNode{},
+						Scope:    currentScope,
+						Variable: funcVar,
+					}
+
+					handleCallExpressionDataFlow(node, dfNode, dataFlowGraph.Graph, pass.FileContext.Source, currentScope)
+
+					functionCalls[node] = &FunctionCall{
+						Node:    immidiateFunc,
+						Sources: dfNode.Sources,
+						DfNode:  dfNode,
+					}
+
+				}
+			}
+
+			// Need a way to track function calls like setTimeout etc.
+			// Can do something like this:
+			// check if the function exits in the function definitions map. If it doesn't exist, then it must be a function call specific to the language.
+			// Then handle it accordingly, for sources etc.
 		}
 
 		if node.Type() == "class_declaration" {
@@ -325,7 +365,6 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 						}
 					}
 
-					fmt.Println(classChild)
 				}
 			}
 
@@ -346,6 +385,7 @@ func createDataFlowGraph(pass *analysis.Pass) (interface{}, error) {
 	})
 	dataFlowGraph.FuncDefs = functionDefinitions
 	dataFlowGraph.ClassDefs = classDefinitions
+	dataFlowGraph.FuncCalls = functionCalls
 
 	return dataFlowGraph, nil
 }
@@ -414,7 +454,6 @@ func handleTemplateStringDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 				if variable := scope.Lookup(varName); variable != nil {
 					if sourceNode, exists := DataFlowGraph[variable]; exists {
 						dfNode.Sources = append(dfNode.Sources, sourceNode)
-
 					}
 				}
 			}
@@ -427,7 +466,6 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 	if node == nil || node.Type() != "call_expression" {
 		return
 	}
-
 	args := node.ChildByFieldName("arguments")
 	if args == nil {
 		return
@@ -436,6 +474,7 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 	// Check each argument for taint
 	for i := 0; i < int(args.NamedChildCount()); i++ {
 		arg := args.NamedChild(i)
+
 		if arg == nil {
 			continue
 		}
@@ -447,7 +486,17 @@ func handleCallExpressionDataFlow(node *sitter.Node, dfNode *DataFlowNode, DataF
 					dfNode.Sources = append(dfNode.Sources, sourceNode)
 				}
 			}
+		}
 
+		// Add handling of template strings inside a function call
+		if arg.Type() == "template_string" {
+			// fmt.Println(arg.Content(sourceCode))
+			handleTemplateStringDataFlow(arg, dfNode, DataFlowGraph, sourceCode, scope)
+		}
+
+		if arg.Type() == "binary_expression" {
+			handleBinaryExpressionDataFlow(arg, dfNode, DataFlowGraph, sourceCode, scope)
 		}
 	}
+
 }
