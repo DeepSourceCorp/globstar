@@ -1,0 +1,29 @@
+language: rust
+name: avoid_expect
+message: "Using expect() can cause runtime panics if an Option is None or Result is Err. Consider handling errors explicitly with match, if let, or the ? operator"
+category: antipattern
+severity: warning
+
+pattern: |
+  (
+    (call_expression
+      function: (field_expression
+        value: (_) @variable
+        field: (field_identifier) @method_name
+        (#eq? @method_name "expect")
+      )
+      arguments: (arguments)
+    ) @avoid_expect
+  )
+
+exclude:
+  - "tests/**"
+  - "vendor/**"
+  - "**/test_*.rs"
+  - "**/*_test.rs"
+
+description: |
+  Using .expect() in Rust can lead to unexpected panics if the value is None (for Option) or Err (for Result).
+  While expect() provides a custom error message, uncaught panics in production can crash the application.
+  Consider handling errors explicitly using match or if let, providing defaults with unwrap_or_else(),
+  or propagating errors using the ? operator.
