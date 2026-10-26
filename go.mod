@@ -2,7 +2,7 @@ module globstar.dev
 
 go 1.25.0
 
-toolchain go1.25.12
+toolchain go1.26.10
 
 require (
 	github.com/go-git/go-git/v5 v5.19.1
